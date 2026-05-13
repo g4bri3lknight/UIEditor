@@ -104,6 +104,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.bgColor && p.bgColor !== "transparent") cls += ` bg-${p.bgColor}`;
       if (p.padding && p.padding !== "0") cls += ` p-${p.padding}`;
       if (p.textColor && p.textColor !== "dark") cls += ` text-${p.textColor}`;
+      if (p.textAlign && p.textAlign !== "start") cls += ` text-${p.textAlign}`;
 
       const content = generateChildrenHTML(component, indentLevel + 1) || "";
       return indent(wrap("div", cls, content), indentLevel);
@@ -123,6 +124,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.bgColor && p.bgColor !== "transparent") cls += ` bg-${p.bgColor}`;
       if (p.textColor && p.textColor !== "dark") cls += ` text-${p.textColor}`;
       if (p.padding && p.padding !== "0") cls += ` p-${p.padding}`;
+      if (p.textAlign && p.textAlign !== "start") cls += ` text-${p.textAlign}`;
       const content = generateChildrenHTML(component, indentLevel + 1) || "";
       return indent(wrap("div", cls, content), indentLevel);
     }
@@ -811,9 +813,12 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         indent(wrap("div", "modal-footer", footerContent), indentLevel + 2)
       ), indentLevel + 1);
 
+      // Wrap modal-content in modal-dialog with size/centered/scrollable classes
+      const dialogContent = indent(wrap("div", dialogCls.trim(), "\n" + html + "\n"), indentLevel + 1);
+
       // Outer wrapper - we show the modal in a static way
       return indent(
-        `<div class="modal d-block position-relative" tabindex="-1">\n${html}\n</div>`,
+        `<div class="modal d-block position-relative" tabindex="-1">\n${dialogContent}\n</div>`,
         indentLevel
       );
     }

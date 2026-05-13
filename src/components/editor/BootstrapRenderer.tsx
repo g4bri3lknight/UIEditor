@@ -121,6 +121,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
           minHeight: "60px",
           boxSizing: "border-box",
           border: !hasChildren && !renderChildren ? "1px dashed #dee2e6" : "none",
+          textAlign: String(p.textAlign) as any,
         }}>
           {renderChildren ?? (hasChildren ? (
             component.children!.map((child) => (
@@ -163,6 +164,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
           minHeight: "50px",
           boxSizing: "border-box",
           flex: "1 1 0%",
+          textAlign: String(p.textAlign) as any,
         }}>
           {renderChildren ?? (hasChildren ? (
             component.children!.map((child) => (
@@ -997,11 +999,19 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const hasBodyContent = bodySlot?.children && bodySlot.children.length > 0;
       const hasFooterContent = footerSlot?.children && footerSlot.children.length > 0;
 
+      // Size mapping for canvas preview
+      const sizeWidthMap: Record<string, string> = {
+        "": "500px", sm: "300px", lg: "800px", xl: "1140px",
+      };
+      const modalMaxWidth = sizeWidthMap[String(p.size)] || "500px";
+      const isCentered = !!p.centered;
+      const isScrollable = !!p.scrollable;
+
       return (
-        <Wrapper style={{ padding: "0" }}>
+        <Wrapper style={{ padding: "0", display: "flex", justifyContent: "center", alignItems: isCentered ? "center" : "flex-start", minHeight: isCentered ? "200px" : undefined, background: "rgba(0,0,0,0.1)", borderRadius: "8px" }}>
           <div style={{
             borderRadius: "12px", overflow: "hidden", border: `1px solid ${BS.borderColor}`,
-            boxShadow: "0 8px 32px rgba(0,0,0,0.15)", background: BS.white, maxWidth: "500px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.15)", background: BS.white, maxWidth: modalMaxWidth, width: "100%",
           }}>
             {/* Header slot */}
             <div style={{ padding: hasHeaderContent ? "4px 8px" : "16px 20px", borderBottom: `1px solid ${BS.borderColor}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1011,7 +1021,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
               <button style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: BS.muted, lineHeight: 1 }}>×</button>
             </div>
             {/* Body slot */}
-            <div style={{ padding: hasBodyContent ? "4px" : "20px", fontSize: "0.9375rem", color: BS.body }}>
+            <div style={{ padding: hasBodyContent ? "4px" : "20px", fontSize: "0.9375rem", color: BS.body, maxHeight: isScrollable ? "200px" : undefined, overflowY: isScrollable ? "auto" : undefined }}>
               {hasBodyContent ? (
                 bodySlot!.children!.map((child) => <BootstrapRenderer key={child.id} component={child} />)
               ) : (
