@@ -128,6 +128,7 @@ interface EditorState {
   history: CanvasComponent[][];
   historyIndex: number;
   clipboard: CanvasComponent | null;
+  hiddenComponents: Set<string>;
 
   addComponent: (type: string, parentId?: string | null, index?: number) => void;
   removeComponent: (id: string) => void;
@@ -136,6 +137,7 @@ interface EditorState {
   duplicateComponent: (id: string) => void;
   selectComponent: (id: string | null) => void;
   updateComponentProps: (id: string, props: Record<string, string | boolean | number>) => void;
+  updateComponentLabel: (id: string, newLabel: string) => void;
   clearCanvas: () => void;
   undo: () => void;
   redo: () => void;
@@ -146,8 +148,10 @@ interface EditorState {
   copyComponent: (id: string) => void;
   pasteComponent: (parentId?: string | null, index?: number) => void;
   importProject: (data: CanvasComponent[]) => boolean;
+  loadTemplate: (components: CanvasComponent[]) => void;
   moveUp: (id: string) => void;
   moveDown: (id: string) => void;
+  toggleComponentVisibility: (id: string) => void;
 }
 
 // ── History size limit ──
@@ -160,6 +164,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   history: [[]],
   historyIndex: 0,
   clipboard: null,
+  hiddenComponents: new Set<string>(),
 
   pushHistory: () => {
     set(s => {
@@ -272,6 +277,21 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     get().pushHistory();
   },
 
+  updateComponentLabel: (id, newLabel) => {
+    set(s => {
+      const updateInTree = (comps: CanvasComponent[]): CanvasComponent[] =>
+        comps.map(c => {
+          if (c.id === id) {
+            return { ...c, label: newLabel };
+          }
+          if (c.children) return { ...c, children: updateInTree(c.children) };
+          return c;
+        });
+      return { components: updateInTree(s.components) };
+    });
+    get().pushHistory();
+  },
+
   clearCanvas: () => {
     set({ components: [], selectedId: null });
     get().pushHistory();
@@ -350,6 +370,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     return true;
   },
 
+  loadTemplate: (components) => {
+    set({ components, selectedId: null });
+    get().pushHistory();
+  },
+
   moveUp: (id) => {
     const info = get().getParentInfo(id);
     if (!info || info.index === 0) return;
@@ -359,10 +384,22 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   moveDown: (id) => {
     const info = get().getParentInfo(id);
-    if (!info || !info.parent) return;
-    const siblings = info.parent.children!;
+    if (!info || info.index === undefined) return;
+    const parentId = info.parent?.id ?? null;
+    const siblings = info.parent ? info.parent.children! : get().components;
     if (info.index >= siblings.length - 1) return;
-    const parentId = info.parent.id;
     get().moveComponentInTree(id, parentId, info.index + 2);
+  },
+
+  toggleComponentVisibility: (id) => {
+    set(s => {
+      const next = new Set(s.hiddenComponents);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return { hiddenComponents: next };
+    });
   },
 }));

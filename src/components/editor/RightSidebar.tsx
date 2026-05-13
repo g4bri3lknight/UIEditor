@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { X, Trash2, Copy, Info } from "lucide-react";
+import { X, Trash2, Copy, Info, ArrowUp, ArrowDown, Eye, EyeOff, Tag, Hash } from "lucide-react";
 
 function PropertyField({
   prop,
@@ -141,11 +141,16 @@ export function RightSidebar({ width }: RightSidebarProps) {
   const {
     selectedId,
     updateComponentProps,
+    updateComponentLabel,
     removeComponent,
     duplicateComponent,
     selectComponent,
     findComponent,
     getParentInfo,
+    moveUp,
+    moveDown,
+    hiddenComponents,
+    toggleComponentVisibility,
   } = useEditorStore();
 
   const selectedComponent = selectedId ? findComponent(selectedId) ?? undefined : undefined;
@@ -155,6 +160,8 @@ export function RightSidebar({ width }: RightSidebarProps) {
     : null;
 
   const managed = selectedComponent ? isAutoManaged(selectedComponent.type) : false;
+
+  const isHidden = selectedComponent ? hiddenComponents.has(selectedComponent.id) : false;
 
   if (!selectedComponent || !componentDef) {
     return (
@@ -230,6 +237,20 @@ export function RightSidebar({ width }: RightSidebarProps) {
       {!managed && (
         <div className="flex items-center gap-1 px-3 py-2 border-b border-border shrink-0">
           <button
+            onClick={() => moveUp(selectedComponent.id)}
+            className="p-1.5 rounded hover:bg-muted transition-colors"
+            title="Sposta su"
+          >
+            <ArrowUp className="w-3.5 h-3.5 text-muted-foreground" />
+          </button>
+          <button
+            onClick={() => moveDown(selectedComponent.id)}
+            className="p-1.5 rounded hover:bg-muted transition-colors"
+            title="Sposta giù"
+          >
+            <ArrowDown className="w-3.5 h-3.5 text-muted-foreground" />
+          </button>
+          <button
             onClick={() => duplicateComponent(selectedComponent.id)}
             className="p-1.5 rounded hover:bg-muted transition-colors"
             title="Duplica"
@@ -237,6 +258,13 @@ export function RightSidebar({ width }: RightSidebarProps) {
             <Copy className="w-3.5 h-3.5 text-muted-foreground" />
           </button>
           <div className="flex-1" />
+          <button
+            onClick={() => toggleComponentVisibility(selectedComponent.id)}
+            className={`p-1.5 rounded transition-colors ${isHidden ? 'bg-muted text-muted-foreground' : 'hover:bg-muted text-muted-foreground'}`}
+            title={isHidden ? 'Mostra componente' : 'Nascondi componente'}
+          >
+            {isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+          </button>
           <button
             onClick={() => removeComponent(selectedComponent.id)}
             className="p-1.5 rounded hover:bg-destructive/10 transition-colors"
@@ -250,6 +278,17 @@ export function RightSidebar({ width }: RightSidebarProps) {
       {/* Property Fields */}
       <ScrollArea className="flex-1 min-h-0">
         <div className="p-3 space-y-3">
+          {/* Nome (rename label) */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-normal text-muted-foreground">Nome</Label>
+            <Input
+              value={selectedComponent.label}
+              onChange={(e) => updateComponentLabel(selectedComponent.id, e.target.value)}
+              className="h-8 text-xs"
+            />
+          </div>
+
+          <Separator />
           {Object.entries(propGroups).map(([groupName, props]) => (
             <div key={groupName}>
               {Object.keys(propGroups).length > 1 && (
@@ -277,6 +316,51 @@ export function RightSidebar({ width }: RightSidebarProps) {
               )}
             </div>
           ))}
+
+          <Separator />
+
+          {/* Avanzato (Advanced) */}
+          <div>
+            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">
+              Avanzato
+            </p>
+            <div className="space-y-2.5">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-normal text-muted-foreground flex items-center gap-1.5">
+                  <Tag className="w-3 h-3" />
+                  Classi CSS
+                </Label>
+                <Input
+                  value={String(selectedComponent.props.customClass || "")}
+                  onChange={(e) =>
+                    updateComponentProps(selectedComponent.id, {
+                      customClass: e.target.value,
+                    })
+                  }
+                  placeholder="es. my-class custom-styling"
+                  className="h-8 text-xs font-mono"
+                />
+                <p className="text-[10px] text-muted-foreground/60">Classi CSS aggiuntive per il componente</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-normal text-muted-foreground flex items-center gap-1.5">
+                  <Hash className="w-3 h-3" />
+                  ID HTML
+                </Label>
+                <Input
+                  value={String(selectedComponent.props.customId || "")}
+                  onChange={(e) =>
+                    updateComponentProps(selectedComponent.id, {
+                      customId: e.target.value,
+                    })
+                  }
+                  placeholder="es. sezione-principale"
+                  className="h-8 text-xs font-mono"
+                />
+                <p className="text-[10px] text-muted-foreground/60">Attributo id personalizzato per il componente</p>
+              </div>
+            </div>
+          </div>
         </div>
       </ScrollArea>
     </div>

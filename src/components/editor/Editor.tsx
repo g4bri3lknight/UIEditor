@@ -42,8 +42,11 @@ import {
   Smartphone,
   Tablet,
   Monitor,
+  LayoutTemplate,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
+import { TEMPLATES } from "@/lib/editor/templates";
 
 // ── Sidebar resize hook ──
 function useSidebarResize(
@@ -161,6 +164,7 @@ export function Editor() {
     pasteComponent,
     clipboard,
     importProject,
+    hiddenComponents,
   } = useEditorStore();
 
   const [codeDialogOpen, setCodeDialogOpen] = useState(false);
@@ -172,6 +176,8 @@ export function Editor() {
     label?: string;
   } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [templateOpen, setTemplateOpen] = useState(false);
+  const templateRef = useRef<HTMLDivElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   // ── Sidebar resizing ──
@@ -283,10 +289,11 @@ export function Editor() {
         }
 
         // Dropped on a before/after indicator or canvas item
-        if (overId.startsWith("before-")) {
-          const parts = overId.replace("before-", "").split("-");
+        if (overId.startsWith("before::")) {
+          const rest = overId.replace("before::", "");
+          const parts = rest.split("::");
           const targetId = parts[0];
-          const parentId = parts.length > 1 ? parts.slice(1).join("-") : null;
+          const parentId = parts.length > 1 ? parts[1] : null;
           const siblings = parentId
             ? useEditorStore.getState().findComponent(parentId)?.children || []
             : components;
@@ -294,10 +301,11 @@ export function Editor() {
           addComponent(type, parentId, idx !== -1 ? idx : undefined);
           return;
         }
-        if (overId.startsWith("after-")) {
-          const parts = overId.replace("after-", "").split("-");
+        if (overId.startsWith("after::")) {
+          const rest = overId.replace("after::", "");
+          const parts = rest.split("::");
           const targetId = parts[0];
-          const parentId = parts.length > 1 ? parts.slice(1).join("-") : null;
+          const parentId = parts.length > 1 ? parts[1] : null;
           const siblings = parentId
             ? useEditorStore.getState().findComponent(parentId)?.children || []
             : components;
@@ -335,11 +343,12 @@ export function Editor() {
         }
 
         // Moving via before/after indicators at root level
-        if (overId.startsWith("before-") || overId.startsWith("after-")) {
-          const isBefore = overId.startsWith("before-");
-          const parts = overId.replace(isBefore ? "before-" : "after-", "").split("-");
+        if (overId.startsWith("before::") || overId.startsWith("after::")) {
+          const isBefore = overId.startsWith("before::");
+          const rest = overId.replace(isBefore ? "before::" : "after::", "");
+          const parts = rest.split("::");
           const targetId = parts[0];
-          const parentId = parts.length > 1 ? parts.slice(1).join("-") : null;
+          const parentId = parts.length > 1 ? parts[1] : null;
           const siblings = parentId
             ? useEditorStore.getState().findComponent(parentId)?.children || []
             : components;
@@ -360,7 +369,7 @@ export function Editor() {
     setActiveDragData(null);
   }, []);
 
-  const htmlCode = useMemo(() => generateFullHTML(components), [components]);
+  const htmlCode = useMemo(() => generateFullHTML(components, hiddenComponents), [components, hiddenComponents]);
 
   const handleCopyCode = async () => {
     try {
@@ -434,6 +443,26 @@ export function Editor() {
 
   const handleImport = useCallback(() => {
     importInputRef.current?.click();
+  }, []);
+
+  // Close template dropdown on outside click
+  React.useEffect(() => {
+    if (!templateOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (templateRef.current && !templateRef.current.contains(e.target as Node)) {
+        setTemplateOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [templateOpen]);
+
+  const handleLoadTemplate = useCallback((templateId: string) => {
+    const tpl = TEMPLATES.find((t) => t.id === templateId);
+    if (!tpl) return;
+    useEditorStore.getState().loadTemplate(tpl.components);
+    setTemplateOpen(false);
+    toast.success(`Template "${tpl.label}" caricato!`);
   }, []);
 
   const handleImportFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -649,6 +678,44 @@ export function Editor() {
             >
               <Upload className="w-4 h-4" />
             </Button>
+            <div className="relative" ref={templateRef}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setTemplateOpen(!templateOpen)}
+                className="h-8 px-2.5 gap-1.5"
+                title="Template predefiniti"
+              >
+                <LayoutTemplate className="w-3.5 h-3.5" />
+                <span className="text-xs">Template</span>
+                <ChevronDown className={`w-3 h-3 transition-transform duration-150 ${templateOpen ? "rotate-180" : ""}`} />
+              </Button>
+              {templateOpen && (
+                <div className="absolute right-0 top-full mt-1 w-64 bg-popover border border-border rounded-lg shadow-lg z-50 py-1 overflow-hidden">
+                  <div className="px-3 py-1.5 border-b border-border">
+                    <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Template predefiniti</span>
+                  </div>
+                  {TEMPLATES.map((tpl) => {
+                    const IconComp = tpl.icon;
+                    return (
+                      <button
+                        key={tpl.id}
+                        onClick={() => handleLoadTemplate(tpl.id)}
+                        className="w-full flex items-start gap-2.5 px-3 py-2.5 text-left hover:bg-muted/80 transition-colors duration-100 cursor-pointer"
+                      >
+                        <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <IconComp className="w-4 h-4 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-foreground truncate">{tpl.label}</div>
+                          <div className="text-[11px] text-muted-foreground leading-snug">{tpl.description}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
             <Button
               variant="ghost"
               size="sm"

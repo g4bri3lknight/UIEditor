@@ -1648,16 +1648,22 @@ export const COMPONENTS: BootstrapComponentDefinition[] = [
         placeholder: "One item per line",
       },
       {
-        key: "variant",
-        label: "Variant",
-        type: "select",
-        defaultValue: "",
-        options: [
-          { label: "Default", value: "" },
-          { label: "Flush (no border)", value: "flush" },
-          { label: "Numbered", value: "numbered" },
-          { label: "Horizontal", value: "horizontal" },
-        ],
+        key: "flush",
+        label: "Flush (no borders)",
+        type: "boolean",
+        defaultValue: false,
+      },
+      {
+        key: "numbered",
+        label: "Numbered",
+        type: "boolean",
+        defaultValue: false,
+      },
+      {
+        key: "horizontal",
+        label: "Horizontal",
+        type: "boolean",
+        defaultValue: false,
       },
       {
         key: "activeItem",

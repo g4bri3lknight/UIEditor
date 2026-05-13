@@ -62,26 +62,45 @@ function wrap(
   classes: string,
   content: string,
   extraAttrs: Record<string, string> = {},
-  inline: boolean = false
+  inline: boolean = false,
+  customClass?: string,
+  hidden?: boolean
 ): string {
-  const cls = classes ? ` class="${classes}"` : "";
+  let cls = classes;
+  if (customClass) cls = cls ? `${cls} ${customClass}` : customClass;
+  const clsAttr = cls ? ` class="${cls}"` : "";
   const extra = attrs(extraAttrs);
-  if (inline) {
-    return `<${tag}${cls}${extra}>${content}</${tag}>`;
+  if (hidden) {
+    const styleAttr = extraAttrs.style ? `;${extraAttrs.style}` : "";
+    const styleStr = ` style="display:none${styleAttr}"`;
+    if (inline) {
+      return `<${tag}${clsAttr}${styleStr}>${content}</${tag}>`;
+    }
+    return `<${tag}${clsAttr}${styleStr}>\n${content}\n</${tag}>`;
   }
-  return `<${tag}${cls}${extra}>\n${content}\n</${tag}>`;
+  if (inline) {
+    return `<${tag}${clsAttr}${extra}>${content}</${tag}>`;
+  }
+  return `<${tag}${clsAttr}${extra}>\n${content}\n</${tag}>`;
 }
 
-function generateChildrenHTML(component: CanvasComponent, indentLevel: number = 0): string {
+function generateChildrenHTML(component: CanvasComponent, indentLevel: number = 0, hiddenComponents?: Set<string>): string {
   if (!component.children || component.children.length === 0) return "";
   return component.children
-    .map((child) => generateComponentHTML(child, indentLevel))
+    .map((child) => generateComponentHTML(child, indentLevel, hiddenComponents))
     .join("\n");
 }
 
-function generateComponentHTML(component: CanvasComponent, indentLevel: number = 0): string {
+function generateComponentHTML(component: CanvasComponent, indentLevel: number = 0, hiddenComponents?: Set<string>): string {
   const { type, props, children } = component;
   const p = props as Record<string, string | boolean | number>;
+  const customClass = String(p.customClass || "").trim();
+  const customId = String(p.customId || "").trim();
+  const isHidden = hiddenComponents?.has(component.id);
+
+  // Build extra attrs for customId (id attr handled via wrapExtraAttrs)
+  const wrapExtraAttrs: Record<string, string> = {};
+  if (customId) wrapExtraAttrs["id"] = customId;
 
   switch (type) {
 
@@ -98,8 +117,8 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.textColor && p.textColor !== "dark") cls += ` text-${p.textColor}`;
       if (p.textAlign && p.textAlign !== "start") cls += ` text-${p.textAlign}`;
 
-      const content = generateChildrenHTML(component, indentLevel + 1) || "";
-      return indent(wrap("div", cls, content), indentLevel);
+      const content = generateChildrenHTML(component, indentLevel + 1, hiddenComponents) || "";
+      return indent(wrap("div", cls, content, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     case "row": {
@@ -107,8 +126,8 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.gutter && p.gutter !== "3") cls += ` g-${p.gutter}`;
       if (p.verticalAlign && p.verticalAlign !== "start")
         cls += ` align-items-${p.verticalAlign}`;
-      const content = generateChildrenHTML(component, indentLevel + 1) || "";
-      return indent(wrap("div", cls, content), indentLevel);
+      const content = generateChildrenHTML(component, indentLevel + 1, hiddenComponents) || "";
+      return indent(wrap("div", cls, content, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     case "col": {
@@ -120,8 +139,8 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.textColor && p.textColor !== "dark") cls += ` text-${p.textColor}`;
       if (p.padding && p.padding !== "0") cls += ` p-${p.padding}`;
       if (p.textAlign && p.textAlign !== "start") cls += ` text-${p.textAlign}`;
-      const content = generateChildrenHTML(component, indentLevel + 1) || "";
-      return indent(wrap("div", cls, content), indentLevel);
+      const content = generateChildrenHTML(component, indentLevel + 1, hiddenComponents) || "";
+      return indent(wrap("div", cls, content, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     // ── TYPOGRAPHY ──
@@ -134,7 +153,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.textAlign && p.textAlign !== "start") cls += ` text-${p.textAlign}`;
       if (p.textClass) cls += ` ${p.textClass}`;
       cls = cls.trim();
-      return indent(wrap(tag, cls, p.text as string, {}, true), indentLevel);
+      return indent(wrap(tag, cls, p.text as string, wrapExtraAttrs, true, customClass, isHidden), indentLevel);
     }
 
     case "paragraph": {
@@ -145,7 +164,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.textSize && p.textSize !== "lead") cls += ` ${p.textSize}`;
       cls = cls.trim();
       const text = (p.text as string).replace(/\n/g, "<br>\n");
-      return indent(wrap("p", cls, text), indentLevel);
+      return indent(wrap("p", cls, text, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     case "blockquote": {
@@ -156,7 +175,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.attribution) {
         html += "\n" + indent('<footer class="blockquote-footer mt-1">' + (p.attribution as string) + "</footer>", indentLevel + 1);
       }
-      return indent(wrap("blockquote", cls, html), indentLevel);
+      return indent(wrap("blockquote", cls, html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     case "list": {
@@ -172,7 +191,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       else if (p.listType === "unstyled") cls = "list-unstyled";
       if (p.textColor) cls += ` text-${p.textColor}`;
       cls = cls.trim();
-      return indent(wrap(tag, cls, items), indentLevel);
+      return indent(wrap(tag, cls, items, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     case "code-block": {
@@ -180,7 +199,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         return indent(`<code>${p.code as string}</code>`, indentLevel);
       }
       let html = indent(`<code>${p.code as string}</code>`, indentLevel + 1);
-      return indent(wrap("pre", "", html), indentLevel);
+      return indent(wrap("pre", "", html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     // ── FORMS ──
@@ -201,7 +220,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.floating) {
         let html = indent(`<label for="floating${indentLevel}" class="form-label">${label}</label>`, indentLevel + 1);
         html = indent(`<input type="${inputType}" class="form-control" id="floating${indentLevel}" placeholder="${p.placeholder || ""}" ${extras.join(" ")}>`) + "\n" + html;
-        html = indent(wrap("div", "form-floating mb-3", html), indentLevel);
+        html = indent(wrap("div", "form-floating mb-3", html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
         return html;
       }
 
@@ -216,7 +235,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.helpText) {
         html += indent(`<div id="help${indentLevel}" class="form-text">${p.helpText}</div>\n`, indentLevel);
       }
-      return html.trimEnd();
+      return indent(wrap("div", "", html.trimEnd(), wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     case "textarea": {
@@ -235,7 +254,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.helpText) {
         html += indent(`<div class="form-text">${p.helpText}</div>\n`, indentLevel);
       }
-      return html.trimEnd();
+      return indent(wrap("div", "", html.trimEnd(), wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     case "select-input": {
@@ -255,7 +274,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         html += indent(`<label for="sel${indentLevel}" class="form-label">${p.label}</label>\n`, indentLevel);
       }
       html += indent(`<select class="${sizeCls}" id="sel${indentLevel}" ${extras.join(" ")}>\n${options}\n</select>`, indentLevel);
-      return html;
+      return indent(wrap("div", "", html.trimEnd(), wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     case "checkbox": {
@@ -269,7 +288,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
 
       const html = indent(`<input class="form-check-input" type="checkbox" id="chk${indentLevel}" ${inputAttrs.join(" ")}>\n` +
         indent(`<label class="form-check-label" for="chk${indentLevel}">${p.label}</label>`, indentLevel + 1), indentLevel);
-      return wrap("div", cls, html);
+      return indent(wrap("div", cls, html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     case "radio": {
@@ -282,13 +301,13 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
 
       const html = indent(`<input class="form-check-input" type="radio" name="${p.name}" id="rad${indentLevel}" ${inputAttrs.join(" ")}>\n` +
         indent(`<label class="form-check-label" for="rad${indentLevel}">${p.label}</label>`, indentLevel + 1), indentLevel);
-      return wrap("div", cls, html);
+      return indent(wrap("div", cls, html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     case "range": {
       const html = indent(`<label for="range${indentLevel}" class="form-label">${p.label}</label>\n` +
         indent(`<input type="range" class="form-range" id="range${indentLevel}" min="${p.min}" max="${p.max}" step="${p.step}" value="${p.defaultValue}" ${p.disabled ? "disabled" : ""}>`, indentLevel), indentLevel);
-      return html;
+      return indent(wrap("div", "", html.trimEnd(), wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     case "switch": {
@@ -297,7 +316,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
 
       const html = indent(`<input class="form-check-input" type="checkbox" role="switch" id="sw${indentLevel}" ${p.checked ? "checked" : ""} ${p.disabled ? "disabled" : ""}>\n` +
         indent(`<label class="form-check-label" for="sw${indentLevel}">${p.label}</label>`, indentLevel + 1), indentLevel);
-      return wrap("div", cls, html);
+      return indent(wrap("div", cls, html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     case "file-input": {
@@ -311,7 +330,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.helpText) {
         html += indent(`<div class="form-text">${p.helpText}</div>\n`, indentLevel);
       }
-      return html.trimEnd();
+      return indent(wrap("div", "", html.trimEnd(), wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     case "input-group": {
@@ -325,7 +344,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.append) {
         html += indent(`<span class="input-group-text">${p.append}</span>\n`, indentLevel + 1);
       }
-      return wrap("div", sizeCls, html.trimEnd());
+      return indent(wrap("div", sizeCls, html.trimEnd(), wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     // ── BUTTONS ──
@@ -337,11 +356,11 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.block) cls += " w-100";
       if (p.disabled) cls += " disabled";
 
-      const extras: Record<string, string> = {};
+      const extras: Record<string, string> = { ...wrapExtraAttrs };
       if (p.disabled) extras["aria-disabled"] = "true";
 
       const icon = p.iconLeft ? `<i class="bi ${p.iconLeft} me-1"></i>` : "";
-      return indent(wrap("button", cls, `${icon}${p.text}`.trim(), extras, true), indentLevel);
+      return indent(wrap("button", cls, `${icon}${p.text}`.trim(), extras, true, customClass, isHidden), indentLevel);
     }
 
     case "button-group": {
@@ -374,7 +393,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       let cls = "btn-group";
       if (p.vertical) cls = "btn-group-vertical";
       if (p.size) cls += ` btn-group-${p.size}`;
-      return wrap("div", cls, html);
+      return indent(wrap("div", cls, html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     // ── NAVIGATION ──
@@ -407,9 +426,9 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       else if (p.container === "none") containerCls = "";
 
       if (containerCls) {
-        return wrap("nav", cls, indent(wrap("div", containerCls, content), indentLevel + 1));
+        return indent(wrap("nav", cls, indent(wrap("div", containerCls, content), indentLevel + 1), wrapExtraAttrs, false, customClass, isHidden), indentLevel);
       }
-      return wrap("nav", cls, content);
+      return indent(wrap("nav", cls, content, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     case "nav-tabs": {
@@ -435,7 +454,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       else if (p.fill === "fill") cls += " nav-fill";
       if (p.vertical) cls += " flex-column";
 
-      return wrap("ul", cls, navItems);
+      return indent(wrap("ul", cls, navItems, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     case "breadcrumb": {
@@ -451,7 +470,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         return indent(`<li class="breadcrumb-item"><a href="#">${item}</a></li>`, indentLevel + 1);
       }).join("\n");
 
-      return wrap("nav", "mb-2", indent(wrap("ol", "breadcrumb", crumbs), indentLevel), { "aria-label": "breadcrumb" });
+      return indent(wrap("nav", "mb-2", indent(wrap("ol", "breadcrumb", crumbs), indentLevel), { "aria-label": "breadcrumb", ...wrapExtraAttrs }, false, customClass, isHidden), indentLevel);
     }
 
     case "pagination": {
@@ -467,7 +486,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       }
       items.push(indent(wrap("li", "page-item", indent(wrap("a", "page-link", "&raquo;", { href: "#" }), indentLevel + 1)), indentLevel));
 
-      return wrap("nav", "", indent(wrap("ul", `pagination${sizeCls}`, items.join("\n")), indentLevel), { "aria-label": "Page navigation" });
+      return indent(wrap("nav", "", indent(wrap("ul", `pagination${sizeCls}`, items.join("\n")), indentLevel), { "aria-label": "Page navigation", ...wrapExtraAttrs }, false, customClass, isHidden), indentLevel);
     }
 
     case "dropdown": {
@@ -493,7 +512,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       let html = indent(wrap("button", btnCls, p.label as string, { "data-bs-toggle": "dropdown", "aria-expanded": "false" }, true), indentLevel + 1);
       html += "\n" + indent(wrap("ul", "dropdown-menu", menuItems), indentLevel + 1);
 
-      return wrap("div", wrapperCls, html);
+      return indent(wrap("div", wrapperCls, html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     // ── CONTENT ──
@@ -516,7 +535,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       // Body
       html += indent('<div class="card-body">\n', indentLevel + 1);
       if (hasChildren) {
-        html += generateChildrenHTML(component, indentLevel + 2);
+        html += generateChildrenHTML(component, indentLevel + 2, hiddenComponents);
       } else {
         if (p.title) html += indent(wrap("h5", "card-title", p.title as string, {}, true), indentLevel + 2) + "\n";
         if (p.subtitle) html += indent(wrap("h6", "card-subtitle mb-2 text-muted", p.subtitle as string, {}, true), indentLevel + 2) + "\n";
@@ -532,7 +551,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         html += indent(wrap("div", "card-footer text-muted", p.footer as string), indentLevel + 1);
       }
 
-      return wrap("div", cls, html.trimEnd());
+      return indent(wrap("div", cls, html.trimEnd(), wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     case "alert": {
@@ -548,14 +567,14 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         html += '\n' + indent('<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>', indentLevel + 1);
       }
 
-      return wrap("div", cls, html, { role: "alert" });
+      return indent(wrap("div", cls, html, { role: "alert", ...wrapExtraAttrs }, false, customClass, isHidden), indentLevel);
     }
 
     case "badge": {
       let cls = "badge";
       if (p.variant) cls += ` bg-${p.variant}`;
       if (p.pill) cls += " rounded-pill";
-      return indent(wrap("span", cls, p.text as string, {}, true), indentLevel);
+      return indent(wrap("span", cls, p.text as string, wrapExtraAttrs, true, customClass, isHidden), indentLevel);
     }
 
     case "progress": {
@@ -577,9 +596,9 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
 
       let outerCls = "progress";
       if (p.height && Number(p.height) > 0) {
-        return wrap("div", outerCls, html, { style: `height: ${p.height}px` });
+        return indent(wrap("div", outerCls, html, { style: `height: ${p.height}px`, ...wrapExtraAttrs }, false, customClass, isHidden), indentLevel);
       }
-      return wrap("div", outerCls, html);
+      return indent(wrap("div", outerCls, html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     case "accordion": {
@@ -632,15 +651,19 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         })
         .join("\n");
 
-      return wrap("div", `accordion${flushCls}`, items.map(item => indent(item, indentLevel)).join("\n"), { id: "accordionExample" });
+      return indent(wrap("div", `accordion${flushCls}`, items.map(item => indent(item, indentLevel)).join("\n"), { id: "accordionExample", ...wrapExtraAttrs }, false, customClass, isHidden), indentLevel);
     }
 
     case "spinner": {
       let cls = `spinner-${p.type}`;
       if (p.variant) cls += ` text-${p.variant}`;
       if (p.size) cls += ` spinner-${p.type}-${p.size}`;
+      if (customClass) cls += ` ${customClass}`;
+      cls = cls.trim();
+      const idAttr = customId ? ` id="${customId}"` : "";
+      const hiddenAttr = isHidden ? ' style="display:none"' : "";
       return indent(
-        `<div class="${cls}" role="status">\n${indent('<span class="visually-hidden">' + (p.label || "Loading...") + "</span>", indentLevel + 1)}\n</div>`,
+        `<div class="${cls}" role="status"${idAttr}${hiddenAttr}>\n${indent('<span class="visually-hidden">' + (p.label || "Loading...") + "</span>", indentLevel + 1)}\n</div>`,
         indentLevel
       );
     }
@@ -660,14 +683,14 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         .join("\n");
 
       let cls = "list-group";
-      if (p.variant === "flush") cls += " list-group-flush";
-      if (p.variant === "numbered") cls += " list-group-numbered";
-      if (p.variant === "horizontal") cls += " list-group-horizontal";
+      if (p.flush) cls += " list-group-flush";
+      if (p.numbered) cls += " list-group-numbered";
+      if (p.horizontal) cls += " list-group-horizontal";
 
-      if (p.variant === "numbered") {
-        return wrap("ol", cls, listItems);
+      if (p.numbered) {
+        return indent(wrap("ol", cls, listItems, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
       }
-      return wrap("ul", cls, listItems);
+      return indent(wrap("ul", cls, listItems, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     case "toast": {
@@ -679,7 +702,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       bodyHtml += "\n" + indent(wrap("div", "toast-body", p.text as string), indentLevel + 1);
 
       return indent(
-        wrap("div", "toast", bodyHtml, { role: "alert", "aria-live": "assertive", "aria-atomic": "true" }),
+        wrap("div", "toast", bodyHtml, { role: "alert", "aria-live": "assertive", "aria-atomic": "true", ...wrapExtraAttrs }, false, customClass, isHidden),
         indentLevel
       );
     }
@@ -701,25 +724,13 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         html += indent(wrap("a", `btn btn-${p.buttonVariant} btn-lg`, p.buttonText as string, { href: "#", role: "button" }, true), indentLevel + 1);
       }
 
-      return wrap("div", `p-5 mb-4 bg-${p.bgColor} rounded-3`, html, { style: `text-align: ${p.textAlign};` });
+      return indent(wrap("div", `p-5 mb-4 bg-${p.bgColor} rounded-3`, html, { style: `text-align: ${p.textAlign};`, ...wrapExtraAttrs }, false, customClass, isHidden), indentLevel);
     }
 
     case "carousel": {
       const slides = ((p.slides as string) || "")
         .split("\n")
         .filter(Boolean);
-
-      const indicators = p.indicators
-        ? "\n" + indent(
-            slides
-              .map((_, i) =>
-                `<button type="button" data-bs-target="#carouselExample" data-bs-slide-to="${i}"${i === 0 ? ' class="active" aria-current="true"' : ""} aria-label="Slide ${i + 1}"></button>`
-              )
-              .map((item) => indent(item, indentLevel + 2))
-              .join("\n"),
-            indentLevel + 1
-          ) + "\n" + indent("</div>", indentLevel + 1)
-        : "";
 
       const slideItems = slides
         .map((slide, i) => {
@@ -755,7 +766,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
           indent("</button>", indentLevel + 1), indentLevel + 1);
       }
 
-      return wrap("div", `carousel slide${p.dark ? " carousel-dark" : ""}`, html, { id: "carouselExample", "data-bs-ride": p.autoplay ? "carousel" : "false" });
+      return indent(wrap("div", `carousel slide${p.dark ? " carousel-dark" : ""}`, html, { id: "carouselExample", "data-bs-ride": p.autoplay ? "carousel" : "false", ...wrapExtraAttrs }, false, customClass, isHidden), indentLevel);
     }
 
     case "modal": {
@@ -767,7 +778,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       const hasChildren = children && children.length > 0;
 
       const bodyContent = hasChildren
-        ? generateChildrenHTML(component, indentLevel + 3)
+        ? generateChildrenHTML(component, indentLevel + 3, hiddenComponents)
         : (p.text as string || "").replace(/\n/g, "<br>\n");
 
       const headerContent = indent(`<h5 class="modal-title">${p.title || "Modal"}</h5>\n`, indentLevel + 3);
@@ -789,8 +800,10 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
 
       const dialogContent = indent(wrap("div", dialogCls.trim(), "\n" + html + "\n"), indentLevel + 1);
 
+      const idAttr = customId ? ` id="${customId}"` : "";
+      const hiddenAttr = isHidden ? ' style="display:none"' : "";
       return indent(
-        `<div class="modal d-block position-relative" tabindex="-1">\n${dialogContent}\n</div>`,
+        `<div class="modal d-block position-relative" tabindex="-1"${idAttr}${hiddenAttr}>\n${dialogContent}\n</div>`,
         indentLevel
       );
     }
@@ -806,7 +819,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       const headerContent = indent(`<h5 class="offcanvas-title">${p.title || "Offcanvas"}</h5>`, indentLevel + 2);
 
       const bodyContent = hasChildren
-        ? generateChildrenHTML(component, indentLevel + 2)
+        ? generateChildrenHTML(component, indentLevel + 2, hiddenComponents)
         : (p.text as string || "").replace(/\n/g, "<br>\n");
 
       const inner = indent(
@@ -817,7 +830,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       ) + "\n" +
       indent(wrap("div", "offcanvas-body", bodyContent), indentLevel + 1);
 
-      return wrap("div", ocClasses, "\n" + inner + "\n");
+      return indent(wrap("div", ocClasses, "\n" + inner + "\n", wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     // ── TABLES ──
@@ -837,6 +850,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.condensed) cls += " table-sm";
       if (p.borderColor) cls += ` table-${p.borderColor}`;
       if (p.stripedColumns) cls += " table-striped-columns";
+      if (customClass) cls += ` ${customClass}`;
 
       const headerHtml = indent(
         "<tr>" + headers.map((h) => `<th scope="col">${h}</th>`).join("") + "</tr>",
@@ -867,9 +881,9 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       const table = wrap("table", cls, tableHtml);
 
       if (p.responsive) {
-        return wrap("div", "table-responsive", indent(table, indentLevel + 1));
+        return indent(wrap("div", "table-responsive", indent(table, indentLevel + 1), wrapExtraAttrs, false, undefined, isHidden), indentLevel);
       }
-      return table;
+      return indent(wrap("div", "", table, wrapExtraAttrs, false, undefined, isHidden), indentLevel);
     }
 
     // ── IMAGES ──
@@ -880,8 +894,11 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       else if (p.rounded === "circle") cls += " rounded-circle";
       else if (p.rounded === "thumbnail") cls += " img-thumbnail";
       else if (p.rounded === "rounded-pill") cls += " rounded-pill";
+      if (customClass) cls += ` ${customClass}`;
       cls = cls.trim();
-      return indent(`<img src="${p.src}" class="${cls}" alt="${p.alt}">`, indentLevel);
+      const idAttr = customId ? ` id="${customId}"` : "";
+      const hiddenAttr = isHidden ? ' style="display:none"' : "";
+      return indent(`<img src="${p.src}" class="${cls}" alt="${p.alt}"${idAttr}${hiddenAttr}>`, indentLevel);
     }
 
     case "figure": {
@@ -894,7 +911,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         indent(wrap("figcaption", "figure-caption", p.caption as string), indentLevel + 2),
         indentLevel + 1
       );
-      return wrap("figure", `figure ${alignCls}`, html);
+      return indent(wrap("figure", `figure ${alignCls}`, html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     // ── UTILITIES ──
@@ -911,24 +928,30 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
           indentLevel + 1
         );
         const hrCls = p.variant ? `divider border border-${p.variant} border-2 opacity-50` : "divider";
-        return wrap("div", hrCls, inner);
+        return indent(wrap("div", hrCls, inner, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
       }
 
       let hrCls = "";
       if (p.variant) hrCls += ` border-${p.variant} border-2 opacity-50`;
-      return indent(`<hr class="${hrCls}">`, indentLevel);
+      if (customClass) hrCls += ` ${customClass}`;
+      hrCls = hrCls.trim();
+      const idAttr = customId ? ` id="${customId}"` : "";
+      const hiddenAttr = isHidden ? ' style="display:none"' : "";
+      return indent(`<hr class="${hrCls}"${idAttr}${hiddenAttr}>`, indentLevel);
     }
 
     case "spacer": {
       const size = p.size || "4";
       const height = { "1": "0.25rem", "2": "0.5rem", "3": "1rem", "4": "1.5rem", "5": "3rem", auto: "auto" };
-      return indent(`<div style="height: ${height[size as string] || "1.5rem"}"></div>`, indentLevel);
+      const idAttr = customId ? ` id="${customId}"` : "";
+      const hiddenAttr = isHidden ? ' style="display:none"' : "";
+      return indent(`<div${idAttr}${hiddenAttr} style="height: ${height[size as string] || "1.5rem"}"></div>`, indentLevel);
     }
 
     case "embed-video": {
       let ratioCls = `ratio ratio-${p.ratio}`;
       let html = indent(`<iframe src="${p.url}" title="Video embed" allowfullscreen></iframe>`, indentLevel + 1);
-      return wrap("div", ratioCls, html);
+      return indent(wrap("div", ratioCls, html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     default:
@@ -936,11 +959,11 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
   }
 }
 
-export function generateFullHTML(components: CanvasComponent[]): string {
+export function generateFullHTML(components: CanvasComponent[], hiddenComponents?: Set<string>): string {
   if (components.length === 0) return "";
 
   const body = components
-    .map((comp) => generateComponentHTML(comp, 1))
+    .map((comp) => generateComponentHTML(comp, 1, hiddenComponents))
     .join("\n\n");
 
   return `<!doctype html>

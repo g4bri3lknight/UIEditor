@@ -77,9 +77,11 @@ function CanvasItem({
     moveDown,
     removeComponent,
     clipboard,
+    hiddenComponents,
   } = useEditorStore();
 
   const isSelected = selectedId === component.id;
+  const isHidden = hiddenComponents.has(component.id);
   const canContain = isContainer(component.type);
   const hasChildren = canContain && component.children && component.children.length > 0;
   const managed = isAutoManaged(component.type);
@@ -162,7 +164,7 @@ function CanvasItem({
       {component.children!.map((child, i) => (
         <React.Fragment key={child.id}>
           <DropIndicator
-            id={`before-${child.id}-${component.id}`}
+            id={`before::${child.id}::${component.id}`}
             isActive={false}
           />
           <CanvasItem
@@ -174,7 +176,7 @@ function CanvasItem({
             depth={depth + 1}
           />
           <DropIndicator
-            id={`after-${child.id}-${component.id}`}
+            id={`after::${child.id}::${component.id}`}
             isActive={false}
           />
         </React.Fragment>
@@ -191,7 +193,7 @@ function CanvasItem({
   return (
     <>
       <DropIndicator
-        id={parentId ? `before-${component.id}-${parentId}` : `before-${component.id}`}
+        id={parentId ? `before::${component.id}::${parentId}` : `before::${component.id}`}
         isActive={false}
       />
 
@@ -199,7 +201,10 @@ function CanvasItem({
         <ContextMenuTrigger asChild>
           <div
             ref={mergedRef}
-            style={dragStyle}
+            style={{
+              ...dragStyle,
+              ...(isHidden && !isDragging && !(isContainerOver && isDragging) && !isSelected ? { opacity: 0.3 } : {}),
+            }}
             className={`relative group/canvas-item rounded-lg transition-all duration-150 ${
               isDragging && selectedId === component.id
                 ? "opacity-30 ring-2 ring-primary/40"
@@ -295,7 +300,7 @@ function CanvasItem({
       </ContextMenu>
 
       <DropIndicator
-        id={parentId ? `after-${component.id}-${parentId}` : `after-${component.id}`}
+        id={parentId ? `after::${component.id}::${parentId}` : `after::${component.id}`}
         isActive={false}
       />
     </>

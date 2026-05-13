@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CATEGORIES, COMPONENTS } from "@/lib/editor/bootstrap-components";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -9,7 +9,7 @@ import { useEditorStore, isAutoManaged } from "@/store/editor-store";
 import type { CanvasComponent } from "@/lib/editor/types";
 import {
   LayoutGrid, Type, FileInput, MousePointerClick, Navigation,
-  Layers, Table, Image, Wrench, Search, List, Code,
+  Layers, Table, Image, Wrench, Search, List, Code, EyeOff,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -93,11 +93,13 @@ function LayerTreeItem({
   depth,
   selectedId,
   onSelect,
+  isHidden,
 }: {
   component: CanvasComponent;
   depth: number;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  isHidden: boolean;
 }) {
   const autoManaged = isAutoManaged(component.type);
   const isSelected = selectedId === component.id;
@@ -111,7 +113,7 @@ function LayerTreeItem({
           isSelected
             ? "bg-primary/10 text-primary border-l-2 border-primary pl-1.5"
             : "text-foreground/80 hover:bg-muted/50 border-l-2 border-transparent"
-        } ${autoManaged ? "opacity-50" : ""}`}
+        } ${autoManaged ? "opacity-50" : ""} ${isHidden && !isSelected ? "opacity-40" : ""}`}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
       >
         <span className="shrink-0">
@@ -120,6 +122,9 @@ function LayerTreeItem({
           })}
         </span>
         <span className="truncate text-xs">{component.label}</span>
+        {isHidden && (
+          <EyeOff className="w-3 h-3 text-muted-foreground/60 shrink-0 ml-auto" />
+        )}
       </button>
       {component.children && component.children.length > 0 && (
         <div>
@@ -130,6 +135,7 @@ function LayerTreeItem({
               depth={depth + 1}
               selectedId={selectedId}
               onSelect={onSelect}
+              isHidden={isHidden}
             />
           ))}
         </div>
@@ -143,6 +149,7 @@ function LayersPanel() {
   const components = useEditorStore((s) => s.components);
   const selectedId = useEditorStore((s) => s.selectedId);
   const selectComponent = useEditorStore((s) => s.selectComponent);
+  const hiddenComponents = useEditorStore((s) => s.hiddenComponents);
 
   const handleSelect = useCallback(
     (id: string) => {
@@ -150,6 +157,19 @@ function LayersPanel() {
     },
     [selectComponent]
   );
+
+  // ── Count components by type ──
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    const countRecursive = (comps: CanvasComponent[]) => {
+      for (const c of comps) {
+        counts[c.type] = (counts[c.type] || 0) + 1;
+        if (c.children) countRecursive(c.children);
+      }
+    };
+    countRecursive(components);
+    return counts;
+  }, [components]);
 
   if (components.length === 0) {
     return (
@@ -162,19 +182,39 @@ function LayersPanel() {
   }
 
   return (
-    <ScrollArea className="flex-1 min-h-0">
-      <div className="p-2 space-y-0.5">
-        {components.map((comp) => (
-          <LayerTreeItem
-            key={comp.id}
-            component={comp}
-            depth={0}
-            selectedId={selectedId}
-            onSelect={handleSelect}
-          />
-        ))}
+    <div className="flex flex-col h-full">
+      {/* Component count summary */}
+      <div className="shrink-0 px-2 pt-2 pb-1 border-b border-border/50">
+        <div className="flex flex-wrap gap-1">
+          {Object.entries(typeCounts).map(([type, count]) => {
+            const icon = getLayerIcon(type);
+            return (
+              <span
+                key={type}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground"
+              >
+                {React.createElement(icon, { className: "w-3 h-3" })}
+                <span className="text-[10px] font-medium leading-none">{count}</span>
+              </span>
+            );
+          })}
+        </div>
       </div>
-    </ScrollArea>
+      <ScrollArea className="flex-1 min-h-0">
+        <div className="p-2 space-y-0.5">
+          {components.map((comp) => (
+            <LayerTreeItem
+              key={comp.id}
+              component={comp}
+              depth={0}
+              selectedId={selectedId}
+              onSelect={handleSelect}
+              isHidden={hiddenComponents.has(comp.id)}
+            />
+          ))}
+        </div>
+      </ScrollArea>
+    </div>
   );
 }
 

@@ -65,9 +65,10 @@ const Wrapper: React.FC<{
   children: React.ReactNode;
   style?: React.CSSProperties;
   className?: string;
-}> = ({ children, style, className }) => (
+  customClass?: string;
+}> = ({ children, style, className, customClass }) => (
   <div
-    className={`transition-all duration-150 ${className || ""}`}
+    className={`transition-all duration-150 ${className || ""} ${customClass || ""}`}
     style={{
       ...style,
       borderRadius: "4px",
@@ -81,6 +82,7 @@ const Wrapper: React.FC<{
 export function BootstrapRenderer({ component, renderChildren }: RendererProps) {
   const { type, props } = component;
   const p = props as Record<string, string | boolean | number>;
+  const customClass = String(p.customClass || "");
 
   switch (type) {
 
@@ -91,7 +93,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const maxWidth = fluid === "fixed" ? "1140px" : "100%";
       const hasChildren = component.children && component.children.length > 0;
       return (
-        <Wrapper style={{
+        <Wrapper customClass={customClass} style={{
           width: "100%",
           maxWidth,
           margin: "0 auto",
@@ -119,7 +121,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
     case "row": {
       const hasChildren = component.children && component.children.length > 0;
       return (
-        <Wrapper style={{ display: "flex", gap: `${spacing(String(p.gutter || "3"))}`, minHeight: "50px", alignItems: p.verticalAlign === "center" ? "center" : p.verticalAlign === "end" ? "flex-end" : "flex-start" }}>
+        <Wrapper customClass={customClass} style={{ display: "flex", gap: `${spacing(String(p.gutter || "3"))}`, minHeight: "50px", alignItems: p.verticalAlign === "center" ? "center" : p.verticalAlign === "end" ? "flex-end" : "flex-start" }}>
           {renderChildren ?? (hasChildren ? (
             component.children!.map((child) => (
               <BootstrapRenderer key={child.id} component={child} />
@@ -134,7 +136,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
     case "col": {
       const hasChildren = component.children && component.children.length > 0;
       return (
-        <Wrapper style={{
+        <Wrapper customClass={customClass} style={{
           // Width is 100% — sizing handled by CanvasItem flex-basis
           width: "100%",
           background: BS_BG[String(p.bgColor)] || BS.light,
@@ -166,7 +168,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const displaySizes: Record<string, string> = { "1": "5rem", "2": "4.5rem", "3": "4rem", "4": "3.5rem", "5": "3rem", "6": "2.5rem" };
       const isDisplay = !!p.displayClass;
       return (
-        <Wrapper style={{ padding: "8px 4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "8px 4px" }}>
           <div style={{
             fontSize: isDisplay ? (displaySizes[String(p.displayClass)] || "2rem") : (sizes[level] || "2rem"),
             fontWeight: isDisplay ? 300 : 700,
@@ -185,7 +187,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
 
     case "paragraph": {
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           <p style={{
             fontSize: p.textSize === "fs-6" ? "1rem" : p.textSize === "fs-4" ? "1.5rem" : p.textSize === "fs-2" ? "2rem" : "1rem",
             fontWeight: p.lead ? 300 : 400,
@@ -202,7 +204,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
 
     case "blockquote": {
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           <blockquote style={{
             borderLeft: `4px solid ${p.borderColor ? BS[String(p.borderColor)] || BS.secondary : BS.gray}`,
             paddingLeft: "16px",
@@ -225,7 +227,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const items = String(p.items || "").split("\n").filter(Boolean);
       const Tag = p.listType === "ordered" ? "ol" : "ul";
       return (
-        <Wrapper style={{ padding: "4px 4px 4px 20px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px 4px 4px 20px" }}>
           <Tag style={{
             color: BS_TEXT[String(p.textColor)] || BS.body,
             margin: 0,
@@ -240,7 +242,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
 
     case "code-block": {
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           {p.inline ? (
             <code style={{ background: "#e9ecef", padding: "2px 6px", borderRadius: "4px", fontSize: "0.875em", fontFamily: "monospace" }}>
               {p.code}
@@ -265,7 +267,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
 
       if (p.floating) {
         return (
-          <Wrapper style={{ padding: "4px" }}>
+          <Wrapper customClass={customClass} style={{ padding: "4px" }}>
             <div style={{ position: "relative" }}>
               <input
                 type={String(p.type || "text")}
@@ -292,7 +294,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       }
 
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           {p.label && <label style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem", color: BS.body }}>{p.label}{p.required && <span style={{ color: BS.danger, marginLeft: "2px" }}>*</span>}</label>}
           <input
             type={String(p.type || "text")}
@@ -314,7 +316,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
     case "textarea": {
       const sz = String(p.size || "");
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           {p.label && <label style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem" }}>{p.label}</label>}
           <textarea
             placeholder={String(p.placeholder || "")}
@@ -336,7 +338,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const isSmall = selectSize === "sm";
       const isLarge = selectSize === "lg";
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           {p.label && <label style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem" }}>{p.label}</label>}
           <select disabled={!!p.disabled} multiple={!!p.multiple} style={{
             width: "100%", padding: isSmall ? "4px 8px" : isLarge ? "10px 14px" : "8px 12px", border: `1px solid ${BS.borderColor}`,
@@ -354,7 +356,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
 
     case "checkbox": {
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           <label style={{ display: !!p.inline ? "inline-flex" : "flex", alignItems: "center", gap: "8px", cursor: p.disabled ? "not-allowed" : "pointer", opacity: p.disabled ? 0.65 : 1, flexDirection: p.reverse ? "row-reverse" : "row" }}>
             <input type="checkbox" defaultChecked={!!p.checked} disabled={!!p.disabled}
               style={{ width: "18px", height: "18px", accentColor: BS.primary, cursor: "inherit" }} />
@@ -366,7 +368,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
 
     case "radio": {
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           <label style={{ display: !!p.inline ? "inline-flex" : "flex", alignItems: "center", gap: "8px", cursor: p.disabled ? "not-allowed" : "pointer", opacity: p.disabled ? 0.65 : 1 }}>
             <input type="radio" name={String(p.name)} defaultChecked={!!p.checked} disabled={!!p.disabled}
               style={{ width: "18px", height: "18px", accentColor: BS.primary, cursor: "inherit" }} />
@@ -378,7 +380,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
 
     case "range": {
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           {p.label && <label style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem" }}>{p.label}</label>}
           <input
             type="range" min={Number(p.min)} max={Number(p.max)} step={Number(p.step)}
@@ -391,7 +393,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
 
     case "switch": {
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: p.disabled ? "not-allowed" : "pointer", opacity: p.disabled ? 0.65 : 1, flexDirection: p.reverse ? "row-reverse" : "row" }}>
             <div style={{
               position: "relative", width: "44px", height: "24px",
@@ -414,7 +416,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
     case "file-input": {
       const fSize = String(p.size || "");
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           {p.label && <label style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem" }}>{p.label}</label>}
           <input type="file" disabled={!!p.disabled}
             style={{ fontSize: fSize === "sm" ? "0.8rem" : fSize === "lg" ? "1.05rem" : "0.875rem", color: BS.body }} />
@@ -428,7 +430,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const igPad = igSize === "sm" ? "4px 8px" : igSize === "lg" ? "10px 14px" : "8px 12px";
       const igFontSize = igSize === "sm" ? "0.875rem" : igSize === "lg" ? "1.25rem" : "1rem";
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           <div style={{ display: "flex", alignItems: "stretch" }}>
             {p.prepend && (
               <span style={{ display: "flex", alignItems: "center", padding: igPad, background: BS.light, borderWidth: "1px", borderStyle: "solid", borderColor: BS.borderColor, borderRightStyle: "none", borderRadius: "6px 0 0 6px", fontSize: igFontSize, color: BS.body, minWidth: "40px", justifyContent: "center" }}>
@@ -462,7 +464,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const btnStyle = getButtonStyle(variant, isOutline);
       const sz = String(p.size || "");
       return (
-        <Wrapper style={{ padding: "4px", display: "inline-block" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px", display: "inline-block" }}>
           <button disabled={!!p.disabled} style={{
             ...btnStyle,
             padding: sz === "sm" ? "4px 12px" : sz === "lg" ? "10px 24px" : "6px 16px",
@@ -492,7 +494,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const bgFontSize = bgSize === "sm" ? "0.875rem" : bgSize === "lg" ? "1.25rem" : "1rem";
 
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           <div style={{ display: "flex", flexDirection: vertical ? "column" : "row" }}>
             {buttons.map((btn, i) => (
               <button key={i} style={{
@@ -516,7 +518,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
     // ── NAVIGATION ──
     case "navbar": {
       return (
-        <Wrapper style={{ padding: "0" }}>
+        <Wrapper customClass={customClass} style={{ padding: "0" }}>
           <nav style={{
             display: "flex", alignItems: "center", padding: "12px 20px",
             background: BS_BG[String(p.bgColor)] || BS.light,
@@ -548,7 +550,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const active = Number(p.active) || 0;
 
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           <div style={{ display: "flex", borderBottom: style === "tabs" ? `2px solid ${BS.borderColor}` : "none", gap: "2px", flexDirection: p.vertical ? "column" : "row", flex: !!p.fill ? "1" : undefined }}>
             {items.map((item, i) => (
               <button key={i} style={{
@@ -586,7 +588,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
     case "breadcrumb": {
       const items = String(p.items || "").split(",").map(i => i.trim()).filter(Boolean);
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           <nav style={{ display: "flex", gap: "8px", alignItems: "center", fontSize: "0.875rem" }}>
             {items.map((item, i) => (
               <React.Fragment key={i}>
@@ -609,7 +611,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const pgSize = String(p.size || "");
       const pgScale = pgSize === "sm" ? 0.85 : pgSize === "lg" ? 1.15 : 1;
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           <div style={{ display: "flex", gap: "4px" }}>
             <button style={pageBtnStyle(false, pgScale)}>&laquo;</button>
             {Array.from({ length: pages }).map((_, i) => (
@@ -636,7 +638,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const dir = String(p.direction || "down");
       const isUp = dir === "up";
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           <div style={{ display: "inline-flex", flexDirection: isUp ? "column-reverse" : "column" }}>
             <button style={{ ...btnStyle, padding: ddPad, borderRadius: isUp ? "0 0 6px 6px" : "6px 6px 0 0", cursor: "pointer", fontSize: ddFontSize, fontWeight: 400, display: "flex", alignItems: "center", gap: "6px" }}>
               {p.label || "Dropdown"} <span style={{ marginLeft: "4px", transform: isUp ? "rotate(180deg)" : "none" }}>▾</span>
@@ -668,7 +670,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const hasDirectChildren = component.children && component.children.length > 0;
 
       return (
-        <Wrapper style={{ padding: "0" }}>
+        <Wrapper customClass={customClass} style={{ padding: "0" }}>
           <div style={{
             border: `1px solid ${borderColor}`, borderRadius: "12px", overflow: "hidden",
             background: bgColor, color: isDark ? BS.white : BS.body,
@@ -729,7 +731,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       };
       const c = colorMap[String(p.variant)] || colorMap.primary;
       return (
-        <Wrapper style={{ padding: "0" }}>
+        <Wrapper customClass={customClass} style={{ padding: "0" }}>
           <div style={{
             padding: "16px 20px", borderRadius: "8px", background: c.bg,
             border: `1px solid ${c.border}`, color: c.text, position: "relative",
@@ -750,7 +752,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
     case "badge": {
       const badgeColor = BS[String(p.variant)] || BS.primary;
       return (
-        <Wrapper style={{ padding: "4px", display: "inline-block" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px", display: "inline-block" }}>
           <span style={{
             display: "inline-block", padding: "4px 10px", background: badgeColor,
             color: BS.white, borderRadius: p.pill ? "20px" : "4px",
@@ -771,7 +773,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const height = Number(p.height) || 16;
 
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           <div style={{ width: "100%", height: `${height}px`, background: "#e9ecef", borderRadius: `${height}px`, overflow: "hidden" }}>
             <div style={{
               width: `${value}%`, height: "100%", background: barColor,
@@ -805,7 +807,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const isFlush = !!p.flush;
 
       return (
-        <Wrapper style={{ padding: "0" }}>
+        <Wrapper customClass={customClass} style={{ padding: "0" }}>
           <div style={{ borderRadius: isFlush ? "0" : "8px", overflow: "hidden", border: isFlush ? "none" : `1px solid ${BS.borderColor}` }}>
             {items.map((item, i) => (
               <div key={i} style={{ borderBottom: i < items.length - 1 ? `1px solid ${BS.borderColor}` : "none" }}>
@@ -837,7 +839,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const size = isSmall ? "1rem" : "2rem";
 
       return (
-        <Wrapper style={{ padding: "8px 4px", display: "inline-block" }}>
+        <Wrapper customClass={customClass} style={{ padding: "8px 4px", display: "inline-block" }}>
           {p.type === "grow" ? (
             <div style={{ width: size, height: size, background: color, borderRadius: "50%", animation: "bs-grow 0.75s linear infinite" }} />
           ) : (
@@ -859,11 +861,11 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
 
     case "list-group": {
       const items = String(p.items || "").split("\n").filter(Boolean);
-      const numbered = p.variant === "numbered";
-      const flush = p.variant === "flush";
+      const numbered = !!p.numbered;
+      const flush = !!p.flush;
 
       return (
-        <Wrapper style={{ padding: "0" }}>
+        <Wrapper customClass={customClass} style={{ padding: "0" }}>
           <div style={{ borderRadius: flush ? 0 : "8px", overflow: "hidden", border: flush ? "none" : `1px solid ${BS.borderColor}` }}>
             {items.map((item, i) => (
               <div key={i} style={{
@@ -885,7 +887,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
     case "toast": {
       const headerColor = BS[String(p.variant)] || BS.primary;
       return (
-        <Wrapper style={{ padding: "0" }}>
+        <Wrapper customClass={customClass} style={{ padding: "0" }}>
           <div style={{
             borderRadius: "8px", overflow: "hidden", background: BS.white,
             border: `1px solid ${BS.borderColor}`, boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
@@ -911,7 +913,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const isDark = ["dark", "primary", "secondary", "success", "danger", "info"].includes(String(p.bgColor));
 
       return (
-        <Wrapper style={{ padding: "0" }}>
+        <Wrapper customClass={customClass} style={{ padding: "0" }}>
           <div style={{
             padding: "48px 32px", borderRadius: "12px", background: bg,
             textAlign: String(p.textAlign) as any, color: isDark ? BS.white : BS.body,
@@ -951,7 +953,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
     case "carousel": {
       const slides = String(p.slides || "").split("\n").filter(Boolean);
       return (
-        <Wrapper style={{ padding: "0" }}>
+        <Wrapper customClass={customClass} style={{ padding: "0" }}>
           <div style={{ borderRadius: "12px", overflow: "hidden", border: `1px solid ${BS.borderColor}` }}>
             {p.indicators && (
               <div style={{ display: "flex", gap: "6px", justifyContent: "center", padding: "8px 0", background: BS.light }}>
@@ -992,7 +994,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const hasDirectChildren = component.children && component.children.length > 0;
 
       return (
-        <Wrapper style={{ padding: "0", display: "flex", justifyContent: "center", alignItems: isCentered ? "center" : "flex-start", minHeight: isCentered ? "200px" : undefined, background: "rgba(0,0,0,0.1)", borderRadius: "8px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "0", display: "flex", justifyContent: "center", alignItems: isCentered ? "center" : "flex-start", minHeight: isCentered ? "200px" : undefined, background: "rgba(0,0,0,0.1)", borderRadius: "8px" }}>
           <div style={{
             borderRadius: "12px", overflow: "hidden", border: `1px solid ${BS.borderColor}`,
             boxShadow: "0 8px 32px rgba(0,0,0,0.15)", background: BS.white, maxWidth: modalMaxWidth, width: "100%",
@@ -1032,7 +1034,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const hasDirectChildren = component.children && component.children.length > 0;
 
       return (
-        <Wrapper style={{ padding: "0" }}>
+        <Wrapper customClass={customClass} style={{ padding: "0" }}>
           <div style={{
             width, height, maxWidth: isVertical ? "80vw" : undefined, maxHeight: isVertical ? undefined : "50vh",
             border: `1px solid ${BS.borderColor}`,
@@ -1068,7 +1070,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const rows = String(p.rows || "").split("\n").filter(Boolean).map(r => r.split(",").map(c => c.trim()));
 
       return (
-        <Wrapper style={{ padding: "0" }}>
+        <Wrapper customClass={customClass} style={{ padding: "0" }}>
           <div style={{ overflowX: "auto" }}>
             <table style={{
               width: "100%", borderCollapse: "collapse", fontSize: "0.9375rem",
@@ -1124,7 +1126,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
         "": "0", rounded: "8px", circle: "50%", thumbnail: "4px",
       };
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           <img
             src={String(p.src || "https://picsum.photos/seed/bseditor/800/400")}
             alt={String(p.alt || "")}
@@ -1143,7 +1145,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
 
     case "figure": {
       return (
-        <Wrapper style={{ padding: "4px", display: "flex", justifyContent: p.alignment === "center" ? "center" : p.alignment === "end" ? "flex-end" : "flex-start" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px", display: "flex", justifyContent: p.alignment === "center" ? "center" : p.alignment === "end" ? "flex-end" : "flex-start" }}>
           <figure style={{ margin: 0, maxWidth: "100%" }}>
             <img src={String(p.src || "https://picsum.photos/seed/figure/400/300")} alt="" style={{
               maxWidth: "100%", height: "auto", borderRadius: "8px",
@@ -1159,7 +1161,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
     // ── UTILITIES ──
     case "divider": {
       return (
-        <Wrapper style={{ padding: "8px 4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "8px 4px" }}>
           {p.text ? (
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <hr style={{ flex: 1, borderColor: BS.borderColor, margin: 0 }} />
@@ -1178,7 +1180,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
     case "spacer": {
       const height = spacing(String(p.size || "4"));
       return (
-        <Wrapper style={{ padding: "4px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           <div style={{ height, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ fontSize: "11px", color: BS.muted, opacity: 0.5 }}>Spacer ({p.size})</span>
           </div>
@@ -1189,7 +1191,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
     case "embed-video": {
       const ratioMap: Record<string, string> = { "21x9": "42.86%", "16x9": "56.25%", "4:3": "75%", "1x1": "100%" };
       return (
-        <Wrapper style={{ padding: "0" }}>
+        <Wrapper customClass={customClass} style={{ padding: "0" }}>
           <div style={{
             position: "relative", width: "100%",
             paddingBottom: ratioMap[String(p.ratio)] || "56.25%",
@@ -1211,7 +1213,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
 
     default:
       return (
-        <Wrapper style={{ padding: "8px" }}>
+        <Wrapper customClass={customClass} style={{ padding: "8px" }}>
           <div style={{ color: BS.muted, fontSize: "0.875rem" }}>Unknown: {type}</div>
         </Wrapper>
       );
