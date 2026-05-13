@@ -84,6 +84,16 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
   const p = props as Record<string, string | boolean | number>;
 
   switch (type) {
+    // ── SLOT TYPES: just render children ──
+    case "slot-card-header":
+    case "slot-card-body":
+    case "slot-card-footer":
+    case "slot-modal-header":
+    case "slot-modal-body":
+    case "slot-modal-footer": {
+      return generateChildrenHTML(component, indentLevel);
+    }
+
     // ── LAYOUT ──
     case "container": {
       const fluid = p.fluid;
@@ -496,23 +506,46 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.borderColor) cls += ` border-${p.borderColor}`;
       if (p.textAlign && p.textAlign !== "start") cls += ` text-${p.textAlign}`;
 
+      // Find slot children
+      const headerSlot = children?.find(c => c.type === "slot-card-header");
+      const bodySlot = children?.find(c => c.type === "slot-card-body");
+      const footerSlot = children?.find(c => c.type === "slot-card-footer");
+      const hasHeaderContent = headerSlot?.children && headerSlot.children.length > 0;
+      const hasBodyContent = bodySlot?.children && bodySlot.children.length > 0;
+      const hasFooterContent = footerSlot?.children && footerSlot.children.length > 0;
+
       let html = "";
       if (p.imgSrc) {
         html += indent(wrap("img", "card-img-top", "", { src: p.imgSrc as string, alt: "Card image" }), indentLevel + 1) + "\n";
       }
-      if (p.header) {
+      // Header
+      if (hasHeaderContent) {
+        html += indent('<div class="card-header">\n', indentLevel + 1);
+        html += generateChildrenHTML(headerSlot!, indentLevel + 2);
+        html += indent("</div>", indentLevel + 1) + "\n";
+      } else if (p.header) {
         html += indent(wrap("div", "card-header", p.header as string), indentLevel + 1) + "\n";
       }
+      // Body
       html += indent('<div class="card-body">\n', indentLevel + 1);
-      if (p.title) html += indent(wrap("h5", "card-title", p.title as string, {}, true), indentLevel + 2) + "\n";
-      if (p.subtitle) html += indent(wrap("h6", "card-subtitle mb-2 text-muted", p.subtitle as string, {}, true), indentLevel + 2) + "\n";
-      if (p.text) html += indent(wrap("p", "card-text", (p.text as string).replace(/\n/g, "<br>\n")), indentLevel + 2) + "\n";
-      if (p.showButton) {
-        const btnVariant = p.variant && p.variant !== "" ? `btn-outline-light` : "btn-primary";
-        html += indent(wrap("a", `btn ${btnVariant}`, p.buttonText as string, { href: "#" }, true), indentLevel + 2) + "\n";
+      if (hasBodyContent) {
+        html += generateChildrenHTML(bodySlot!, indentLevel + 2);
+      } else {
+        if (p.title) html += indent(wrap("h5", "card-title", p.title as string, {}, true), indentLevel + 2) + "\n";
+        if (p.subtitle) html += indent(wrap("h6", "card-subtitle mb-2 text-muted", p.subtitle as string, {}, true), indentLevel + 2) + "\n";
+        if (p.text) html += indent(wrap("p", "card-text", (p.text as string).replace(/\n/g, "<br>\n")), indentLevel + 2) + "\n";
+        if (p.showButton) {
+          const btnVariant = p.variant && p.variant !== "" ? `btn-outline-light` : "btn-primary";
+          html += indent(wrap("a", `btn ${btnVariant}`, p.buttonText as string, { href: "#" }, true), indentLevel + 2) + "\n";
+        }
       }
       html += indent("</div>", indentLevel + 1) + "\n";
-      if (p.footer) {
+      // Footer
+      if (hasFooterContent) {
+        html += indent('<div class="card-footer">\n', indentLevel + 1);
+        html += generateChildrenHTML(footerSlot!, indentLevel + 2);
+        html += indent("</div>", indentLevel + 1);
+      } else if (p.footer) {
         html += indent(wrap("div", "card-footer text-muted", p.footer as string), indentLevel + 1);
       }
 
@@ -748,16 +781,34 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.centered) dialogCls += " modal-dialog-centered";
       if (p.scrollable) dialogCls += " modal-dialog-scrollable";
 
+      // Find slot children
+      const headerSlot = children?.find(c => c.type === "slot-modal-header");
+      const bodySlot = children?.find(c => c.type === "slot-modal-body");
+      const footerSlot = children?.find(c => c.type === "slot-modal-footer");
+      const hasHeaderContent = headerSlot?.children && headerSlot.children.length > 0;
+      const hasBodyContent = bodySlot?.children && bodySlot.children.length > 0;
+      const hasFooterContent = footerSlot?.children && footerSlot.children.length > 0;
+
+      const bodyContent = hasBodyContent
+        ? generateChildrenHTML(bodySlot!, indentLevel + 3)
+        : (p.text as string).replace(/\n/g, "<br>\n");
+
+      const headerContent = hasHeaderContent
+        ? generateChildrenHTML(headerSlot!, indentLevel + 3)
+        : indent(`<h5 class="modal-title">${p.title}</h5>\n`, indentLevel + 3);
+
+      const footerContent = hasFooterContent
+        ? generateChildrenHTML(footerSlot!, indentLevel + 3)
+        : indent(wrap("button", "btn btn-secondary", "Close", { "data-bs-dismiss": "modal" }, true), indentLevel + 3) + "\n" +
+          indent(wrap("button", "btn btn-primary", p.footer as string, {}, true), indentLevel + 3);
+
       let html = indent(wrap("div", "modal-content",
         indent(wrap("div", "modal-header",
-          indent(`<h5 class="modal-title">${p.title}</h5>\n`, indentLevel + 3) +
+          headerContent +
           indent('<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>', indentLevel + 3)
         ), indentLevel + 2) + "\n" +
-        indent(wrap("div", "modal-body", (p.text as string).replace(/\n/g, "<br>\n")), indentLevel + 2) + "\n" +
-        indent(wrap("div", "modal-footer",
-          indent(wrap("button", "btn btn-secondary", "Close", { "data-bs-dismiss": "modal" }, true), indentLevel + 3) + "\n" +
-          indent(wrap("button", "btn btn-primary", p.footer as string, {}, true), indentLevel + 3)
-        ), indentLevel + 2)
+        indent(wrap("div", "modal-body", bodyContent), indentLevel + 2) + "\n" +
+        indent(wrap("div", "modal-footer", footerContent), indentLevel + 2)
       ), indentLevel + 1);
 
       // Outer wrapper - we show the modal in a static way

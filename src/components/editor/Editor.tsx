@@ -269,6 +269,11 @@ export function Editor() {
           // If dropping on a row, redirect to its first column
           if (parentComp?.type === "row" && parentComp.children && parentComp.children.length > 0) {
             addComponent(type, parentComp.children[0].id);
+          // If dropping on a card/modal, redirect to body slot
+          } else if ((parentComp?.type === "card" || parentComp?.type === "modal") && parentComp.children) {
+            const bodySlot = parentComp.children.find(c => c.type === `slot-${parentComp.type}-body`);
+            if (bodySlot) addComponent(type, bodySlot.id);
+            else addComponent(type, parentId);
           } else {
             addComponent(type, parentId);
           }
@@ -320,6 +325,11 @@ export function Editor() {
             // If dropping on a row, redirect to its first column
             if (parentComp?.type === "row" && parentComp.children && parentComp.children.length > 0) {
               useEditorStore.getState().moveComponentInTree(activeId, parentComp.children[0].id);
+            // If dropping on a card/modal, redirect to body slot
+            } else if ((parentComp?.type === "card" || parentComp?.type === "modal") && parentComp.children) {
+              const bodySlot = parentComp.children.find(c => c.type === `slot-${parentComp.type}-body`);
+              if (bodySlot) useEditorStore.getState().moveComponentInTree(activeId, bodySlot.id);
+              else useEditorStore.getState().moveComponentInTree(activeId, newParentId);
             } else {
               useEditorStore.getState().moveComponentInTree(activeId, newParentId);
             }

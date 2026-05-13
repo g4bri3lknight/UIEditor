@@ -43,11 +43,23 @@ function newComponent(type: string): CanvasComponent {
     comp.children = Array.from({ length: numCols }, () => createCol());
   }
 
+  // Auto-create slots for card/modal
+  if (type === "card" || type === "modal") {
+    const slots = getSlotConfig(type);
+    if (slots) {
+      comp.children = slots.map((s) => createSlot(s));
+    }
+  }
+
   return comp;
 }
 
 // Layout types that can hold children
-export const CONTAINER_TYPES = new Set(["container", "row", "col"]);
+export const CONTAINER_TYPES = new Set([
+  "container", "row", "col", "card", "modal",
+  "slot-card-header", "slot-card-body", "slot-card-footer",
+  "slot-modal-header", "slot-modal-body", "slot-modal-footer",
+]);
 
 export function isContainer(type: string): boolean {
   return CONTAINER_TYPES.has(type);
@@ -55,7 +67,50 @@ export function isContainer(type: string): boolean {
 
 // Auto-managed types cannot be independently dragged or deleted
 export function isAutoManaged(type: string): boolean {
-  return type === "col";
+  return type === "col" || type.startsWith("slot-");
+}
+
+// Slot type configs
+const CARD_SLOTS = ["slot-card-header", "slot-card-body", "slot-card-footer"];
+const MODAL_SLOTS = ["slot-modal-header", "slot-modal-body", "slot-modal-footer"];
+
+function getSlotConfig(parentType: string): string[] | null {
+  if (parentType === "card") return CARD_SLOTS;
+  if (parentType === "modal") return MODAL_SLOTS;
+  return null;
+}
+
+function createSlot(type: string): CanvasComponent {
+  return {
+    id: generateId(),
+    type,
+    label: type.replace("slot-", "").replace("card-", "Card ").replace("modal-", "Modal "),
+    props: {},
+    children: [],
+  };
+}
+
+// Sync slot children for card/modal (like syncRowChildrenById)
+function syncSlotChildren(list: CanvasComponent[], targetId: string): CanvasComponent[] {
+  return list.map((c) => {
+    if (c.id === targetId) {
+      const slots = getSlotConfig(c.type);
+      if (!slots) {
+        if (c.children) return { ...c, children: syncSlotChildren(c.children, targetId) };
+        return c;
+      }
+      const current = c.children || [];
+      const currentSlotMap = new Map(current.map((ch) => [ch.type, ch]));
+      const newChildren = slots.map((slotType) => {
+        const existing = currentSlotMap.get(slotType);
+        if (existing) return existing;
+        return createSlot(slotType);
+      });
+      return { ...c, children: newChildren };
+    }
+    if (c.children) return { ...c, children: syncSlotChildren(c.children, targetId) };
+    return c;
+  });
 }
 
 // ── Recursive tree helpers ──

@@ -228,25 +228,25 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
             }`}
           />
           <span className="text-xs font-medium text-muted-foreground">
-            Workspace
+            Area di lavoro
           </span>
           <span className="text-xs text-muted-foreground/60">
-            {components.length} component{components.length !== 1 ? "s" : ""}
+            {components.length} componente{components.length !== 1 ? "i" : ""}
           </span>
         </div>
         <div className="flex items-center gap-1 text-[10px] text-muted-foreground/50">
           <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-mono">
             Ctrl+Z
           </kbd>
-          <span>Undo</span>
+          <span>Annulla</span>
           <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-mono ml-2">
             Del
           </kbd>
-          <span>Delete</span>
+          <span>Elimina</span>
           <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-mono ml-2">
             Esc
           </kbd>
-          <span>Deselect</span>
+          <span>Deseleziona</span>
         </div>
       </div>
 
@@ -258,7 +258,7 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
           isOver && isDragging ? "bg-primary/5" : ""
         }`}
       >
-        <div className="max-w-4xl mx-auto p-6">
+        <div className="w-[90%] mx-auto p-6">
           {components.length === 0 ? (
             <EmptyCanvas isOver={isOver && isDragging} />
           ) : (
@@ -290,7 +290,7 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
           {components.length > 0 && isDragging && !isOver && (
             <div className="mt-4 h-12 border-2 border-dashed border-primary/30 rounded-xl flex items-center justify-center bg-primary/5 transition-all">
               <span className="text-xs text-primary/60 font-medium">
-                Drop at the end
+                Rilascia alla fine
               </span>
             </div>
           )}
@@ -326,10 +326,10 @@ function EmptyCanvas({ isOver }: { isOver: boolean }) {
         </svg>
       </div>
       <p className="text-sm font-medium text-muted-foreground mb-1">
-        Drag components here
+        Trascina i componenti qui
       </p>
       <p className="text-xs text-muted-foreground/60">
-        Start building your Bootstrap interface
+        Inizia a costruire la tua interfaccia Bootstrap
       </p>
     </div>
   );

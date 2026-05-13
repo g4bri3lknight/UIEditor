@@ -82,6 +82,29 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
   const p = props as Record<string, string | boolean | number>;
 
   switch (type) {
+    // ── SLOT CONTAINERS (pass-through: just render children) ──
+    case "slot-card-header":
+    case "slot-card-body":
+    case "slot-card-footer":
+    case "slot-modal-header":
+    case "slot-modal-body":
+    case "slot-modal-footer": {
+      const hasChildren = component.children && component.children.length > 0;
+      return (
+        <div style={{ minHeight: hasChildren ? undefined : "32px" }}>
+          {renderChildren ?? (hasChildren ? (
+            component.children!.map((child) => (
+              <BootstrapRenderer key={child.id} component={child} />
+            ))
+          ) : (
+            <span style={{ color: "#adb5bd", fontSize: "11px", display: "block", textAlign: "center" }}>
+              {type.includes("header") ? "Header" : type.includes("body") ? "Body" : "Footer"}
+            </span>
+          ))}
+        </div>
+      );
+    }
+
     // ── LAYOUT ──
     case "container": {
       const fluid = p.fluid;
@@ -640,6 +663,13 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const bgColor = bgMap[String(p.variant)] || BS.white;
       const isDark = ["primary", "secondary", "success", "danger", "info", "dark"].includes(String(p.variant));
       const borderColor = p.borderColor ? BS[String(p.borderColor)] : BS.borderColor;
+      const cardChildren = component.children || [];
+      const headerSlot = cardChildren.find(c => c.type === "slot-card-header");
+      const bodySlot = cardChildren.find(c => c.type === "slot-card-body");
+      const footerSlot = cardChildren.find(c => c.type === "slot-card-footer");
+      const hasHeaderContent = headerSlot?.children && headerSlot.children.length > 0;
+      const hasBodyContent = bodySlot?.children && bodySlot.children.length > 0;
+      const hasFooterContent = footerSlot?.children && footerSlot.children.length > 0;
 
       return (
         <Wrapper style={{ padding: "0" }}>
@@ -651,29 +681,42 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
             {p.imgSrc && (
               <img src={String(p.imgSrc)} alt="" style={{ width: "100%", height: "180px", objectFit: "cover" }} />
             )}
-            {p.header && (
-              <div style={{ padding: "12px 20px", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : BS.borderColor}`, fontSize: "0.875rem", fontWeight: 600 }}>
-                {p.header}
+            {/* Header slot */}
+            {(hasHeaderContent || p.header) && (
+              <div style={{ padding: hasHeaderContent ? "4px 8px" : "12px 20px", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : BS.borderColor}`, fontSize: "0.875rem", fontWeight: 600 }}>
+                {hasHeaderContent
+                  ? headerSlot!.children!.map((child) => <BootstrapRenderer key={child.id} component={child} />)
+                  : p.header as string}
               </div>
             )}
-            <div style={{ padding: "20px" }}>
-              {p.title && <h5 style={{ fontWeight: 600, marginBottom: "8px", fontSize: "1.25rem" }}>{p.title}</h5>}
-              {p.subtitle && <h6 style={{ fontSize: "0.875rem", color: isDark ? "rgba(255,255,255,0.7)" : BS.muted, marginBottom: "12px", fontWeight: 400 }}>{p.subtitle}</h6>}
-              {p.text && <p style={{ fontSize: "0.9375rem", lineHeight: 1.6, margin: 0, color: isDark ? "rgba(255,255,255,0.85)" : "inherit" }}>{String(p.text).replace(/\\n/g, "\n")}</p>}
-              {p.showButton && (
-                <button style={{
-                  marginTop: "16px", padding: "6px 16px", borderRadius: "6px",
-                  background: isDark ? "transparent" : BS.primary, color: isDark ? BS.white : BS.white,
-                  border: isDark ? `1px solid rgba(255,255,255,0.5)` : "none",
-                  cursor: "pointer", fontSize: "0.9rem", fontWeight: 400,
-                }}>
-                  {p.buttonText || "Go somewhere"}
-                </button>
+            {/* Body slot */}
+            <div style={{ padding: hasBodyContent ? "4px" : "20px" }}>
+              {hasBodyContent ? (
+                bodySlot!.children!.map((child) => <BootstrapRenderer key={child.id} component={child} />)
+              ) : (
+                <>
+                  {p.title && <h5 style={{ fontWeight: 600, marginBottom: "8px", fontSize: "1.25rem" }}>{p.title}</h5>}
+                  {p.subtitle && <h6 style={{ fontSize: "0.875rem", color: isDark ? "rgba(255,255,255,0.7)" : BS.muted, marginBottom: "12px", fontWeight: 400 }}>{p.subtitle}</h6>}
+                  {p.text && <p style={{ fontSize: "0.9375rem", lineHeight: 1.6, margin: 0, color: isDark ? "rgba(255,255,255,0.85)" : "inherit" }}>{String(p.text).replace(/\\n/g, "\n")}</p>}
+                  {p.showButton && (
+                    <button style={{
+                      marginTop: "16px", padding: "6px 16px", borderRadius: "6px",
+                      background: isDark ? "transparent" : BS.primary, color: isDark ? BS.white : BS.white,
+                      border: isDark ? `1px solid rgba(255,255,255,0.5)` : "none",
+                      cursor: "pointer", fontSize: "0.9rem", fontWeight: 400,
+                    }}>
+                      {p.buttonText || "Go somewhere"}
+                    </button>
+                  )}
+                </>
               )}
             </div>
-            {p.footer && (
-              <div style={{ padding: "12px 20px", borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : BS.borderColor}`, fontSize: "0.875rem", color: isDark ? "rgba(255,255,255,0.6)" : BS.muted }}>
-                {p.footer}
+            {/* Footer slot */}
+            {(hasFooterContent || p.footer) && (
+              <div style={{ padding: hasFooterContent ? "4px 8px" : "12px 20px", borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : BS.borderColor}`, fontSize: "0.875rem", color: isDark ? "rgba(255,255,255,0.6)" : BS.muted }}>
+                {hasFooterContent
+                  ? footerSlot!.children!.map((child) => <BootstrapRenderer key={child.id} component={child} />)
+                  : p.footer as string}
               </div>
             )}
           </div>
@@ -946,22 +989,45 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
     }
 
     case "modal": {
+      const modalChildren = component.children || [];
+      const headerSlot = modalChildren.find(c => c.type === "slot-modal-header");
+      const bodySlot = modalChildren.find(c => c.type === "slot-modal-body");
+      const footerSlot = modalChildren.find(c => c.type === "slot-modal-footer");
+      const hasHeaderContent = headerSlot?.children && headerSlot.children.length > 0;
+      const hasBodyContent = bodySlot?.children && bodySlot.children.length > 0;
+      const hasFooterContent = footerSlot?.children && footerSlot.children.length > 0;
+
       return (
         <Wrapper style={{ padding: "0" }}>
           <div style={{
             borderRadius: "12px", overflow: "hidden", border: `1px solid ${BS.borderColor}`,
             boxShadow: "0 8px 32px rgba(0,0,0,0.15)", background: BS.white, maxWidth: "500px",
           }}>
-            <div style={{ padding: "16px 20px", borderBottom: `1px solid ${BS.borderColor}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h5 style={{ fontWeight: 600, fontSize: "1.1rem", margin: 0 }}>{p.title}</h5>
+            {/* Header slot */}
+            <div style={{ padding: hasHeaderContent ? "4px 8px" : "16px 20px", borderBottom: `1px solid ${BS.borderColor}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              {hasHeaderContent
+                ? <div style={{ flex: 1 }}>{headerSlot!.children!.map((child) => <BootstrapRenderer key={child.id} component={child} />)}</div>
+                : <h5 style={{ fontWeight: 600, fontSize: "1.1rem", margin: 0 }}>{p.title}</h5>}
               <button style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: BS.muted, lineHeight: 1 }}>×</button>
             </div>
-            <div style={{ padding: "20px", fontSize: "0.9375rem", color: BS.body }}>
-              {String(p.text).replace(/\\n/g, "\n")}
+            {/* Body slot */}
+            <div style={{ padding: hasBodyContent ? "4px" : "20px", fontSize: "0.9375rem", color: BS.body }}>
+              {hasBodyContent ? (
+                bodySlot!.children!.map((child) => <BootstrapRenderer key={child.id} component={child} />)
+              ) : (
+                String(p.text).replace(/\\n/g, "\n")
+              )}
             </div>
-            <div style={{ padding: "12px 20px", borderTop: `1px solid ${BS.borderColor}`, display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-              <button style={{ padding: "6px 16px", borderRadius: "6px", border: `1px solid ${BS.borderColor}`, background: BS.white, cursor: "pointer", fontSize: "0.9rem" }}>Close</button>
-              <button style={{ padding: "6px 16px", borderRadius: "6px", background: BS.primary, color: BS.white, border: "none", cursor: "pointer", fontSize: "0.9rem" }}>{p.footer || "Save Changes"}</button>
+            {/* Footer slot */}
+            <div style={{ padding: hasFooterContent ? "4px 8px" : "12px 20px", borderTop: `1px solid ${BS.borderColor}`, display: "flex", justifyContent: hasFooterContent ? "flex-start" : "flex-end", gap: "8px" }}>
+              {hasFooterContent
+                ? footerSlot!.children!.map((child) => <BootstrapRenderer key={child.id} component={child} />)
+                : (
+                  <>
+                    <button style={{ padding: "6px 16px", borderRadius: "6px", border: `1px solid ${BS.borderColor}`, background: BS.white, cursor: "pointer", fontSize: "0.9rem" }}>Close</button>
+                    <button style={{ padding: "6px 16px", borderRadius: "6px", background: BS.primary, color: BS.white, border: "none", cursor: "pointer", fontSize: "0.9rem" }}>{p.footer || "Save Changes"}</button>
+                  </>
+                )}
             </div>
           </div>
         </Wrapper>

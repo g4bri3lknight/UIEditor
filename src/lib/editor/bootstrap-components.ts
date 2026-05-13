@@ -2121,10 +2121,47 @@ export const COMPONENTS: BootstrapComponentDefinition[] = [
   },
 ];
 
+// ── Slot types (auto-managed, hidden from palette) ──
+const SLOT_DEFINITIONS: BootstrapComponentDefinition[] = [
+  {
+    type: "slot-card-header", label: "Card Header", category: "content",
+    icon: "Layers", description: "Card header slot", hidden: true,
+    properties: [],
+  },
+  {
+    type: "slot-card-body", label: "Card Body", category: "content",
+    icon: "Layers", description: "Card body slot", hidden: true,
+    properties: [],
+  },
+  {
+    type: "slot-card-footer", label: "Card Footer", category: "content",
+    icon: "Layers", description: "Card footer slot", hidden: true,
+    properties: [],
+  },
+  {
+    type: "slot-modal-header", label: "Modal Header", category: "content",
+    icon: "Layers", description: "Modal header slot", hidden: true,
+    properties: [],
+  },
+  {
+    type: "slot-modal-body", label: "Modal Body", category: "content",
+    icon: "Layers", description: "Modal body slot", hidden: true,
+    properties: [],
+  },
+  {
+    type: "slot-modal-footer", label: "Modal Footer", category: "content",
+    icon: "Layers", description: "Modal footer slot", hidden: true,
+    properties: [],
+  },
+];
+
+// Merge so getComponentByType can find slots too
+export const ALL_COMPONENTS = [...COMPONENTS, ...SLOT_DEFINITIONS];
+
 export function getComponentByType(
   type: string
 ): BootstrapComponentDefinition | undefined {
-  return COMPONENTS.find((c) => c.type === type);
+  return ALL_COMPONENTS.find((c) => c.type === type);
 }
 
 export function getComponentsByCategory(
