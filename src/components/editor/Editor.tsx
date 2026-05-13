@@ -123,7 +123,7 @@ function ResizeHandle({
       className={`group relative w-[5px] shrink-0 cursor-col-resize transition-colors duration-150
         ${side === "left" ? "border-r border-border" : "border-l border-border"}
         hover:bg-primary/20 active:bg-primary/30`}
-      title="Drag to resize"
+      title="Trascina per ridimensionare"
     >
       {/* Visible grip indicator on hover */}
       <div
@@ -359,7 +359,7 @@ export function Editor() {
     try {
       await navigator.clipboard.writeText(htmlCode);
       setCopied(true);
-      toast.success("Code copied to clipboard!");
+      toast.success("Codice copiato negli appunti!");
       setTimeout(() => setCopied(false), 2000);
     } catch {
       const textarea = document.createElement("textarea");
@@ -369,7 +369,7 @@ export function Editor() {
       document.execCommand("copy");
       document.body.removeChild(textarea);
       setCopied(true);
-      toast.success("Code copied to clipboard!");
+      toast.success("Codice copiato negli appunti!");
       setTimeout(() => setCopied(false), 2000);
     }
   };
@@ -382,7 +382,7 @@ export function Editor() {
     a.download = "bootstrap-page.html";
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("HTML file downloaded!");
+    toast.success("File HTML scaricato!");
   };
 
   const canUndo = historyIndex > 0;
@@ -460,7 +460,7 @@ export function Editor() {
               onClick={undo}
               disabled={!canUndo}
               className="h-8 px-2"
-              title="Undo (Ctrl+Z)"
+              title="Annulla (Ctrl+Z)"
             >
               <Undo2 className="w-4 h-4" />
             </Button>
@@ -470,7 +470,7 @@ export function Editor() {
               onClick={redo}
               disabled={!canRedo}
               className="h-8 px-2"
-              title="Redo (Ctrl+Y)"
+              title="Ripristina (Ctrl+Y)"
             >
               <Redo2 className="w-4 h-4" />
             </Button>
@@ -485,7 +485,7 @@ export function Editor() {
               className="h-8 px-2.5 gap-1.5"
             >
               <Eye className="w-3.5 h-3.5" />
-              <span className="text-xs">Preview</span>
+              <span className="text-xs">Anteprima</span>
             </Button>
             <Button
               variant="ghost"
@@ -506,7 +506,7 @@ export function Editor() {
               onClick={clearCanvas}
               disabled={components.length === 0}
               className="h-8 px-2 text-destructive hover:text-destructive"
-              title="Clear canvas"
+              title="Svuota canvas"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -529,11 +529,11 @@ export function Editor() {
           <div className="bg-card border border-primary/30 rounded-lg px-4 py-3 shadow-2xl shadow-primary/10 flex items-center gap-2 pointer-events-none">
             <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
             <span className="text-sm font-medium text-foreground">
-              {activeDragData.label || "Component"}
+              {activeDragData.label || "Componente"}
             </span>
             {activeDragData.fromPalette && (
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">
-                New
+                Nuovo
               </Badge>
             )}
           </div>
@@ -546,11 +546,11 @@ export function Editor() {
           <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Code className="w-5 h-5" />
-              Generated Bootstrap HTML
+              HTML Bootstrap generato
             </DialogTitle>
             <DialogDescription>
-              Copy the generated HTML code or download it as a file. Requires
-              Bootstrap 5.3.3 CSS and JS.
+              Copia il codice HTML generato o scaricalo come file. Richiede
+              Bootstrap 5.3.3 CSS e JS.
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center gap-2 shrink-0">
@@ -565,16 +565,16 @@ export function Editor() {
               ) : (
                 <Copy className="w-3.5 h-3.5" />
               )}
-              {copied ? "Copied!" : "Copy Code"}
+              {copied ? "Copiato!" : "Copia codice"}
             </Button>
             <Button variant="outline" size="sm" onClick={handleDownload} className="gap-1.5">
               <Download className="w-3.5 h-3.5" />
-              Download HTML
+              Scarica HTML
             </Button>
           </div>
           <ScrollArea className="flex-1 min-h-0">
             <pre className="bg-muted rounded-lg p-4 text-xs font-mono leading-relaxed whitespace-pre-wrap break-words">
-              {htmlCode || "<!-- No components on canvas -->"}
+              {htmlCode || "<!-- Nessun componente sulla canvas -->"}
             </pre>
           </ScrollArea>
         </DialogContent>
@@ -596,7 +596,7 @@ export function Editor() {
           <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/50 shrink-0">
             <DialogTitle className="text-sm font-medium flex items-center gap-2">
               <Eye className="w-4 h-4" />
-              Preview (Bootstrap 5.3.3)
+              Anteprima (Bootstrap 5.3.3)
               <span className="text-[11px] text-muted-foreground font-normal ml-1">
                 {previewSize.w} × {previewSize.h}
               </span>
@@ -606,7 +606,7 @@ export function Editor() {
               <button
                 onClick={() => applyPresetSize(375, 667)}
                 className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                title="Mobile (375×667)"
+                title="Cellulare (375×667)"
               >
                 <Smartphone className="w-3.5 h-3.5" />
               </button>
@@ -628,7 +628,7 @@ export function Editor() {
               <button
                 onClick={() => setPreviewDialogOpen(false)}
                 className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                title="Close"
+                title="Chiudi"
               >
                 <span className="text-base leading-none">✕</span>
               </button>

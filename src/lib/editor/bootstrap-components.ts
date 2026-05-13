@@ -4,14 +4,14 @@ import { BootstrapComponentDefinition, CategoryInfo } from "./types";
 
 export const CATEGORIES: CategoryInfo[] = [
   { id: "layout", label: "Layout", icon: "LayoutGrid" },
-  { id: "typography", label: "Typography", icon: "Type" },
-  { id: "forms", label: "Forms", icon: "FileInput" },
-  { id: "buttons", label: "Buttons", icon: "MousePointerClick" },
-  { id: "navigation", label: "Navigation", icon: "Navigation" },
-  { id: "content", label: "Content", icon: "Layers" },
-  { id: "tables", label: "Tables", icon: "Table" },
-  { id: "images", label: "Images & Media", icon: "Image" },
-  { id: "utilities", label: "Utilities", icon: "Wrench" },
+  { id: "typography", label: "Tipografia", icon: "Type" },
+  { id: "forms", label: "Form", icon: "FileInput" },
+  { id: "buttons", label: "Pulsanti", icon: "MousePointerClick" },
+  { id: "navigation", label: "Navigazione", icon: "Navigation" },
+  { id: "content", label: "Contenuto", icon: "Layers" },
+  { id: "tables", label: "Tabelle", icon: "Table" },
+  { id: "images", label: "Immagini & Media", icon: "Image" },
+  { id: "utilities", label: "Utilità", icon: "Wrench" },
 ];
 
 export const COMPONENTS: BootstrapComponentDefinition[] = [

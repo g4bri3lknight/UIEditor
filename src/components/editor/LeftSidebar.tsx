@@ -101,12 +101,12 @@ export function LeftSidebar({ width }: LeftSidebarProps) {
     >
       <div className="p-3 border-b border-border shrink-0">
         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">
-          Components
+          Componenti
         </h2>
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
-            placeholder="Search components..."
+            placeholder="Cerca componenti..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-8 h-8 text-xs bg-background"

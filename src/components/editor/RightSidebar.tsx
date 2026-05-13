@@ -164,7 +164,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
       >
         <div className="p-3 border-b border-border">
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Properties
+            Proprietà
           </h2>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center p-6">
@@ -175,7 +175,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
             </svg>
           </div>
           <p className="text-sm text-muted-foreground text-center">
-            Select a component on the canvas to edit its properties
+            Seleziona un componente sulla canvas per modificarne le proprietà
           </p>
         </div>
       </div>
@@ -185,7 +185,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
   // Group properties
   const propGroups: Record<string, PropertyDefinition[]> = {};
   componentDef.properties.forEach((prop) => {
-    const group = prop.group || "General";
+    const group = prop.group || "Generale";
     if (!propGroups[group]) propGroups[group] = [];
     propGroups[group].push(prop);
   });
@@ -199,7 +199,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
       <div className="p-3 border-b border-border shrink-0">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Properties
+            Proprietà
           </h2>
           <button
             onClick={() => selectComponent(null)}
@@ -222,7 +222,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
       {managed && (
         <div className="mx-3 mt-2 flex items-start gap-2 px-2.5 py-2 rounded-md bg-muted/60 text-[11px] text-muted-foreground">
           <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-muted-foreground/70" />
-          <span>This column is managed by its parent Row. Change the column count in the Row properties.</span>
+          <span>Questa colonna è gestita dalla Row genitore. Modifica il numero di colonne nelle proprietà della Row.</span>
         </div>
       )}
 
@@ -232,7 +232,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
           <button
             onClick={() => duplicateComponent(selectedComponent.id)}
             className="p-1.5 rounded hover:bg-muted transition-colors"
-            title="Duplicate"
+            title="Duplica"
           >
             <Copy className="w-3.5 h-3.5 text-muted-foreground" />
           </button>
@@ -240,7 +240,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
           <button
             onClick={() => removeComponent(selectedComponent.id)}
             className="p-1.5 rounded hover:bg-destructive/10 transition-colors"
-            title="Delete"
+            title="Elimina"
           >
             <Trash2 className="w-3.5 h-3.5 text-destructive" />
           </button>
