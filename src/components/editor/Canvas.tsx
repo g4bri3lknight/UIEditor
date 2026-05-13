@@ -2,13 +2,11 @@
 
 import React, { useCallback } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { useEditorStore, isContainer } from "@/store/editor-store";
+import { useEditorStore, isContainer, isAutoManaged } from "@/store/editor-store";
 import { BootstrapRenderer } from "./BootstrapRenderer";
-import { Trash2, Copy, ArrowUp, ArrowDown } from "lucide-react";
 import { CanvasComponent } from "@/lib/editor/types";
 
 // ── Drop indicator between items ──
-// Uses flex: 0 0 auto so it doesn't stretch in flex containers (rows)
 function DropIndicator({
   id,
   isActive,
@@ -52,19 +50,14 @@ function CanvasItem({
   isDragging: boolean;
   depth?: number;
 }) {
-  const {
-    selectedId,
-    selectComponent,
-    removeComponent,
-    duplicateComponent,
-    moveWithinParent,
-  } = useEditorStore();
+  const { selectedId, selectComponent } = useEditorStore();
 
   const isSelected = selectedId === component.id;
   const canContain = isContainer(component.type);
   const hasChildren = canContain && component.children && component.children.length > 0;
+  const managed = isAutoManaged(component.type);
 
-  // ── Draggable ──
+  // ── Draggable (disabled for auto-managed types like col) ──
   const {
     attributes,
     listeners,
@@ -73,6 +66,7 @@ function CanvasItem({
   } = useDraggable({
     id: component.id,
     data: { type: "canvas-item", componentId: component.id },
+    disabled: managed,
   });
 
   // ── Droppable (for container types) ──
@@ -94,14 +88,9 @@ function CanvasItem({
 
   // Col components need explicit flex-basis to size correctly inside flex rows
   if (component.type === "col") {
-    const colSize = Number(String(component.props.size)) || 12;
-    const isAuto = String(component.props.size) === "auto";
-    if (isAuto) {
-      dragStyle.flex = "1 1 0%";
-    } else {
-      dragStyle.flex = `0 0 ${(colSize / 12) * 100}%`;
-      dragStyle.maxWidth = `${(colSize / 12) * 100}%`;
-    }
+    // Cols inside a row should be equal width
+    dragStyle.flex = "1 1 0%";
+    dragStyle.minWidth = "0";
   }
 
   const handleSelect = useCallback(
@@ -120,9 +109,7 @@ function CanvasItem({
     [setDragRef, setDropRef]
   );
 
-  // ── Children rendered as CanvasItems (recursive) ──
-  // Use React.Fragment (no wrapper div) so children participate directly
-  // in the parent's flex layout (e.g. cols inside a row)
+  // ── Children rendered as CanvasItems (recursive, no wrapper div) ──
   const childrenContent = hasChildren ? (
     <>
       {component.children!.map((child, i) => (
@@ -145,7 +132,6 @@ function CanvasItem({
           />
         </React.Fragment>
       ))}
-      {/* Drop indicator at bottom of container when dragging */}
       {isDragging && (
         <DropIndicator
           id={`bottom-${component.id}`}
@@ -157,7 +143,6 @@ function CanvasItem({
 
   return (
     <>
-      {/* Drop indicator before this item */}
       <DropIndicator
         id={parentId ? `before-${component.id}-${parentId}` : `before-${component.id}`}
         isActive={false}
@@ -179,71 +164,10 @@ function CanvasItem({
         {...attributes}
         {...listeners}
       >
-        {/* Action bar */}
-        <div
-          className={`absolute top-1 right-1 z-20 flex items-center gap-0.5 rounded-md shadow-sm border border-border bg-background/95 backdrop-blur-sm overflow-hidden transition-opacity duration-150 ${
-            isSelected
-              ? "opacity-100"
-              : "opacity-0 group-hover/canvas-item:opacity-100"
-          }`}
-          style={{ touchAction: "auto" }}
-        >
-          {parentId !== null && (
-            <>
-              <button
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  moveWithinParent(component.id, "up");
-                }}
-                disabled={index <= 0}
-                className="p-1.5 hover:bg-muted transition-colors disabled:opacity-30"
-                title="Move up"
-              >
-                <ArrowUp className="w-3.5 h-3.5 text-muted-foreground" />
-              </button>
-              <button
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  moveWithinParent(component.id, "down");
-                }}
-                disabled={index >= siblings.length - 1}
-                className="p-1.5 hover:bg-muted transition-colors disabled:opacity-30"
-                title="Move down"
-              >
-                <ArrowDown className="w-3.5 h-3.5 text-muted-foreground" />
-              </button>
-            </>
-          )}
-          <button
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              duplicateComponent(component.id);
-            }}
-            className="p-1.5 hover:bg-muted transition-colors"
-            title="Duplicate"
-          >
-            <Copy className="w-3.5 h-3.5 text-muted-foreground" />
-          </button>
-          <button
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              removeComponent(component.id);
-            }}
-            className="p-1.5 hover:bg-destructive/10 transition-colors"
-            title="Delete"
-          >
-            <Trash2 className="w-3.5 h-3.5 text-destructive" />
-          </button>
-        </div>
-
         {/* Selection label */}
         {isSelected && (
           <div className="absolute -top-1.5 left-2 bg-primary text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-t-md z-10 leading-tight">
-            {component.label}
+            {managed ? `Column ${index + 1}` : component.label}
           </div>
         )}
 
@@ -261,13 +185,11 @@ function CanvasItem({
         {/* Rendered component content */}
         <div className="relative z-[1]" style={{ padding: canContain ? "0" : "6px 4px" }}>
           {canContain ? (
-            // Container: render visual shell + child CanvasItems
             <BootstrapRenderer
               component={component}
               renderChildren={childrenContent}
             />
           ) : (
-            // Leaf: render visual with pointer-events-none
             <div className="pointer-events-none">
               <BootstrapRenderer component={component} />
             </div>
@@ -275,7 +197,6 @@ function CanvasItem({
         </div>
       </div>
 
-      {/* Drop indicator after this item */}
       <DropIndicator
         id={parentId ? `after-${component.id}-${parentId}` : `after-${component.id}`}
         isActive={false}
@@ -342,7 +263,6 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
             <EmptyCanvas isOver={isOver && isDragging} />
           ) : (
             <div className="space-y-0">
-              {/* Drop indicator at the very top */}
               <DropIndicator
                 id="top-drop"
                 isActive={isOver && isDragging && components.length > 0}
@@ -360,7 +280,6 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
                 />
               ))}
 
-              {/* Drop indicator at the very bottom */}
               <DropIndicator
                 id="bottom-drop"
                 isActive={isOver && isDragging && components.length > 0}

@@ -128,12 +128,10 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
     }
 
     case "col": {
-      const size = Number(p.size) || 12;
-      const isAuto = String(p.size) === "auto";
       const hasChildren = component.children && component.children.length > 0;
       return (
         <Wrapper style={{
-          // Width is 100% — actual sizing is handled by the CanvasItem wrapper's flex-basis
+          // Width is 100% — sizing handled by CanvasItem flex-basis
           width: "100%",
           background: BS_BG[String(p.bgColor)] || BS.light,
           color: BS_TEXT[String(p.textColor)] || BS.body,
@@ -141,7 +139,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
           borderRadius: "4px",
           minHeight: "50px",
           boxSizing: "border-box",
-          flex: isAuto ? "1 1 0%" : undefined,
+          flex: "1 1 0%",
         }}>
           {renderChildren ?? (hasChildren ? (
             component.children!.map((child) => (
@@ -149,7 +147,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
             ))
           ) : (
             <span style={{ fontSize: "12px", color: BS.muted }}>
-              {isAuto ? "Col-auto" : `Col-${size}`}
+              Drop here
             </span>
           ))}
         </Wrapper>
@@ -420,7 +418,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
         <Wrapper style={{ padding: "4px" }}>
           <div style={{ display: "flex", alignItems: "stretch" }}>
             {p.prepend && (
-              <span style={{ display: "flex", alignItems: "center", padding: "8px 12px", background: BS.light, border: `1px solid ${BS.borderColor}`, borderRight: "none", borderRadius: "6px 0 0 6px", fontSize: "0.875rem", color: BS.body, minWidth: "40px", justifyContent: "center" }}>
+              <span style={{ display: "flex", alignItems: "center", padding: "8px 12px", background: BS.light, borderWidth: "1px", borderStyle: "solid", borderColor: BS.borderColor, borderRightStyle: "none", borderRadius: "6px 0 0 6px", fontSize: "0.875rem", color: BS.body, minWidth: "40px", justifyContent: "center" }}>
                 {p.prepend}
               </span>
             )}
@@ -435,7 +433,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
               }}
             />
             {p.append && (
-              <span style={{ display: "flex", alignItems: "center", padding: "8px 12px", background: BS.light, border: `1px solid ${BS.borderColor}`, borderLeft: "none", borderRadius: "0 6px 6px 0", fontSize: "0.875rem", color: BS.body, minWidth: "40px", justifyContent: "center" }}>
+              <span style={{ display: "flex", alignItems: "center", padding: "8px 12px", background: BS.light, borderWidth: "1px", borderStyle: "solid", borderColor: BS.borderColor, borderLeftStyle: "none", borderRadius: "0 6px 6px 0", fontSize: "0.875rem", color: BS.body, minWidth: "40px", justifyContent: "center" }}>
                 {p.append}
               </span>
             )}
@@ -460,7 +458,6 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
             width: p.block ? "100%" : undefined,
             opacity: p.disabled ? 0.65 : 1,
             display: "inline-flex", alignItems: "center", justifyContent: "center",
-            border: btnStyle.border,
             fontWeight: 400,
           }}>
             {p.text || "Button"}
@@ -484,8 +481,8 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
               <button key={i} style={{
                 ...btnStyle,
                 padding: "6px 16px", fontSize: "1rem", fontWeight: 400,
-                borderRight: !vertical && i < buttons.length - 1 ? "none" : btnStyle.border,
-                borderBottom: vertical && i < buttons.length - 1 ? "none" : btnStyle.border,
+                borderRightStyle: !vertical && i < buttons.length - 1 ? "none" : undefined,
+                borderBottomStyle: vertical && i < buttons.length - 1 ? "none" : undefined,
                 cursor: "pointer",
                 borderRadius: vertical
                   ? i === 0 ? "6px 6px 0 0" : i === buttons.length - 1 ? "0 0 6px 6px" : 0
@@ -539,12 +536,21 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
             {items.map((item, i) => (
               <button key={i} style={{
                 padding: "8px 16px", background: "transparent",
-                border: style === "tabs"
-                  ? `1px solid ${i === active ? "transparent transparent" + " " + BS.borderColor + " transparent" : "transparent"}`
-                  : style === "underline"
-                    ? `none ${i === active ? `2px solid ${BS.primary}` : `2px solid transparent`} none`
-                    : "none",
-                borderBottom: style === "underline" ? i === active ? `2px solid ${BS.primary}` : "2px solid transparent" : undefined,
+                ...(style === "tabs" ? {
+                  borderWidth: "1px",
+                  borderStyle: "solid",
+                  borderColor: "transparent",
+                  borderRightColor: i === active ? BS.borderColor : "transparent",
+                  borderLeftColor: i === active ? BS.borderColor : "transparent",
+                } : style === "underline" ? {
+                  borderWidth: "0",
+                  borderBottomWidth: "2px",
+                  borderBottomStyle: "solid",
+                  borderBottomColor: i === active ? BS.primary : "transparent",
+                } : {
+                  borderWidth: "0",
+                  borderStyle: "none",
+                }),
                 borderRadius: style === "pills" ? "20px" : style === "tabs" ? "6px 6px 0 0" : "6px",
                 color: i === active ? BS.primary : BS.muted,
                 fontWeight: i === active ? 600 : 400,
@@ -592,7 +598,6 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
               <button key={i} style={{
                 ...pageBtnStyle(i + 1 === active),
                 background: i + 1 === active ? BS.primary : BS.white,
-                borderColor: i + 1 === active ? BS.primary : BS.borderColor,
               }}>
                 {i + 1}
               </button>
@@ -609,10 +614,10 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const btnStyle = getButtonStyle(variant, false);
       return (
         <Wrapper style={{ padding: "4px" }}>
-          <button style={{ ...btnStyle, padding: "6px 16px", borderRadius: "6px 0 0 6px", cursor: "pointer", fontSize: "1rem", border: btnStyle.border, fontWeight: 400 }}>
+          <button style={{ ...btnStyle, padding: "6px 16px", borderRadius: "6px 0 0 6px", cursor: "pointer", fontSize: "1rem", fontWeight: 400 }}>
             {p.label || "Dropdown"} <span style={{ marginLeft: "4px" }}>▾</span>
           </button>
-          <div style={{ border: `1px solid ${BS.borderColor}`, borderTop: "none", borderRadius: "0 0 6px 6px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", display: "inline-block", minWidth: "180px" }}>
+          <div style={{ borderWidth: "1px", borderStyle: "solid", borderColor: BS.borderColor, borderTopStyle: "none", borderRadius: "0 0 6px 6px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", display: "inline-block", minWidth: "180px" }}>
             {items.map((item, i) => item.trim() === "---" ? (
               <div key={i} style={{ borderTop: `1px solid ${BS.borderColor}`, margin: "4px 0" }} />
             ) : (
@@ -800,7 +805,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
             <div style={{ width: size, height: size, background: color, borderRadius: "50%", animation: "bs-grow 0.75s linear infinite" }} />
           ) : (
             <div style={{
-              width: size, height: size, border: `${isSmall ? "2px" : "3px"} solid ${BS.borderColor}`,
+              width: size, height: size, borderWidth: isSmall ? "2px" : "3px", borderStyle: "solid", borderColor: BS.borderColor,
               borderTopColor: color, borderRadius: "50%", animation: "bs-spin 0.75s linear infinite",
             }} />
           )}
@@ -973,7 +978,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
           <div style={{ overflowX: "auto" }}>
             <table style={{
               width: "100%", borderCollapse: "collapse", fontSize: "0.9375rem",
-              border: p.bordered ? `1px solid ${BS.borderColor}` : undefined,
+              ...(p.bordered ? { borderWidth: "1px", borderStyle: "solid", borderColor: p.borderColor ? BS[String(p.borderColor)] : BS.borderColor } : {}),
             }}>
               <thead>
                 <tr style={{
@@ -982,10 +987,12 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
                   {headers.map((h, i) => (
                     <th key={i} style={{
                       padding: p.condensed ? "6px 12px" : "12px 16px",
-                      border: p.bordered ? `1px solid ${BS.borderColor}` : undefined,
-                      borderBottom: `2px solid ${BS.borderColor}`,
+                      ...(p.bordered ? { borderWidth: "1px", borderStyle: "solid" } : {}),
+                      borderBottomWidth: "2px",
+                      borderBottomStyle: "solid",
+                      borderBottomColor: BS.borderColor,
                       fontWeight: 600, textAlign: "left", color: BS.body,
-                      borderColor: p.borderColor ? BS[String(p.borderColor)] : undefined,
+                      borderColor: p.borderColor ? BS[String(p.borderColor)] : (p.bordered ? BS.borderColor : undefined),
                     }}>
                       {h}
                     </th>
@@ -1002,8 +1009,8 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
                     {row.map((cell, ci) => (
                       <td key={ci} style={{
                         padding: p.condensed ? "6px 12px" : "12px 16px",
-                        border: p.bordered ? `1px solid ${BS.borderColor}` : undefined,
-                        borderColor: p.borderColor ? BS[String(p.borderColor)] : undefined,
+                        ...(p.bordered ? { borderWidth: "1px", borderStyle: "solid" } : {}),
+                        borderColor: p.borderColor ? BS[String(p.borderColor)] : (p.bordered ? BS.borderColor : undefined),
                       }}>
                         {ci === 0 ? <strong>{cell}</strong> : cell}
                       </td>
@@ -1129,27 +1136,32 @@ function getButtonStyle(variant: string, isOutline: boolean): React.CSSPropertie
     return {
       background: "transparent",
       color,
-      border: `1px solid ${color}`,
+      borderWidth: "1px",
+      borderStyle: "solid",
+      borderColor: color,
     };
   }
 
   const styles: Record<string, React.CSSProperties> = {
-    primary: { background: BS.primary, color: BS.white, border: `1px solid ${BS.primary}` },
-    secondary: { background: BS.secondary, color: BS.white, border: `1px solid ${BS.secondary}` },
-    success: { background: BS.success, color: BS.white, border: `1px solid ${BS.success}` },
-    danger: { background: BS.danger, color: BS.white, border: `1px solid ${BS.danger}` },
-    warning: { background: BS.warning, color: BS.dark, border: `1px solid ${BS.warning}` },
-    info: { background: BS.info, color: BS.dark, border: `1px solid ${BS.info}` },
-    light: { background: BS.light, color: BS.dark, border: `1px solid ${BS.borderColor}` },
-    dark: { background: BS.dark, color: BS.white, border: `1px solid ${BS.dark}` },
-    link: { background: "transparent", color: BS.primary, border: "none", textDecoration: "underline" },
+    primary: { background: BS.primary, color: BS.white, borderWidth: "1px", borderStyle: "solid", borderColor: BS.primary },
+    secondary: { background: BS.secondary, color: BS.white, borderWidth: "1px", borderStyle: "solid", borderColor: BS.secondary },
+    success: { background: BS.success, color: BS.white, borderWidth: "1px", borderStyle: "solid", borderColor: BS.success },
+    danger: { background: BS.danger, color: BS.white, borderWidth: "1px", borderStyle: "solid", borderColor: BS.danger },
+    warning: { background: BS.warning, color: BS.dark, borderWidth: "1px", borderStyle: "solid", borderColor: BS.warning },
+    info: { background: BS.info, color: BS.dark, borderWidth: "1px", borderStyle: "solid", borderColor: BS.info },
+    light: { background: BS.light, color: BS.dark, borderWidth: "1px", borderStyle: "solid", borderColor: BS.borderColor },
+    dark: { background: BS.dark, color: BS.white, borderWidth: "1px", borderStyle: "solid", borderColor: BS.dark },
+    link: { background: "transparent", color: BS.primary, borderWidth: "0", borderStyle: "none", textDecoration: "underline" },
   };
   return styles[variant] || styles.primary;
 }
 
 function pageBtnStyle(active: boolean): React.CSSProperties {
   return {
-    padding: "6px 12px", border: `1px solid ${active ? BS.primary : BS.borderColor}`,
+    padding: "6px 12px",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: active ? BS.primary : BS.borderColor,
     background: active ? BS.primary : BS.white, color: active ? BS.white : BS.primary,
     borderRadius: "6px", cursor: "pointer", fontSize: "0.875rem", fontWeight: 400,
   };

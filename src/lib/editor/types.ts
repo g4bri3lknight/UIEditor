@@ -44,6 +44,7 @@ export interface BootstrapComponentDefinition {
   description: string;
   properties: PropertyDefinition[];
   defaultSize?: { w: number; h: number };
+  hidden?: boolean;
 }
 
 export interface CanvasComponent {

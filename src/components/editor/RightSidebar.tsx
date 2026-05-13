@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useEditorStore } from "@/store/editor-store";
+import { useEditorStore, isAutoManaged } from "@/store/editor-store";
 import { getComponentByType } from "@/lib/editor/bootstrap-components";
 import { PropertyDefinition } from "@/lib/editor/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { X, Trash2, Copy, ArrowUp, ArrowDown } from "lucide-react";
+import { X, Trash2, Copy, Info } from "lucide-react";
 
 function PropertyField({
   prop,
@@ -133,7 +133,11 @@ function PropertyField({
   }
 }
 
-export function RightSidebar() {
+interface RightSidebarProps {
+  width: number;
+}
+
+export function RightSidebar({ width }: RightSidebarProps) {
   const {
     selectedId,
     updateComponentProps,
@@ -142,24 +146,22 @@ export function RightSidebar() {
     selectComponent,
     findComponent,
     getParentInfo,
-    moveWithinParent,
   } = useEditorStore();
 
-  // Recursive find — works for nested components (e.g. col inside row)
   const selectedComponent = selectedId ? findComponent(selectedId) ?? undefined : undefined;
-
-  // Get parent info for move operations
-  const parentInfo = selectedId ? getParentInfo(selectedId) : null;
-  const selectedIndex = parentInfo?.index ?? -1;
-  const siblingsCount = parentInfo?.siblings.length ?? 0;
 
   const componentDef = selectedComponent
     ? getComponentByType(selectedComponent.type)
     : null;
 
+  const managed = selectedComponent ? isAutoManaged(selectedComponent.type) : false;
+
   if (!selectedComponent || !componentDef) {
     return (
-      <div className="w-72 border-l border-border bg-card flex flex-col h-full shrink-0">
+      <div
+        className="border-l border-border bg-card flex flex-col h-full shrink-0 overflow-hidden"
+        style={{ width: `${width}px` }}
+      >
         <div className="p-3 border-b border-border">
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Properties
@@ -189,9 +191,12 @@ export function RightSidebar() {
   });
 
   return (
-    <div className="w-72 border-l border-border bg-card flex flex-col h-full shrink-0">
+    <div
+      className="border-l border-border bg-card flex flex-col h-full shrink-0 overflow-hidden"
+      style={{ width: `${width}px` }}
+    >
       {/* Header */}
-      <div className="p-3 border-b border-border">
+      <div className="p-3 border-b border-border shrink-0">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Properties
@@ -213,43 +218,37 @@ export function RightSidebar() {
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-1 px-3 py-2 border-b border-border">
-        <button
-          onClick={() => selectedId && moveWithinParent(selectedId, "up")}
-          disabled={selectedIndex <= 0}
-          className="p-1.5 rounded hover:bg-muted transition-colors disabled:opacity-30"
-          title="Move up"
-        >
-          <ArrowUp className="w-3.5 h-3.5 text-muted-foreground" />
-        </button>
-        <button
-          onClick={() => selectedId && moveWithinParent(selectedId, "down")}
-          disabled={selectedIndex >= siblingsCount - 1}
-          className="p-1.5 rounded hover:bg-muted transition-colors disabled:opacity-30"
-          title="Move down"
-        >
-          <ArrowDown className="w-3.5 h-3.5 text-muted-foreground" />
-        </button>
-        <button
-          onClick={() => duplicateComponent(selectedComponent.id)}
-          className="p-1.5 rounded hover:bg-muted transition-colors"
-          title="Duplicate"
-        >
-          <Copy className="w-3.5 h-3.5 text-muted-foreground" />
-        </button>
-        <div className="flex-1" />
-        <button
-          onClick={() => removeComponent(selectedComponent.id)}
-          className="p-1.5 rounded hover:bg-destructive/10 transition-colors"
-          title="Delete"
-        >
-          <Trash2 className="w-3.5 h-3.5 text-destructive" />
-        </button>
-      </div>
+      {/* Auto-managed info for columns */}
+      {managed && (
+        <div className="mx-3 mt-2 flex items-start gap-2 px-2.5 py-2 rounded-md bg-muted/60 text-[11px] text-muted-foreground">
+          <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-muted-foreground/70" />
+          <span>This column is managed by its parent Row. Change the column count in the Row properties.</span>
+        </div>
+      )}
+
+      {/* Actions — only for non-managed components */}
+      {!managed && (
+        <div className="flex items-center gap-1 px-3 py-2 border-b border-border shrink-0">
+          <button
+            onClick={() => duplicateComponent(selectedComponent.id)}
+            className="p-1.5 rounded hover:bg-muted transition-colors"
+            title="Duplicate"
+          >
+            <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+          </button>
+          <div className="flex-1" />
+          <button
+            onClick={() => removeComponent(selectedComponent.id)}
+            className="p-1.5 rounded hover:bg-destructive/10 transition-colors"
+            title="Delete"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+          </button>
+        </div>
+      )}
 
       {/* Property Fields */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-3 space-y-3">
           {Object.entries(propGroups).map(([groupName, props]) => (
             <div key={groupName}>

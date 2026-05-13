@@ -43,6 +43,107 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+// ── Sidebar resize hook ──
+function useSidebarResize(
+  storageKey: string,
+  defaultWidth: number,
+  minWidth: number,
+  maxWidth: number,
+  direction: "left" | "right" = "left"
+) {
+  const [width, setWidth] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = Number(saved);
+        if (parsed >= minWidth && parsed <= maxWidth) return parsed;
+      }
+    }
+    return defaultWidth;
+  });
+
+  const isResizing = useRef(false);
+  const startX = useRef(0);
+  const startWidth = useRef(0);
+
+  const startResize = useCallback(
+    (e: React.PointerEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      isResizing.current = true;
+      startX.current = e.clientX;
+      startWidth.current = width;
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+
+      const onMove = (ev: PointerEvent) => {
+        if (!isResizing.current) return;
+        const dx = ev.clientX - startX.current;
+        // Right sidebar: dragging left (negative dx) should INCREASE width
+        const newW = Math.max(
+          minWidth,
+          Math.min(
+            startWidth.current + (direction === "right" ? -dx : dx),
+            maxWidth
+          )
+        );
+        setWidth(newW);
+      };
+
+      const onUp = () => {
+        isResizing.current = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        document.removeEventListener("pointermove", onMove);
+        document.removeEventListener("pointerup", onUp);
+        localStorage.setItem(storageKey, String(width));
+      };
+
+      document.addEventListener("pointermove", onMove);
+      document.addEventListener("pointerup", onUp);
+    },
+    [width, minWidth, maxWidth, storageKey, direction]
+  );
+
+  return { width, startResize };
+}
+
+// ── Resize handle component ──
+function ResizeHandle({
+  onPointerDown,
+  side,
+}: {
+  onPointerDown: (e: React.PointerEvent) => void;
+  side: "left" | "right";
+}) {
+  return (
+    <div
+      onPointerDown={onPointerDown}
+      className={`group relative w-[5px] shrink-0 cursor-col-resize transition-colors duration-150
+        ${side === "left" ? "border-r border-border" : "border-l border-border"}
+        hover:bg-primary/20 active:bg-primary/30`}
+      title="Drag to resize"
+    >
+      {/* Visible grip indicator on hover */}
+      <div
+        className={`absolute top-1/2 -translate-y-1/2 ${
+          side === "left" ? "right-0" : "left-0"
+        } translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none`}
+      >
+        <div className="flex flex-col gap-[2px] py-3 px-[2px]">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="w-[3px] h-[3px] rounded-full bg-primary/60"
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Editor() {
   const {
     components,
@@ -65,6 +166,10 @@ export function Editor() {
     label?: string;
   } | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // ── Sidebar resizing ──
+  const leftSidebar = useSidebarResize("editor-left-width", 256, 180, 400);
+  const rightSidebar = useSidebarResize("editor-right-width", 288, 200, 500, "right");
 
   // ── Preview dialog resizing ──
   const previewSizeRef = useRef({ w: 1024, h: 680 });
@@ -160,7 +265,13 @@ export function Editor() {
         // Dropped ON a container → add as child of that container
         if (overId.startsWith("container-")) {
           const parentId = overId.replace("container-", "");
-          addComponent(type, parentId);
+          const parentComp = useEditorStore.getState().findComponent(parentId);
+          // If dropping on a row, redirect to its first column
+          if (parentComp?.type === "row" && parentComp.children && parentComp.children.length > 0) {
+            addComponent(type, parentComp.children[0].id);
+          } else {
+            addComponent(type, parentId);
+          }
           return;
         }
 
@@ -205,7 +316,13 @@ export function Editor() {
           const newParentId = overId.replace("container-", "");
           // Don't move into self
           if (newParentId !== activeId) {
-            useEditorStore.getState().moveComponentInTree(activeId, newParentId);
+            const parentComp = useEditorStore.getState().findComponent(newParentId);
+            // If dropping on a row, redirect to its first column
+            if (parentComp?.type === "row" && parentComp.children && parentComp.children.length > 0) {
+              useEditorStore.getState().moveComponentInTree(activeId, parentComp.children[0].id);
+            } else {
+              useEditorStore.getState().moveComponentInTree(activeId, newParentId);
+            }
           }
           return;
         }
@@ -331,7 +448,7 @@ export function Editor() {
                 Bootstrap Editor
               </span>
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
-                v5.3
+                Bootstrap 5.3
               </Badge>
             </div>
           </div>
@@ -396,11 +513,13 @@ export function Editor() {
           </div>
         </header>
 
-        {/* Main Content */}
+        {/* Main Content — Resizable Sidebars */}
         <div className="flex-1 flex overflow-hidden">
-          <LeftSidebar />
+          <LeftSidebar width={leftSidebar.width} />
+          <ResizeHandle onPointerDown={leftSidebar.startResize} side="left" />
           <Canvas activeDragId={activeDragId} />
-          <RightSidebar />
+          <ResizeHandle onPointerDown={rightSidebar.startResize} side="right" />
+          <RightSidebar width={rightSidebar.width} />
         </div>
       </div>
 

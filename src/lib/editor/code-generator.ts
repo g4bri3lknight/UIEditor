@@ -110,8 +110,6 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
 
     case "col": {
       let cls = "col";
-      if (p.size && p.size !== "auto") cls = `col-${p.size}`;
-      else if (p.size === "auto") cls = "col";
       if (p.bgColor && p.bgColor !== "transparent") cls += ` bg-${p.bgColor}`;
       if (p.textColor && p.textColor !== "dark") cls += ` text-${p.textColor}`;
       if (p.padding && p.padding !== "0") cls += ` p-${p.padding}`;

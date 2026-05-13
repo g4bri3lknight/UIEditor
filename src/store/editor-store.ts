@@ -17,15 +17,33 @@ function getDefaultProps(type: string): Record<string, string | boolean | number
   return props;
 }
 
+function createCol(): CanvasComponent {
+  return {
+    id: generateId(),
+    type: "col",
+    label: "Column",
+    props: { bgColor: "light", padding: "3", textColor: "dark" },
+    children: [],
+  };
+}
+
 function newComponent(type: string): CanvasComponent {
   const def = getComponentByType(type);
-  return {
+  const comp: CanvasComponent = {
     id: generateId(),
     type,
     label: def?.label || type,
     props: getDefaultProps(type),
     children: isContainer(type) ? [] : undefined,
   };
+
+  // Auto-create columns for rows
+  if (type === "row") {
+    const numCols = Number(comp.props.cols) || 3;
+    comp.children = Array.from({ length: numCols }, () => createCol());
+  }
+
+  return comp;
 }
 
 // Layout types that can hold children
@@ -33,6 +51,11 @@ export const CONTAINER_TYPES = new Set(["container", "row", "col"]);
 
 export function isContainer(type: string): boolean {
   return CONTAINER_TYPES.has(type);
+}
+
+// Auto-managed types cannot be independently dragged or deleted
+export function isAutoManaged(type: string): boolean {
+  return type === "col";
 }
 
 // ── Recursive tree helpers ──
@@ -139,15 +162,6 @@ function duplicateWithNewIds(comp: CanvasComponent): CanvasComponent {
   };
 }
 
-function reassignIds(comp: CanvasComponent): CanvasComponent {
-  return {
-    ...comp,
-    id: generateId(),
-    children: comp.children?.map(reassignIds),
-  };
-}
-
-// Flatten tree to list of all IDs (for drag-over detection)
 function collectContainerIds(list: CanvasComponent[]): string[] {
   const ids: string[] = [];
   for (const c of list) {
@@ -155,6 +169,32 @@ function collectContainerIds(list: CanvasComponent[]): string[] {
     if (c.children) ids.push(...collectContainerIds(c.children));
   }
   return ids;
+}
+
+// ── Sync row children to match cols count ──
+function syncRowChildrenById(list: CanvasComponent[], targetId: string): CanvasComponent[] {
+  return list.map((c) => {
+    if (c.id === targetId && c.type === "row") {
+      const targetCount = Number(c.props.cols) || 3;
+      const current = c.children || [];
+
+      let newChildren: CanvasComponent[];
+      if (current.length <= targetCount) {
+        newChildren = [...current];
+        for (let i = current.length; i < targetCount; i++) {
+          newChildren.push(createCol());
+        }
+      } else {
+        newChildren = current.slice(0, targetCount);
+      }
+
+      return { ...c, children: newChildren };
+    }
+    if (c.children) {
+      return { ...c, children: syncRowChildrenById(c.children, targetId) };
+    }
+    return c;
+  });
 }
 
 // ── Store ──
@@ -186,7 +226,6 @@ interface EditorState {
   getContainerIds: () => string[];
   findComponent: (id: string) => CanvasComponent | null;
   getParentInfo: (id: string) => ParentInfo | null;
-  moveWithinParent: (id: string, direction: "up" | "down") => void;
 }
 
 export const useEditorStore = create<EditorState>((set, get) => {
@@ -213,6 +252,10 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
 
     removeComponent: (id) => {
+      // Don't allow removing auto-managed components
+      const comp = findById(get().components, id);
+      if (comp && isAutoManaged(comp.type)) return;
+
       pushHistory();
       const { components, selectedId } = get();
       set({
@@ -231,20 +274,23 @@ export const useEditorStore = create<EditorState>((set, get) => {
     },
 
     moveComponentInTree: (compId, newParentId, index) => {
+      // Don't allow moving auto-managed components
+      const comp = findById(get().components, compId);
+      if (comp && isAutoManaged(comp.type)) return;
+
       pushHistory();
       const { components } = get();
-
-      // First, remove the component from wherever it is
       const flatList = removeById(components, compId);
-      // Then re-insert at new location
       const removed = findById(components, compId);
       if (!removed) return;
-
       const updated = insertChild(flatList, newParentId, removed, index);
       set({ components: updated });
     },
 
     duplicateComponent: (id) => {
+      const comp = findById(get().components, id);
+      if (comp && isAutoManaged(comp.type)) return;
+
       pushHistory();
       const { components } = get();
       const deepCopy = deepClone(components);
@@ -263,7 +309,14 @@ export const useEditorStore = create<EditorState>((set, get) => {
     updateComponentProps: (id, props) => {
       pushHistory();
       const { components } = get();
-      set({ components: updatePropsById(components, id, props) });
+      let updated = updatePropsById(components, id, props);
+
+      // If updating a row's columns count, sync children
+      if (props.cols !== undefined) {
+        updated = syncRowChildrenById(updated, id);
+      }
+
+      set({ components: updated });
     },
 
     clearCanvas: () => {
@@ -312,19 +365,6 @@ export const useEditorStore = create<EditorState>((set, get) => {
     getParentInfo: (id) => {
       const { components } = get();
       return findParentInfo(components, id);
-    },
-
-    moveWithinParent: (id, direction) => {
-      pushHistory();
-      const { components } = get();
-      const result = findParentInfo(components, id);
-      if (!result) return;
-      const { parentId, index, siblings } = result;
-      const newIndex = direction === "up" ? index - 1 : index + 1;
-      if (newIndex < 0 || newIndex >= siblings.length) return;
-      const [moved] = siblings.splice(index, 1);
-      siblings.splice(newIndex, 0, moved);
-      set({ components: deepClone(components) });
     },
   };
 });
