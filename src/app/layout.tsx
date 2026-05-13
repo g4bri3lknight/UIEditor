@@ -14,19 +14,24 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Bootstrap GUI Editor - Visual Interface Builder",
-  description: "A drag-and-drop Bootstrap 5 GUI editor. Build beautiful Bootstrap interfaces visually, then export clean HTML code.",
-  keywords: ["Bootstrap", "GUI Editor", "Drag and Drop", "Visual Builder", "HTML", "CSS", "Web Design"],
+  title: "Z.ai Code Scaffold - AI-Powered Development",
+  description: "Modern Next.js scaffold optimized for AI-powered development with Z.ai. Built with TypeScript, Tailwind CSS, and shadcn/ui.",
+  keywords: ["Z.ai", "Next.js", "TypeScript", "Tailwind CSS", "shadcn/ui", "AI development", "React"],
   authors: [{ name: "Z.ai Team" }],
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
   openGraph: {
-    title: "Bootstrap GUI Editor",
-    description: "Build Bootstrap interfaces visually with drag-and-drop",
+    title: "Z.ai Code Scaffold",
+    description: "AI-powered development with modern React stack",
     url: "https://chat.z.ai",
     siteName: "Z.ai",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Z.ai Code Scaffold",
+    description: "AI-powered development with modern React stack",
   },
 };
 

@@ -18,6 +18,7 @@ const BS = {
   body: "#212529",
   bodyBg: "#ffffff",
   borderColor: "#dee2e6",
+  gray: "#adb5bd",
 };
 
 const BS_TEXT: Record<string, string> = {
@@ -352,13 +353,17 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
     }
 
     case "select-input": {
+      const selectSize = String(p.size || "");
+      const isSmall = selectSize === "sm";
+      const isLarge = selectSize === "lg";
       return (
         <Wrapper style={{ padding: "4px" }}>
           {p.label && <label style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem" }}>{p.label}</label>}
-          <select disabled={!!p.disabled} style={{
-            width: "100%", padding: "8px 12px", border: `1px solid ${BS.borderColor}`,
-            borderRadius: "6px", background: BS.white, fontSize: "1rem", boxSizing: "border-box",
+          <select disabled={!!p.disabled} multiple={!!p.multiple} style={{
+            width: "100%", padding: isSmall ? "4px 8px" : isLarge ? "10px 14px" : "8px 12px", border: `1px solid ${BS.borderColor}`,
+            borderRadius: "6px", background: BS.white, fontSize: isSmall ? "0.875rem" : isLarge ? "1.25rem" : "1rem", boxSizing: "border-box",
             opacity: p.disabled ? 0.65 : 1, outline: "none",
+            height: p.multiple ? "120px" : undefined,
           }}>
             {String(p.options || "").split("\n").filter(Boolean).map((opt, i) => (
               <option key={i} selected={i === 0}>{opt}</option>
@@ -371,7 +376,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
     case "checkbox": {
       return (
         <Wrapper style={{ padding: "4px" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: p.disabled ? "not-allowed" : "pointer", opacity: p.disabled ? 0.65 : 1, flexDirection: p.reverse ? "row-reverse" : "row" }}>
+          <label style={{ display: !!p.inline ? "inline-flex" : "flex", alignItems: "center", gap: "8px", cursor: p.disabled ? "not-allowed" : "pointer", opacity: p.disabled ? 0.65 : 1, flexDirection: p.reverse ? "row-reverse" : "row" }}>
             <input type="checkbox" defaultChecked={!!p.checked} disabled={!!p.disabled}
               style={{ width: "18px", height: "18px", accentColor: BS.primary, cursor: "inherit" }} />
             <span style={{ fontSize: "1rem", color: BS.body }}>{p.label}</span>
@@ -383,7 +388,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
     case "radio": {
       return (
         <Wrapper style={{ padding: "4px" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: p.disabled ? "not-allowed" : "pointer", opacity: p.disabled ? 0.65 : 1 }}>
+          <label style={{ display: !!p.inline ? "inline-flex" : "flex", alignItems: "center", gap: "8px", cursor: p.disabled ? "not-allowed" : "pointer", opacity: p.disabled ? 0.65 : 1 }}>
             <input type="radio" name={String(p.name)} defaultChecked={!!p.checked} disabled={!!p.disabled}
               style={{ width: "18px", height: "18px", accentColor: BS.primary, cursor: "inherit" }} />
             <span style={{ fontSize: "1rem", color: BS.body }}>{p.label}</span>
@@ -428,22 +433,26 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
     }
 
     case "file-input": {
+      const fSize = String(p.size || "");
       return (
         <Wrapper style={{ padding: "4px" }}>
           {p.label && <label style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem" }}>{p.label}</label>}
           <input type="file" disabled={!!p.disabled}
-            style={{ fontSize: "0.875rem", color: BS.body }} />
+            style={{ fontSize: fSize === "sm" ? "0.8rem" : fSize === "lg" ? "1.05rem" : "0.875rem", color: BS.body }} />
           {p.helpText && <div style={{ fontSize: "0.875rem", color: BS.muted, marginTop: "4px" }}>{p.helpText}</div>}
         </Wrapper>
       );
     }
 
     case "input-group": {
+      const igSize = String(p.size || "");
+      const igPad = igSize === "sm" ? "4px 8px" : igSize === "lg" ? "10px 14px" : "8px 12px";
+      const igFontSize = igSize === "sm" ? "0.875rem" : igSize === "lg" ? "1.25rem" : "1rem";
       return (
         <Wrapper style={{ padding: "4px" }}>
           <div style={{ display: "flex", alignItems: "stretch" }}>
             {p.prepend && (
-              <span style={{ display: "flex", alignItems: "center", padding: "8px 12px", background: BS.light, borderWidth: "1px", borderStyle: "solid", borderColor: BS.borderColor, borderRightStyle: "none", borderRadius: "6px 0 0 6px", fontSize: "0.875rem", color: BS.body, minWidth: "40px", justifyContent: "center" }}>
+              <span style={{ display: "flex", alignItems: "center", padding: igPad, background: BS.light, borderWidth: "1px", borderStyle: "solid", borderColor: BS.borderColor, borderRightStyle: "none", borderRadius: "6px 0 0 6px", fontSize: igFontSize, color: BS.body, minWidth: "40px", justifyContent: "center" }}>
                 {p.prepend}
               </span>
             )}
@@ -452,13 +461,13 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
               placeholder={String(p.label || "")}
               disabled={!!p.disabled}
               style={{
-                flex: 1, padding: "8px 12px", border: `1px solid ${BS.borderColor}`,
+                flex: 1, padding: igPad, border: `1px solid ${BS.borderColor}`,
                 borderRadius: !p.prepend && !p.append ? "6px" : "0", background: BS.white,
-                fontSize: "1rem", outline: "none", boxSizing: "border-box",
+                fontSize: igFontSize, outline: "none", boxSizing: "border-box",
               }}
             />
             {p.append && (
-              <span style={{ display: "flex", alignItems: "center", padding: "8px 12px", background: BS.light, borderWidth: "1px", borderStyle: "solid", borderColor: BS.borderColor, borderLeftStyle: "none", borderRadius: "0 6px 6px 0", fontSize: "0.875rem", color: BS.body, minWidth: "40px", justifyContent: "center" }}>
+              <span style={{ display: "flex", alignItems: "center", padding: igPad, background: BS.light, borderWidth: "1px", borderStyle: "solid", borderColor: BS.borderColor, borderLeftStyle: "none", borderRadius: "0 6px 6px 0", fontSize: igFontSize, color: BS.body, minWidth: "40px", justifyContent: "center" }}>
                 {p.append}
               </span>
             )}
@@ -482,9 +491,10 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
             borderRadius: "6px", cursor: p.disabled ? "not-allowed" : "pointer",
             width: p.block ? "100%" : undefined,
             opacity: p.disabled ? 0.65 : 1,
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px",
             fontWeight: 400,
           }}>
+            {p.iconLeft && <i className={String(p.iconLeft)} style={{ fontSize: "inherit" }} />}
             {p.text || "Button"}
           </button>
         </Wrapper>
@@ -498,6 +508,9 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const btnStyle = getButtonStyle(baseVariant, isOutline);
       const buttons = String(p.buttons || "").split(",").map(b => b.trim()).filter(Boolean);
       const vertical = !!p.vertical;
+      const bgSize = String(p.size || "");
+      const bgPad = bgSize === "sm" ? "4px 12px" : bgSize === "lg" ? "10px 24px" : "6px 16px";
+      const bgFontSize = bgSize === "sm" ? "0.875rem" : bgSize === "lg" ? "1.25rem" : "1rem";
 
       return (
         <Wrapper style={{ padding: "4px" }}>
@@ -505,7 +518,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
             {buttons.map((btn, i) => (
               <button key={i} style={{
                 ...btnStyle,
-                padding: "6px 16px", fontSize: "1rem", fontWeight: 400,
+                padding: bgPad, fontSize: bgFontSize, fontWeight: 400,
                 borderRightStyle: !vertical && i < buttons.length - 1 ? "none" : undefined,
                 borderBottomStyle: vertical && i < buttons.length - 1 ? "none" : undefined,
                 cursor: "pointer",
@@ -557,7 +570,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
 
       return (
         <Wrapper style={{ padding: "4px" }}>
-          <div style={{ display: "flex", borderBottom: style === "tabs" ? `2px solid ${BS.borderColor}` : "none", gap: "2px", flexDirection: p.vertical ? "column" : "row" }}>
+          <div style={{ display: "flex", borderBottom: style === "tabs" ? `2px solid ${BS.borderColor}` : "none", gap: "2px", flexDirection: p.vertical ? "column" : "row", flex: !!p.fill ? "1" : undefined }}>
             {items.map((item, i) => (
               <button key={i} style={{
                 padding: "8px 16px", background: "transparent",
@@ -580,7 +593,6 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
                 color: i === active ? BS.primary : BS.muted,
                 fontWeight: i === active ? 600 : 400,
                 cursor: "pointer", fontSize: "0.95rem",
-                background2: style === "pills" && i === active ? BS.primary : "transparent",
                 backgroundColor: style === "pills" && i === active ? BS.primary : "transparent",
                 ...(style === "pills" && i === active ? { color: BS.white } : {}),
               }}>
@@ -615,19 +627,21 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
     case "pagination": {
       const pages = Number(p.pages) || 5;
       const active = Number(p.active) || 1;
+      const pgSize = String(p.size || "");
+      const pgScale = pgSize === "sm" ? 0.85 : pgSize === "lg" ? 1.15 : 1;
       return (
         <Wrapper style={{ padding: "4px" }}>
           <div style={{ display: "flex", gap: "4px" }}>
-            <button style={pageBtnStyle(false)}>&laquo;</button>
+            <button style={pageBtnStyle(false, pgScale)}>&laquo;</button>
             {Array.from({ length: pages }).map((_, i) => (
               <button key={i} style={{
-                ...pageBtnStyle(i + 1 === active),
+                ...pageBtnStyle(i + 1 === active, pgScale),
                 background: i + 1 === active ? BS.primary : BS.white,
               }}>
                 {i + 1}
               </button>
             ))}
-            <button style={pageBtnStyle(false)}>&raquo;</button>
+            <button style={pageBtnStyle(false, pgScale)}>&raquo;</button>
           </div>
         </Wrapper>
       );
@@ -637,19 +651,26 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const items = String(p.items || "").split("\n").filter(Boolean);
       const variant = String(p.variant || "primary");
       const btnStyle = getButtonStyle(variant, false);
+      const ddSize = String(p.size || "");
+      const ddPad = ddSize === "sm" ? "4px 12px" : ddSize === "lg" ? "10px 24px" : "6px 16px";
+      const ddFontSize = ddSize === "sm" ? "0.875rem" : ddSize === "lg" ? "1.25rem" : "1rem";
+      const dir = String(p.direction || "down");
+      const isUp = dir === "up";
       return (
         <Wrapper style={{ padding: "4px" }}>
-          <button style={{ ...btnStyle, padding: "6px 16px", borderRadius: "6px 0 0 6px", cursor: "pointer", fontSize: "1rem", fontWeight: 400 }}>
-            {p.label || "Dropdown"} <span style={{ marginLeft: "4px" }}>▾</span>
-          </button>
-          <div style={{ borderWidth: "1px", borderStyle: "solid", borderColor: BS.borderColor, borderTopStyle: "none", borderRadius: "0 0 6px 6px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", display: "inline-block", minWidth: "180px" }}>
-            {items.map((item, i) => item.trim() === "---" ? (
-              <div key={i} style={{ borderTop: `1px solid ${BS.borderColor}`, margin: "4px 0" }} />
-            ) : (
-              <div key={i} style={{ padding: "8px 16px", cursor: "pointer", fontSize: "0.9rem", color: BS.body }}>
-                {item}
-              </div>
-            ))}
+          <div style={{ display: "inline-flex", flexDirection: isUp ? "column-reverse" : "column" }}>
+            <button style={{ ...btnStyle, padding: ddPad, borderRadius: isUp ? "0 0 6px 6px" : "6px 6px 0 0", cursor: "pointer", fontSize: ddFontSize, fontWeight: 400, display: "flex", alignItems: "center", gap: "6px" }}>
+              {p.label || "Dropdown"} <span style={{ marginLeft: "4px", transform: isUp ? "rotate(180deg)" : "none" }}>▾</span>
+            </button>
+            <div style={{ borderWidth: "1px", borderStyle: "solid", borderColor: BS.borderColor, borderTopStyle: isUp ? "none" : undefined, borderBottomStyle: isUp ? undefined : "none", borderRadius: isUp ? "6px 6px 0 0" : "0 0 6px 6px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", display: "inline-block", minWidth: "180px" }}>
+              {items.map((item, i) => item.trim() === "---" ? (
+                <div key={i} style={{ borderTop: `1px solid ${BS.borderColor}`, margin: "4px 0" }} />
+              ) : (
+                <div key={i} style={{ padding: "8px 16px", cursor: "pointer", fontSize: "0.9rem", color: BS.body }}>
+                  {item}
+                </div>
+              ))}
+            </div>
           </div>
         </Wrapper>
       );
@@ -812,10 +833,11 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
         const parts = item.split("|");
         return { title: parts[0] || "Item", body: parts[1] || "" };
       });
+      const isFlush = !!p.flush;
 
       return (
         <Wrapper style={{ padding: "0" }}>
-          <div style={{ borderRadius: "8px", overflow: "hidden", border: `1px solid ${BS.borderColor}` }}>
+          <div style={{ borderRadius: isFlush ? "0" : "8px", overflow: "hidden", border: isFlush ? "none" : `1px solid ${BS.borderColor}` }}>
             {items.map((item, i) => (
               <div key={i} style={{ borderBottom: i < items.length - 1 ? `1px solid ${BS.borderColor}` : "none" }}>
                 <div style={{
@@ -823,6 +845,7 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
                   background: i === 0 ? BS.light : BS.white,
                   display: "flex", justifyContent: "space-between", alignItems: "center",
                   borderBottom: i === 0 ? `1px solid ${BS.borderColor}` : "none",
+                  borderRadius: isFlush ? "0" : (i === 0 ? "8px 8px 0 0" : i === items.length - 1 ? "0 0 8px 8px" : "0"),
                 }}>
                   {item.title}
                   <span style={{ fontSize: "0.875rem", color: BS.muted, transform: i === 0 ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▾</span>
@@ -1232,13 +1255,13 @@ function getButtonStyle(variant: string, isOutline: boolean): React.CSSPropertie
   return styles[variant] || styles.primary;
 }
 
-function pageBtnStyle(active: boolean): React.CSSProperties {
+function pageBtnStyle(active: boolean, scale: number = 1): React.CSSProperties {
   return {
-    padding: "6px 12px",
+    padding: `${6 * scale}px ${12 * scale}px`,
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: active ? BS.primary : BS.borderColor,
     background: active ? BS.primary : BS.white, color: active ? BS.white : BS.primary,
-    borderRadius: "6px", cursor: "pointer", fontSize: "0.875rem", fontWeight: 400,
+    borderRadius: "6px", cursor: "pointer", fontSize: `${0.875 * scale}rem`, fontWeight: 400,
   };
 }

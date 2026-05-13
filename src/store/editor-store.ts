@@ -1,425 +1,400 @@
-// Bootstrap GUI Editor - Zustand Store (Tree-based)
+// Bootstrap GUI Editor - Editor Store (Zustand with undo/redo)
 import { create } from "zustand";
 import { CanvasComponent } from "@/lib/editor/types";
 import { getComponentByType } from "@/lib/editor/bootstrap-components";
 
-function generateId(): string {
-  return `comp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-}
-
-function getDefaultProps(type: string): Record<string, string | boolean | number> {
-  const def = getComponentByType(type);
-  if (!def) return {};
-  const props: Record<string, string | boolean | number> = {};
-  for (const p of def.properties) {
-    props[p.key] = p.defaultValue;
-  }
-  return props;
-}
-
-function createCol(): CanvasComponent {
-  return {
-    id: generateId(),
-    type: "col",
-    label: "Column",
-    props: { bgColor: "light", padding: "3", textColor: "dark" },
-    children: [],
-  };
-}
-
-function newComponent(type: string): CanvasComponent {
-  const def = getComponentByType(type);
-  const comp: CanvasComponent = {
-    id: generateId(),
-    type,
-    label: def?.label || type,
-    props: getDefaultProps(type),
-    children: isContainer(type) ? [] : undefined,
-  };
-
-  // Auto-create columns for rows
-  if (type === "row") {
-    const numCols = Number(comp.props.cols) || 3;
-    comp.children = Array.from({ length: numCols }, () => createCol());
-  }
-
-  // Auto-create slots for card/modal
-  if (type === "card" || type === "modal") {
-    const slots = getSlotConfig(type);
-    if (slots) {
-      comp.children = slots.map((s) => createSlot(s));
-    }
-  }
-
-  return comp;
-}
-
-// Layout types that can hold children
+// ── Container types that can accept children ──
 export const CONTAINER_TYPES = new Set([
   "container", "row", "col", "card", "modal",
   "slot-card-header", "slot-card-body", "slot-card-footer",
   "slot-modal-header", "slot-modal-body", "slot-modal-footer",
+  "offcanvas",
+  "slot-offcanvas-header", "slot-offcanvas-body",
 ]);
 
 export function isContainer(type: string): boolean {
   return CONTAINER_TYPES.has(type);
 }
 
-// Auto-managed types cannot be independently dragged or deleted
 export function isAutoManaged(type: string): boolean {
   return type === "col" || type.startsWith("slot-");
 }
 
-// Slot type configs
-const CARD_SLOTS = ["slot-card-header", "slot-card-body", "slot-card-footer"];
-const MODAL_SLOTS = ["slot-modal-header", "slot-modal-body", "slot-modal-footer"];
+// ── Slot configuration ──
+interface SlotConfig {
+  type: string;
+  label: string;
+}
 
-function getSlotConfig(parentType: string): string[] | null {
-  if (parentType === "card") return CARD_SLOTS;
-  if (parentType === "modal") return MODAL_SLOTS;
+const CARD_SLOTS: SlotConfig[] = [
+  { type: "slot-card-header", label: "Card Header" },
+  { type: "slot-card-body", label: "Card Body" },
+  { type: "slot-card-footer", label: "Card Footer" },
+];
+
+const MODAL_SLOTS: SlotConfig[] = [
+  { type: "slot-modal-header", label: "Modal Header" },
+  { type: "slot-modal-body", label: "Modal Body" },
+  { type: "slot-modal-footer", label: "Modal Footer" },
+];
+
+const OFFCANVAS_SLOTS: SlotConfig[] = [
+  { type: "slot-offcanvas-header", label: "Offcanvas Header" },
+  { type: "slot-offcanvas-body", label: "Offcanvas Body" },
+];
+
+function getSlotConfig(type: string): SlotConfig[] | null {
+  if (type === "card") return CARD_SLOTS;
+  if (type === "modal") return MODAL_SLOTS;
+  if (type === "offcanvas") return OFFCANVAS_SLOTS;
   return null;
 }
 
-function createSlot(type: string): CanvasComponent {
+// ── ID generation ──
+let idCounter = 0;
+function generateId(): string {
+  return `comp-${Date.now()}-${++idCounter}`;
+}
+
+// ── Deep clone a component tree with new IDs ──
+function deepCloneWithNewIds(comp: CanvasComponent): CanvasComponent {
+  return {
+    ...comp,
+    id: generateId(),
+    props: { ...comp.props },
+    children: comp.children?.map(deepCloneWithNewIds),
+  };
+}
+
+// ── Create a slot component ──
+function createSlot(config: SlotConfig): CanvasComponent {
   return {
     id: generateId(),
-    type,
-    label: type.replace("slot-", "").replace("card-", "Card ").replace("modal-", "Modal "),
+    type: config.type,
+    label: config.label,
     props: {},
     children: [],
   };
 }
 
-// Sync slot children for card/modal (like syncRowChildrenById)
-function syncSlotChildren(list: CanvasComponent[], targetId: string): CanvasComponent[] {
-  return list.map((c) => {
-    if (c.id === targetId) {
-      const slots = getSlotConfig(c.type);
-      if (!slots) {
-        if (c.children) return { ...c, children: syncSlotChildren(c.children, targetId) };
-        return c;
-      }
-      const current = c.children || [];
-      const currentSlotMap = new Map(current.map((ch) => [ch.type, ch]));
-      const newChildren = slots.map((slotType) => {
-        const existing = currentSlotMap.get(slotType);
-        if (existing) return existing;
-        return createSlot(slotType);
-      });
-      return { ...c, children: newChildren };
-    }
-    if (c.children) return { ...c, children: syncSlotChildren(c.children, targetId) };
-    return c;
-  });
-}
-
-// ── Recursive tree helpers ──
-
-function deepClone(components: CanvasComponent[]): CanvasComponent[] {
-  return JSON.parse(JSON.stringify(components));
-}
-
-function removeById(list: CanvasComponent[], id: string): CanvasComponent[] {
-  return list
-    .filter((c) => c.id !== id)
-    .map((c) => (c.children ? { ...c, children: removeById(c.children, id) } : c));
-}
-
-function updatePropsById(
-  list: CanvasComponent[],
-  id: string,
-  props: Record<string, string | boolean | number>
-): CanvasComponent[] {
-  return list.map((c) => {
-    if (c.id === id) return { ...c, props: { ...c.props, ...props } };
-    if (c.children) return { ...c, children: updatePropsById(c.children, id, props) };
-    return c;
-  });
-}
-
-function findById(list: CanvasComponent[], id: string): CanvasComponent | null {
-  for (const c of list) {
+// ── Find a component in the tree ──
+function findInTree(comps: CanvasComponent[], id: string): CanvasComponent | null {
+  for (const c of comps) {
     if (c.id === id) return c;
     if (c.children) {
-      const found = findById(c.children, id);
+      const found = findInTree(c.children, id);
       if (found) return found;
     }
   }
   return null;
 }
 
-function findParentList(list: CanvasComponent[], id: string): { parentList: CanvasComponent[]; index: number } | null {
-  for (let i = 0; i < list.length; i++) {
-    if (list[i].id === id) return { parentList: list, index: i };
-    if (list[i].children) {
-      const result = findParentList(list[i].children!, id);
-      if (result) return result;
-    }
-  }
-  return null;
+// ── Remove from tree ──
+function removeFromTree(comps: CanvasComponent[], id: string): CanvasComponent[] {
+  return comps
+    .filter(c => c.id !== id)
+    .map(c => c.children ? { ...c, children: removeFromTree(c.children, id) } : c);
 }
 
-function findParentInfo(list: CanvasComponent[], id: string, parentPath: string[] = []): { parentId: string | null; index: number; siblings: CanvasComponent[] } | null {
-  for (let i = 0; i < list.length; i++) {
-    if (list[i].id === id) {
-      return {
-        parentId: parentPath.length > 0 ? parentPath[parentPath.length - 1] : null,
-        index: i,
-        siblings: list,
-      };
-    }
-    if (list[i].children) {
-      const result = findParentInfo(list[i].children!, id, [...parentPath, list[i].id]);
-      if (result) return result;
-    }
-  }
-  return null;
-}
-
-function insertChild(
-  list: CanvasComponent[],
+// ── Add to tree ──
+function addToTree(
+  comps: CanvasComponent[],
   parentId: string | null,
-  child: CanvasComponent,
+  comp: CanvasComponent,
   index?: number
 ): CanvasComponent[] {
-  // Insert at root
   if (parentId === null) {
-    if (index !== undefined && index >= 0) {
-      const updated = [...list];
-      updated.splice(index, 0, child);
-      return updated;
+    if (index !== undefined) {
+      const arr = [...comps];
+      arr.splice(index, 0, comp);
+      return arr;
     }
-    return [...list, child];
+    return [...comps, comp];
   }
-  // Insert inside a parent container
-  return list.map((c) => {
+  return comps.map(c => {
     if (c.id === parentId) {
       const children = c.children ? [...c.children] : [];
-      if (index !== undefined && index >= 0) {
-        children.splice(index, 0, child);
+      if (index !== undefined) {
+        children.splice(index, 0, comp);
       } else {
-        children.push(child);
+        children.push(comp);
       }
       return { ...c, children };
     }
     if (c.children) {
-      return { ...c, children: insertChild(c.children, parentId, child, index) };
+      return { ...c, children: addToTree(c.children, parentId, comp, index) };
     }
     return c;
   });
 }
 
-function duplicateWithNewIds(comp: CanvasComponent): CanvasComponent {
-  return {
-    ...comp,
-    id: generateId(),
-    children: comp.children?.map(duplicateWithNewIds),
-  };
-}
+// ── Sync row columns ──
+function syncRowChildren(comp: CanvasComponent): CanvasComponent {
+  if (comp.type === "row" && comp.children) {
+    const targetCols = Number(comp.props.cols) || 3;
+    const currentCols = comp.children.length;
+    let children = [...comp.children];
 
-function collectContainerIds(list: CanvasComponent[]): string[] {
-  const ids: string[] = [];
-  for (const c of list) {
-    if (isContainer(c.type)) ids.push(c.id);
-    if (c.children) ids.push(...collectContainerIds(c.children));
-  }
-  return ids;
-}
-
-// ── Sync row children to match cols count ──
-function syncRowChildrenById(list: CanvasComponent[], targetId: string): CanvasComponent[] {
-  return list.map((c) => {
-    if (c.id === targetId && c.type === "row") {
-      const targetCount = Number(c.props.cols) || 3;
-      const current = c.children || [];
-
-      let newChildren: CanvasComponent[];
-      if (current.length <= targetCount) {
-        newChildren = [...current];
-        for (let i = current.length; i < targetCount; i++) {
-          newChildren.push(createCol());
-        }
-      } else {
-        newChildren = current.slice(0, targetCount);
+    if (currentCols < targetCols) {
+      for (let i = currentCols; i < targetCols; i++) {
+        children.push({
+          id: generateId(),
+          type: "col",
+          label: `Column ${i + 1}`,
+          props: { size: "12", bgColor: "light", textColor: "dark", padding: "3", textAlign: "start" },
+          children: [],
+        });
       }
+    } else if (currentCols > targetCols) {
+      children = children.slice(0, targetCols);
+    }
 
-      return { ...c, children: newChildren };
-    }
-    if (c.children) {
-      return { ...c, children: syncRowChildrenById(c.children, targetId) };
-    }
-    return c;
-  });
+    return {
+      ...comp,
+      children: children.map((c, i) => ({
+        ...c,
+        label: `Column ${i + 1}`,
+        props: { ...c.props },
+      })),
+    };
+  }
+  if (comp.children) {
+    return { ...comp, children: comp.children.map(syncRowChildren) };
+  }
+  return comp;
 }
 
-// ── Store ──
-
-interface ParentInfo {
-  parentId: string | null;
-  index: number;
-  siblings: CanvasComponent[];
-}
-
+// ── Store interface ──
 interface EditorState {
   components: CanvasComponent[];
   selectedId: string | null;
   history: CanvasComponent[][];
   historyIndex: number;
+  clipboard: CanvasComponent | null;
 
-  addComponent: (type: string, parentId?: string | null, index?: number) => string;
+  addComponent: (type: string, parentId?: string | null, index?: number) => void;
   removeComponent: (id: string) => void;
   moveComponent: (fromIndex: number, toIndex: number) => void;
   moveComponentInTree: (compId: string, newParentId: string | null, index?: number) => void;
   duplicateComponent: (id: string) => void;
   selectComponent: (id: string | null) => void;
-  updateComponentProps: (id: string, props: Partial<Record<string, string | boolean | number>>) => void;
+  updateComponentProps: (id: string, props: Record<string, string | boolean | number>) => void;
   clearCanvas: () => void;
   undo: () => void;
   redo: () => void;
   pushHistory: () => void;
-  getSelectedComponent: () => CanvasComponent | undefined;
-  getContainerIds: () => string[];
   findComponent: (id: string) => CanvasComponent | null;
-  getParentInfo: (id: string) => ParentInfo | null;
+  getParentInfo: (id: string) => { parent: CanvasComponent | null; index: number } | null;
+  getSelectedComponent: () => CanvasComponent | null;
+  copyComponent: (id: string) => void;
+  pasteComponent: (parentId?: string | null, index?: number) => void;
+  moveUp: (id: string) => void;
+  moveDown: (id: string) => void;
 }
 
-export const useEditorStore = create<EditorState>((set, get) => {
-  const pushHistory = () => {
-    const { components, history, historyIndex } = get();
-    const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(deepClone(components));
-    set({ history: newHistory, historyIndex: newHistory.length - 1 });
-  };
+// ── History size limit ──
+const MAX_HISTORY = 100;
 
-  return {
-    components: [],
-    selectedId: null,
-    history: [[]],
-    historyIndex: 0,
+// ── Store ──
+export const useEditorStore = create<EditorState>((set, get) => ({
+  components: [],
+  selectedId: null,
+  history: [[]],
+  historyIndex: 0,
+  clipboard: null,
 
-    addComponent: (type, parentId = null, index) => {
-      pushHistory();
-      const comp = newComponent(type);
-      const { components } = get();
-      const updated = insertChild(components, parentId, comp, index);
-      set({ components: updated, selectedId: comp.id });
-      return comp.id;
-    },
+  pushHistory: () => {
+    set(s => {
+      const snapshot = JSON.parse(JSON.stringify(s.components)) as CanvasComponent[];
+      const newHistory = s.history.slice(0, s.historyIndex + 1);
+      newHistory.push(snapshot);
+      if (newHistory.length > MAX_HISTORY) newHistory.shift();
+      const newIdx = newHistory.length - 1;
+      return { history: newHistory, historyIndex: newIdx };
+    });
+  },
 
-    removeComponent: (id) => {
-      // Don't allow removing auto-managed components
-      const comp = findById(get().components, id);
-      if (comp && isAutoManaged(comp.type)) return;
+  addComponent: (type, parentId = null, index) => {
+    const def = getComponentByType(type);
+    if (!def) return;
 
-      pushHistory();
-      const { components, selectedId } = get();
-      set({
-        components: removeById(components, id),
-        selectedId: selectedId === id ? null : selectedId,
-      });
-    },
+    const comp: CanvasComponent = {
+      id: generateId(),
+      type,
+      label: def.label,
+      props: {},
+      children: undefined,
+    };
 
-    moveComponent: (fromIndex, toIndex) => {
-      pushHistory();
-      const { components } = get();
-      const updated = [...components];
-      const [moved] = updated.splice(fromIndex, 1);
-      updated.splice(toIndex, 0, moved);
-      set({ components: updated });
-    },
+    // Initialize default props
+    for (const prop of def.properties) {
+      comp.props[prop.key] = prop.defaultValue;
+    }
 
-    moveComponentInTree: (compId, newParentId, index) => {
-      // Don't allow moving auto-managed components
-      const comp = findById(get().components, compId);
-      if (comp && isAutoManaged(comp.type)) return;
-
-      pushHistory();
-      const { components } = get();
-      const flatList = removeById(components, compId);
-      const removed = findById(components, compId);
-      if (!removed) return;
-      const updated = insertChild(flatList, newParentId, removed, index);
-      set({ components: updated });
-    },
-
-    duplicateComponent: (id) => {
-      const comp = findById(get().components, id);
-      if (comp && isAutoManaged(comp.type)) return;
-
-      pushHistory();
-      const { components } = get();
-      const deepCopy = deepClone(components);
-      const result = findParentList(deepCopy, id);
-      if (!result) return;
-      const { parentList, index } = result;
-      const dup = duplicateWithNewIds(parentList[index]);
-      parentList.splice(index + 1, 0, dup);
-      set({ components: deepCopy, selectedId: dup.id });
-    },
-
-    selectComponent: (id) => {
-      set({ selectedId: id });
-    },
-
-    updateComponentProps: (id, props) => {
-      pushHistory();
-      const { components } = get();
-      let updated = updatePropsById(components, id, props);
-
-      // If updating a row's columns count, sync children
-      if (props.cols !== undefined) {
-        updated = syncRowChildrenById(updated, id);
+    // Auto-create children for containers
+    if (type === "card" || type === "modal" || type === "offcanvas") {
+      const slots = getSlotConfig(type);
+      if (slots) {
+        comp.children = slots.map(s => createSlot(s));
       }
+    }
 
-      set({ components: updated });
-    },
+    if (type === "row") {
+      const cols = Number(comp.props.cols) || 3;
+      comp.children = Array.from({ length: cols }, (_, i) => ({
+        id: generateId(),
+        type: "col",
+        label: `Column ${i + 1}`,
+        props: { size: "12", bgColor: "light", textColor: "dark", padding: "3", textAlign: "start" },
+        children: [],
+      }));
+    }
 
-    clearCanvas: () => {
-      pushHistory();
-      set({ components: [], selectedId: null });
-    },
+    set(s => {
+      const newComps = addToTree(s.components, parentId, comp, index);
+      return { components: newComps, selectedId: comp.id };
+    });
+    get().pushHistory();
+  },
 
-    undo: () => {
-      const { historyIndex, history } = get();
-      if (historyIndex > 0) {
-        set({
-          historyIndex: historyIndex - 1,
-          components: deepClone(history[historyIndex - 1]),
+  removeComponent: (id) => {
+    const comp = findInTree(get().components, id);
+    if (!comp || isAutoManaged(comp.type)) return;
+    set(s => {
+      const newComps = removeFromTree(s.components, id);
+      return { components: newComps, selectedId: s.selectedId === id ? null : s.selectedId };
+    });
+    get().pushHistory();
+  },
+
+  moveComponent: (fromIndex, toIndex) => {
+    set(s => {
+      const arr = [...s.components];
+      const [moved] = arr.splice(fromIndex, 1);
+      arr.splice(toIndex, 0, moved);
+      return { components: arr };
+    });
+    get().pushHistory();
+  },
+
+  moveComponentInTree: (compId, newParentId, index) => {
+    const comp = findInTree(get().components, compId);
+    if (!comp) return;
+    const clone = deepCloneWithNewIds(comp);
+    // Keep original ID for move (not copy)
+    clone.id = compId;
+    clone.children = comp.children;
+
+    set(s => {
+      let newComps = removeFromTree(s.components, compId);
+      newComps = addToTree(newComps, newParentId, clone, index);
+      return { components: newComps };
+    });
+    get().pushHistory();
+  },
+
+  duplicateComponent: (id) => {
+    const comp = findInTree(get().components, id);
+    if (!comp || isAutoManaged(comp.type)) return;
+    const clone = deepCloneWithNewIds(comp);
+    set(s => {
+      const newComps = addToTree(s.components, null, clone);
+      return { components: newComps, selectedId: clone.id };
+    });
+    get().pushHistory();
+  },
+
+  selectComponent: (id) => set({ selectedId: id }),
+
+  updateComponentProps: (id, props) => {
+    set(s => {
+      const updateInTree = (comps: CanvasComponent[]): CanvasComponent[] =>
+        comps.map(c => {
+          if (c.id === id) {
+            const updated = { ...c, props: { ...c.props, ...props } };
+            return syncRowChildren(updated);
+          }
+          if (c.children) return { ...c, children: updateInTree(c.children) };
+          return c;
         });
+      return { components: updateInTree(s.components) };
+    });
+    get().pushHistory();
+  },
+
+  clearCanvas: () => {
+    set({ components: [], selectedId: null });
+    get().pushHistory();
+  },
+
+  undo: () => {
+    set(s => {
+      if (s.historyIndex <= 0) return s;
+      const newIdx = s.historyIndex - 1;
+      return { components: JSON.parse(JSON.stringify(s.history[newIdx])), historyIndex: newIdx };
+    });
+  },
+
+  redo: () => {
+    set(s => {
+      if (s.historyIndex >= s.history.length - 1) return s;
+      const newIdx = s.historyIndex + 1;
+      return { components: JSON.parse(JSON.stringify(s.history[newIdx])), historyIndex: newIdx };
+    });
+  },
+
+  findComponent: (id) => findInTree(get().components, id),
+
+  getParentInfo: (id) => {
+    const search = (comps: CanvasComponent[], parent: CanvasComponent | null): { parent: CanvasComponent | null; index: number } | null => {
+      for (let i = 0; i < comps.length; i++) {
+        if (comps[i].id === id) return { parent, index: i };
+        if (comps[i].children) {
+          const found = search(comps[i].children!, comps[i]);
+          if (found) return found;
+        }
       }
-    },
+      return null;
+    };
+    return search(get().components, null);
+  },
 
-    redo: () => {
-      const { historyIndex, history } = get();
-      if (historyIndex < history.length - 1) {
-        set({
-          historyIndex: historyIndex + 1,
-          components: deepClone(history[historyIndex + 1]),
-        });
-      }
-    },
+  getSelectedComponent: () => {
+    const { selectedId, components } = get();
+    if (!selectedId) return null;
+    return findInTree(components, selectedId);
+  },
 
-    pushHistory,
+  copyComponent: (id) => {
+    const comp = findInTree(get().components, id);
+    if (!comp || isAutoManaged(comp.type)) return;
+    set({ clipboard: deepCloneWithNewIds(comp) });
+  },
 
-    getSelectedComponent: () => {
-      const { components, selectedId } = get();
-      if (!selectedId) return undefined;
-      return findById(components, selectedId) || undefined;
-    },
+  pasteComponent: (parentId, index) => {
+    const { clipboard } = get();
+    if (!clipboard) return;
+    const clone = deepCloneWithNewIds(clipboard);
+    set(s => {
+      const newComps = addToTree(s.components, parentId ?? null, clone, index);
+      return { components: newComps, selectedId: clone.id };
+    });
+    get().pushHistory();
+  },
 
-    getContainerIds: () => {
-      const { components } = get();
-      return collectContainerIds(components);
-    },
+  moveUp: (id) => {
+    const info = get().getParentInfo(id);
+    if (!info || info.index === 0) return;
+    const parentId = info.parent?.id ?? null;
+    get().moveComponentInTree(id, parentId, info.index - 1);
+  },
 
-    findComponent: (id) => {
-      const { components } = get();
-      return findById(components, id);
-    },
-
-    getParentInfo: (id) => {
-      const { components } = get();
-      return findParentInfo(components, id);
-    },
-  };
-});
+  moveDown: (id) => {
+    const info = get().getParentInfo(id);
+    if (!info || !info.parent) return;
+    const siblings = info.parent.children!;
+    if (info.index >= siblings.length - 1) return;
+    const parentId = info.parent.id;
+    get().moveComponentInTree(id, parentId, info.index + 2);
+  },
+}));

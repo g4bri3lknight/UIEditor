@@ -1,4 +1,4 @@
-// Bootstrap GUI Editor - Type Definitions
+// Bootstrap GUI Editor - Core Types
 
 export type ComponentCategory =
   | "layout"
@@ -10,6 +10,31 @@ export type ComponentCategory =
   | "tables"
   | "images"
   | "utilities";
+
+export interface CategoryInfo {
+  id: ComponentCategory;
+  label: string;
+  icon: string;
+}
+
+export interface CanvasComponent {
+  id: string;
+  type: string;
+  label: string;
+  props: Record<string, string | boolean | number>;
+  children?: CanvasComponent[];
+}
+
+export interface BootstrapComponentDefinition {
+  type: string;
+  label: string;
+  category: ComponentCategory;
+  icon: string;
+  description: string;
+  properties: PropertyDefinition[];
+  defaultSize?: { w: number; h: number };
+  hidden?: boolean;
+}
 
 export type PropType =
   | "text"
@@ -34,29 +59,4 @@ export interface PropertyDefinition {
   placeholder?: string;
   description?: string;
   group?: string;
-}
-
-export interface BootstrapComponentDefinition {
-  type: string;
-  label: string;
-  category: ComponentCategory;
-  icon: string;
-  description: string;
-  properties: PropertyDefinition[];
-  defaultSize?: { w: number; h: number };
-  hidden?: boolean;
-}
-
-export interface CanvasComponent {
-  id: string;
-  type: string;
-  label: string;
-  props: Record<string, string | boolean | number>;
-  children?: CanvasComponent[];
-}
-
-export interface CategoryInfo {
-  id: ComponentCategory;
-  label: string;
-  icon: string;
 }
