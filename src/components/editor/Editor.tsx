@@ -36,7 +36,9 @@ import {
   Download,
   Copy,
   Check,
-  GripHorizontal,
+  Save,
+  Upload,
+  FolderOpen,
   Smartphone,
   Tablet,
   Monitor,
@@ -155,6 +157,10 @@ export function Editor() {
     historyIndex,
     removeComponent,
     moveComponent,
+    copyComponent,
+    pasteComponent,
+    clipboard,
+    importProject,
   } = useEditorStore();
 
   const [codeDialogOpen, setCodeDialogOpen] = useState(false);
@@ -166,6 +172,7 @@ export function Editor() {
     label?: string;
   } | null>(null);
   const [copied, setCopied] = useState(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   // ── Sidebar resizing ──
   const leftSidebar = useSidebarResize("editor-left-width", 256, 180, 400);
@@ -269,11 +276,6 @@ export function Editor() {
           // If dropping on a row, redirect to its first column
           if (parentComp?.type === "row" && parentComp.children && parentComp.children.length > 0) {
             addComponent(type, parentComp.children[0].id);
-          // If dropping on a card/modal, redirect to body slot
-          } else if ((parentComp?.type === "card" || parentComp?.type === "modal") && parentComp.children) {
-            const bodySlot = parentComp.children.find(c => c.type === `slot-${parentComp.type}-body`);
-            if (bodySlot) addComponent(type, bodySlot.id);
-            else addComponent(type, parentId);
           } else {
             addComponent(type, parentId);
           }
@@ -325,11 +327,6 @@ export function Editor() {
             // If dropping on a row, redirect to its first column
             if (parentComp?.type === "row" && parentComp.children && parentComp.children.length > 0) {
               useEditorStore.getState().moveComponentInTree(activeId, parentComp.children[0].id);
-            // If dropping on a card/modal, redirect to body slot
-            } else if ((parentComp?.type === "card" || parentComp?.type === "modal") && parentComp.children) {
-              const bodySlot = parentComp.children.find(c => c.type === `slot-${parentComp.type}-body`);
-              if (bodySlot) useEditorStore.getState().moveComponentInTree(activeId, bodySlot.id);
-              else useEditorStore.getState().moveComponentInTree(activeId, newParentId);
             } else {
               useEditorStore.getState().moveComponentInTree(activeId, newParentId);
             }
@@ -398,6 +395,69 @@ export function Editor() {
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
 
+  // ── Save / Load / Export ──
+  const handleSave = useCallback(() => {
+    const { components } = useEditorStore.getState();
+    localStorage.setItem("bootstrap-editor-project", JSON.stringify(components));
+    toast.success("Progetto salvato!");
+  }, []);
+
+  const handleLoad = useCallback(() => {
+    const saved = localStorage.getItem("bootstrap-editor-project");
+    if (!saved) {
+      toast.error("Nessun progetto salvato trovato");
+      return;
+    }
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        useEditorStore.setState({ components: parsed, selectedId: null });
+        useEditorStore.getState().pushHistory();
+        toast.success("Progetto caricato!");
+      }
+    } catch {
+      toast.error("Errore nel caricamento del progetto");
+    }
+  }, []);
+
+  const handleExport = useCallback(() => {
+    const { components } = useEditorStore.getState();
+    const blob = new Blob([JSON.stringify(components, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "bootstrap-editor-project.json";
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Progetto esportato!");
+  }, []);
+
+  const handleImport = useCallback(() => {
+    importInputRef.current?.click();
+  }, []);
+
+  const handleImportFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target?.result as string);
+        const success = useEditorStore.getState().importProject(parsed);
+        if (success) {
+          toast.success("Progetto importato!");
+        } else {
+          toast.error("File JSON non valido: formato non riconosciuto");
+        }
+      } catch {
+        toast.error("Errore nella lettura del file JSON");
+      }
+    };
+    reader.readAsText(file);
+    // Reset input so same file can be re-imported
+    e.target.value = "";
+  }, []);
+
   // Keyboard shortcuts
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -428,6 +488,54 @@ export function Editor() {
       }
       if (e.key === "Escape") {
         useEditorStore.getState().selectComponent(null);
+      }
+      // Ctrl+C: Copy component
+      if (e.key === "c" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        const { selectedId } = useEditorStore.getState();
+        if (selectedId) {
+          const target = e.target as HTMLElement;
+          if (
+            target.tagName !== "INPUT" &&
+            target.tagName !== "TEXTAREA" &&
+            target.tagName !== "SELECT"
+          ) {
+            e.preventDefault();
+            useEditorStore.getState().copyComponent(selectedId);
+            toast.success("Componente copiato");
+          }
+        }
+      }
+      // Ctrl+V: Paste component
+      if (e.key === "v" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        const { selectedId, clipboard } = useEditorStore.getState();
+        if (clipboard) {
+          const target = e.target as HTMLElement;
+          if (
+            target.tagName !== "INPUT" &&
+            target.tagName !== "TEXTAREA" &&
+            target.tagName !== "SELECT"
+          ) {
+            e.preventDefault();
+            useEditorStore.getState().pasteComponent(selectedId);
+            toast.success("Componente incollato");
+          }
+        }
+      }
+      // Ctrl+D: Duplicate component
+      if (e.key === "d" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        const { selectedId } = useEditorStore.getState();
+        if (selectedId) {
+          const target = e.target as HTMLElement;
+          if (
+            target.tagName !== "INPUT" &&
+            target.tagName !== "TEXTAREA" &&
+            target.tagName !== "SELECT"
+          ) {
+            e.preventDefault();
+            useEditorStore.getState().duplicateComponent(selectedId);
+            toast.success("Componente duplicato");
+          }
+        }
       }
     };
 
@@ -507,6 +615,58 @@ export function Editor() {
               <Code className="w-3.5 h-3.5" />
               <span className="text-xs">HTML</span>
             </Button>
+
+            <div className="w-px h-5 bg-border mx-1" />
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSave}
+              disabled={components.length === 0}
+              className="h-8 px-2"
+              title="Salva progetto (localStorage)"
+            >
+              <Save className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLoad}
+              className="h-8 px-2"
+              title="Carica progetto (localStorage)"
+            >
+              <FolderOpen className="w-4 h-4" />
+            </Button>
+
+            <div className="w-px h-5 bg-border mx-1" />
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleImport}
+              className="h-8 px-2"
+              title="Importa progetto da JSON"
+            >
+              <Upload className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleExport}
+              disabled={components.length === 0}
+              className="h-8 px-2"
+              title="Esporta progetto come JSON"
+            >
+              <Download className="w-4 h-4" />
+            </Button>
+            {/* Hidden file input for JSON import */}
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={handleImportFile}
+            />
 
             <div className="w-px h-5 bg-border mx-1" />
 

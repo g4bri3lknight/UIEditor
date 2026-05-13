@@ -1893,6 +1893,56 @@ export const COMPONENTS: BootstrapComponentDefinition[] = [
     ],
   },
 
+  {
+    type: "offcanvas",
+    label: "Offcanvas",
+    category: "content",
+    icon: "Sidebar",
+    description: "Sidebar panel that slides in from the edge",
+    properties: [
+      {
+        key: "title",
+        label: "Title",
+        type: "text",
+        defaultValue: "Offcanvas",
+        placeholder: "Offcanvas title",
+      },
+      {
+        key: "text",
+        label: "Body Text",
+        type: "textarea",
+        defaultValue:
+          "Content goes here. You can place any component inside the offcanvas body.",
+        placeholder: "Offcanvas body",
+      },
+      {
+        key: "placement",
+        label: "Placement",
+        type: "select",
+        defaultValue: "start",
+        options: [
+          { label: "Sinistra (start)", value: "start" },
+          { label: "Destra (end)", value: "end" },
+          { label: "Basso (bottom)", value: "bottom" },
+          { label: "Alto (top)", value: "top" },
+        ],
+      },
+      {
+        key: "backdrop",
+        label: "Backdrop",
+        type: "boolean",
+        defaultValue: true,
+      },
+      {
+        key: "scrollBody",
+        label: "Body Scroll",
+        type: "boolean",
+        defaultValue: false,
+        description: "Allow body scrolling while offcanvas is open",
+      },
+    ],
+  },
+
   // ──────────────── TABLES ────────────────
   {
     type: "table",
@@ -2147,47 +2197,10 @@ export const COMPONENTS: BootstrapComponentDefinition[] = [
   },
 ];
 
-// ── Slot types (auto-managed, hidden from palette) ──
-const SLOT_DEFINITIONS: BootstrapComponentDefinition[] = [
-  {
-    type: "slot-card-header", label: "Card Header", category: "content",
-    icon: "Layers", description: "Card header slot", hidden: true,
-    properties: [],
-  },
-  {
-    type: "slot-card-body", label: "Card Body", category: "content",
-    icon: "Layers", description: "Card body slot", hidden: true,
-    properties: [],
-  },
-  {
-    type: "slot-card-footer", label: "Card Footer", category: "content",
-    icon: "Layers", description: "Card footer slot", hidden: true,
-    properties: [],
-  },
-  {
-    type: "slot-modal-header", label: "Modal Header", category: "content",
-    icon: "Layers", description: "Modal header slot", hidden: true,
-    properties: [],
-  },
-  {
-    type: "slot-modal-body", label: "Modal Body", category: "content",
-    icon: "Layers", description: "Modal body slot", hidden: true,
-    properties: [],
-  },
-  {
-    type: "slot-modal-footer", label: "Modal Footer", category: "content",
-    icon: "Layers", description: "Modal footer slot", hidden: true,
-    properties: [],
-  },
-];
-
-// Merge so getComponentByType can find slots too
-export const ALL_COMPONENTS = [...COMPONENTS, ...SLOT_DEFINITIONS];
-
 export function getComponentByType(
   type: string
 ): BootstrapComponentDefinition | undefined {
-  return ALL_COMPONENTS.find((c) => c.type === type);
+  return COMPONENTS.find((c) => c.type === type);
 }
 
 export function getComponentsByCategory(

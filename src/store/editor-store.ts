@@ -5,11 +5,7 @@ import { getComponentByType } from "@/lib/editor/bootstrap-components";
 
 // ── Container types that can accept children ──
 export const CONTAINER_TYPES = new Set([
-  "container", "row", "col", "card", "modal",
-  "slot-card-header", "slot-card-body", "slot-card-footer",
-  "slot-modal-header", "slot-modal-body", "slot-modal-footer",
-  "offcanvas",
-  "slot-offcanvas-header", "slot-offcanvas-body",
+  "container", "row", "col", "card", "modal", "offcanvas",
 ]);
 
 export function isContainer(type: string): boolean {
@@ -17,38 +13,10 @@ export function isContainer(type: string): boolean {
 }
 
 export function isAutoManaged(type: string): boolean {
-  return type === "col" || type.startsWith("slot-");
+  return type === "col";
 }
 
-// ── Slot configuration ──
-interface SlotConfig {
-  type: string;
-  label: string;
-}
 
-const CARD_SLOTS: SlotConfig[] = [
-  { type: "slot-card-header", label: "Card Header" },
-  { type: "slot-card-body", label: "Card Body" },
-  { type: "slot-card-footer", label: "Card Footer" },
-];
-
-const MODAL_SLOTS: SlotConfig[] = [
-  { type: "slot-modal-header", label: "Modal Header" },
-  { type: "slot-modal-body", label: "Modal Body" },
-  { type: "slot-modal-footer", label: "Modal Footer" },
-];
-
-const OFFCANVAS_SLOTS: SlotConfig[] = [
-  { type: "slot-offcanvas-header", label: "Offcanvas Header" },
-  { type: "slot-offcanvas-body", label: "Offcanvas Body" },
-];
-
-function getSlotConfig(type: string): SlotConfig[] | null {
-  if (type === "card") return CARD_SLOTS;
-  if (type === "modal") return MODAL_SLOTS;
-  if (type === "offcanvas") return OFFCANVAS_SLOTS;
-  return null;
-}
 
 // ── ID generation ──
 let idCounter = 0;
@@ -63,17 +31,6 @@ function deepCloneWithNewIds(comp: CanvasComponent): CanvasComponent {
     id: generateId(),
     props: { ...comp.props },
     children: comp.children?.map(deepCloneWithNewIds),
-  };
-}
-
-// ── Create a slot component ──
-function createSlot(config: SlotConfig): CanvasComponent {
-  return {
-    id: generateId(),
-    type: config.type,
-    label: config.label,
-    props: {},
-    children: [],
   };
 }
 
@@ -188,6 +145,7 @@ interface EditorState {
   getSelectedComponent: () => CanvasComponent | null;
   copyComponent: (id: string) => void;
   pasteComponent: (parentId?: string | null, index?: number) => void;
+  importProject: (data: CanvasComponent[]) => boolean;
   moveUp: (id: string) => void;
   moveDown: (id: string) => void;
 }
@@ -229,14 +187,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     // Initialize default props
     for (const prop of def.properties) {
       comp.props[prop.key] = prop.defaultValue;
-    }
-
-    // Auto-create children for containers
-    if (type === "card" || type === "modal" || type === "offcanvas") {
-      const slots = getSlotConfig(type);
-      if (slots) {
-        comp.children = slots.map(s => createSlot(s));
-      }
     }
 
     if (type === "row") {
@@ -380,6 +330,24 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return { components: newComps, selectedId: clone.id };
     });
     get().pushHistory();
+  },
+
+  importProject: (data) => {
+    if (!Array.isArray(data)) return false;
+    if (data.length === 0) return false;
+    // Basic validation: each item must have id, type, props
+    const isValid = data.every(
+      (item) =>
+        typeof item === "object" &&
+        item !== null &&
+        typeof item.id === "string" &&
+        typeof item.type === "string" &&
+        typeof item.props === "object"
+    );
+    if (!isValid) return false;
+    set({ components: data, selectedId: null });
+    get().pushHistory();
+    return true;
   },
 
   moveUp: (id) => {

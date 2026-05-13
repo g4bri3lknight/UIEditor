@@ -2,9 +2,26 @@
 
 import React, { useCallback } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
+  Copy,
+  ClipboardPaste,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  Scissors,
+  ClipboardCopy,
+} from "lucide-react";
 import { useEditorStore, isContainer, isAutoManaged } from "@/store/editor-store";
 import { BootstrapRenderer } from "./BootstrapRenderer";
 import { CanvasComponent } from "@/lib/editor/types";
+import { toast } from "sonner";
 
 // ── Drop indicator between items ──
 function DropIndicator({
@@ -50,7 +67,17 @@ function CanvasItem({
   isDragging: boolean;
   depth?: number;
 }) {
-  const { selectedId, selectComponent } = useEditorStore();
+  const {
+    selectedId,
+    selectComponent,
+    duplicateComponent,
+    copyComponent,
+    pasteComponent,
+    moveUp,
+    moveDown,
+    removeComponent,
+    clipboard,
+  } = useEditorStore();
 
   const isSelected = selectedId === component.id;
   const canContain = isContainer(component.type);
@@ -109,6 +136,26 @@ function CanvasItem({
     [setDragRef, setDropRef]
   );
 
+  const handleDuplicate = useCallback(() => {
+    duplicateComponent(component.id);
+    toast.success("Componente duplicato");
+  }, [duplicateComponent, component.id]);
+
+  const handleCopy = useCallback(() => {
+    copyComponent(component.id);
+    toast.success("Componente copiato");
+  }, [copyComponent, component.id]);
+
+  const handlePaste = useCallback(() => {
+    pasteComponent();
+    toast.success("Componente incollato");
+  }, [pasteComponent]);
+
+  const handleRemove = useCallback(() => {
+    removeComponent(component.id);
+    toast.success("Componente eliminato");
+  }, [removeComponent, component.id]);
+
   // ── Children rendered as CanvasItems (recursive, no wrapper div) ──
   const childrenContent = hasChildren ? (
     <>
@@ -148,54 +195,104 @@ function CanvasItem({
         isActive={false}
       />
 
-      <div
-        ref={mergedRef}
-        style={dragStyle}
-        className={`relative group/canvas-item rounded-lg transition-all duration-150 ${
-          isDragging && selectedId === component.id
-            ? "opacity-30 ring-2 ring-primary/40"
-            : isContainerOver && isDragging
-              ? "ring-2 ring-primary/40 bg-primary/5"
-              : isSelected
-                ? "ring-2 ring-primary/50 bg-primary/5"
-                : "hover:ring-1 hover:ring-border"
-        }`}
-        onClick={handleSelect}
-        {...attributes}
-        {...listeners}
-      >
-        {/* Selection label */}
-        {isSelected && (
-          <div className="absolute -top-1.5 left-2 bg-primary text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-t-md z-10 leading-tight">
-            {managed ? `Column ${index + 1}` : component.label}
-          </div>
-        )}
-
-        {/* Container drop zone hint */}
-        {canContain && isDragging && (
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
           <div
-            className={`absolute inset-0 rounded-lg border-2 border-dashed pointer-events-none transition-colors z-0 ${
-              isContainerOver
-                ? "border-primary/60 bg-primary/5"
-                : "border-primary/20"
+            ref={mergedRef}
+            style={dragStyle}
+            className={`relative group/canvas-item rounded-lg transition-all duration-150 ${
+              isDragging && selectedId === component.id
+                ? "opacity-30 ring-2 ring-primary/40"
+                : isContainerOver && isDragging
+                  ? "ring-2 ring-primary/40 bg-primary/5"
+                  : isSelected
+                    ? "ring-2 ring-primary/50 bg-primary/5"
+                    : "hover:ring-1 hover:ring-border"
             }`}
-          />
-        )}
+            onClick={handleSelect}
+            {...attributes}
+            {...listeners}
+          >
+            {/* Selection label */}
+            {isSelected && (
+              <div className="absolute -top-1.5 left-2 bg-primary text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-t-md z-10 leading-tight">
+                {managed ? `Column ${index + 1}` : component.label}
+              </div>
+            )}
 
-        {/* Rendered component content */}
-        <div className="relative z-[1]" style={{ padding: canContain ? "0" : "6px 4px" }}>
-          {canContain ? (
-            <BootstrapRenderer
-              component={component}
-              renderChildren={childrenContent}
-            />
-          ) : (
-            <div className="pointer-events-none">
-              <BootstrapRenderer component={component} />
+            {/* Container drop zone hint */}
+            {canContain && isDragging && (
+              <div
+                className={`absolute inset-0 rounded-lg border-2 border-dashed pointer-events-none transition-colors z-0 ${
+                  isContainerOver
+                    ? "border-primary/60 bg-primary/5"
+                    : "border-primary/20"
+                }`}
+              />
+            )}
+
+            {/* Rendered component content */}
+            <div className="relative z-[1]" style={{ padding: canContain ? "0" : "6px 4px" }}>
+              {canContain ? (
+                <BootstrapRenderer
+                  component={component}
+                  renderChildren={childrenContent}
+                />
+              ) : (
+                <div className="pointer-events-none">
+                  <BootstrapRenderer component={component} />
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem
+            disabled={managed}
+            onClick={handleDuplicate}
+          >
+            <ClipboardCopy className="mr-2 h-4 w-4" />
+            Duplica
+          </ContextMenuItem>
+          <ContextMenuItem onClick={handleCopy}>
+            <Copy className="mr-2 h-4 w-4" />
+            Copia
+            <span className="ml-auto text-xs text-muted-foreground">Ctrl+C</span>
+          </ContextMenuItem>
+          <ContextMenuItem
+            disabled={clipboard === null}
+            onClick={handlePaste}
+          >
+            <ClipboardPaste className="mr-2 h-4 w-4" />
+            Incolla
+            <span className="ml-auto text-xs text-muted-foreground">Ctrl+V</span>
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            disabled={managed}
+            onClick={() => moveUp(component.id)}
+          >
+            <ArrowUp className="mr-2 h-4 w-4" />
+            Sposta su
+          </ContextMenuItem>
+          <ContextMenuItem
+            disabled={managed}
+            onClick={() => moveDown(component.id)}
+          >
+            <ArrowDown className="mr-2 h-4 w-4" />
+            Sposta giù
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            disabled={managed}
+            onClick={handleRemove}
+            className="text-destructive focus:text-destructive"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Elimina
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
 
       <DropIndicator
         id={parentId ? `after-${component.id}-${parentId}` : `after-${component.id}`}
@@ -258,7 +355,7 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
           isOver && isDragging ? "bg-primary/5" : ""
         }`}
       >
-        <div className="w-[90%] mx-auto p-6">
+        <div className="w-[95%] mx-auto p-6">
           {components.length === 0 ? (
             <EmptyCanvas isOver={isOver && isDragging} />
           ) : (
