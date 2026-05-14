@@ -523,19 +523,28 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.textAlign && p.textAlign !== "start") cls += ` text-${p.textAlign}`;
 
       const hasChildren = children && children.length > 0;
+      const headerChildren = hasChildren ? children.filter(c => c.slot === "header") : [];
+      const bodyChildren = hasChildren ? children.filter(c => !c.slot || c.slot === "body") : [];
+      const footerChildren = hasChildren ? children.filter(c => c.slot === "footer") : [];
+      const hasHeaderSlot = headerChildren.length > 0;
+      const hasBodySlot = bodyChildren.length > 0;
+      const hasFooterSlot = footerChildren.length > 0;
 
       let html = "";
       if (p.imgSrc) {
         html += indent(wrap("img", "card-img-top", "", { src: p.imgSrc as string, alt: "Card image" }), indentLevel + 1) + "\n";
       }
-      // Header from props (only when no direct children)
-      if (p.header && !hasChildren) {
-        html += indent(wrap("div", "card-header", p.header as string), indentLevel + 1) + "\n";
+      // Header
+      if (p.header || hasHeaderSlot) {
+        const headerContent = hasHeaderSlot
+          ? headerChildren.map(c => generateComponentHTML(c, indentLevel + 2, hiddenComponents)).join("\n")
+          : (p.header as string);
+        html += indent(wrap("div", "card-header", headerContent), indentLevel + 1) + "\n";
       }
       // Body
       html += indent('<div class="card-body">\n', indentLevel + 1);
-      if (hasChildren) {
-        html += generateChildrenHTML(component, indentLevel + 2, hiddenComponents);
+      if (hasBodySlot) {
+        html += bodyChildren.map(c => generateComponentHTML(c, indentLevel + 2, hiddenComponents)).join("\n");
       } else {
         if (p.title) html += indent(wrap("h5", "card-title", p.title as string, {}, true), indentLevel + 2) + "\n";
         if (p.subtitle) html += indent(wrap("h6", "card-subtitle mb-2 text-muted", p.subtitle as string, {}, true), indentLevel + 2) + "\n";
@@ -546,9 +555,12 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         }
       }
       html += indent("</div>", indentLevel + 1) + "\n";
-      // Footer from props (only when no direct children)
-      if (p.footer && !hasChildren) {
-        html += indent(wrap("div", "card-footer text-muted", p.footer as string), indentLevel + 1);
+      // Footer
+      if (p.footer || hasFooterSlot) {
+        const footerContent = hasFooterSlot
+          ? footerChildren.map(c => generateComponentHTML(c, indentLevel + 2, hiddenComponents)).join("\n")
+          : (p.footer as string);
+        html += indent(wrap("div", "card-footer text-muted", footerContent), indentLevel + 1);
       }
 
       return indent(wrap("div", cls, html.trimEnd(), wrapExtraAttrs, false, customClass, isHidden), indentLevel);
@@ -776,27 +788,46 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.scrollable) dialogCls += " modal-dialog-scrollable";
 
       const hasChildren = children && children.length > 0;
+      const headerSlotChildren = hasChildren ? children.filter(c => c.slot === "header") : [];
+      const bodySlotChildren = hasChildren ? children.filter(c => !c.slot || c.slot === "body") : [];
+      const footerSlotChildren = hasChildren ? children.filter(c => c.slot === "footer") : [];
+      const hasHeaderSlot = headerSlotChildren.length > 0;
+      const hasBodySlot = bodySlotChildren.length > 0;
+      const hasFooterSlot = footerSlotChildren.length > 0;
 
-      const bodyContent = hasChildren
-        ? generateChildrenHTML(component, indentLevel + 3, hiddenComponents)
+      const bodyContent = hasBodySlot
+        ? bodySlotChildren.map(c => generateComponentHTML(c, indentLevel + 3, hiddenComponents)).join("\n")
         : (p.text as string || "").replace(/\n/g, "<br>\n");
 
-      const headerContent = indent(`<h5 class="modal-title">${p.title || "Modal"}</h5>\n`, indentLevel + 3);
-
-      let footerContent = "";
-      if (p.footer && !hasChildren) {
-        footerContent = indent(wrap("button", "btn btn-secondary", "Close", { "data-bs-dismiss": "modal" }, true), indentLevel + 3) + "\n" +
-          indent(wrap("button", "btn btn-primary", p.footer as string, {}, true), indentLevel + 3);
-      }
+      let headerHTML = hasHeaderSlot
+        ? headerSlotChildren.map(c => generateComponentHTML(c, indentLevel + 3, hiddenComponents)).join("\n")
+        : indent(`<h5 class="modal-title">${p.title || "Modal"}</h5>\n`, indentLevel + 3);
 
       let html = indent(wrap("div", "modal-content",
         indent(wrap("div", "modal-header",
-          headerContent +
+          headerHTML +
           indent('<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>', indentLevel + 3)
         ), indentLevel + 2) + "\n" +
-        indent(wrap("div", "modal-body", bodyContent), indentLevel + 2) +
-        (footerContent ? "\n" + indent(wrap("div", "modal-footer", footerContent), indentLevel + 2) : "")
+        indent(wrap("div", "modal-body", bodyContent), indentLevel + 2)
       ), indentLevel + 1);
+
+      // Footer — buttons or slot children
+      const showClose = !!p.showCloseButton;
+      const showPrimary = !!p.showPrimaryButton;
+      if (showClose || showPrimary || hasFooterSlot) {
+        let footerContent = "";
+        if (hasFooterSlot) {
+          footerContent = footerSlotChildren.map(c => generateComponentHTML(c, indentLevel + 3, hiddenComponents)).join("\n");
+        } else {
+          if (showClose) {
+            footerContent = indent(wrap("button", "btn btn-secondary", p.closeButtonText || "Close", { "data-bs-dismiss": "modal" }, true), indentLevel + 3);
+          }
+          if (showPrimary) {
+            footerContent += (footerContent ? "\n" : "") + indent(wrap("button", "btn btn-primary", (p.footer as string) || "Save Changes", {}, true), indentLevel + 3);
+          }
+        }
+        html += "\n" + indent(wrap("div", "modal-footer", footerContent), indentLevel + 2);
+      }
 
       const dialogContent = indent(wrap("div", dialogCls.trim(), "\n" + html + "\n"), indentLevel + 1);
 
@@ -815,16 +846,22 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       const ocClasses = `offcanvas offcanvas-${placement}${backdropClass}${scrollClass}`;
 
       const hasChildren = children && children.length > 0;
+      const headerSlotChildren = hasChildren ? children.filter(c => c.slot === "header") : [];
+      const bodySlotChildren = hasChildren ? children.filter(c => !c.slot || c.slot === "body") : [];
+      const hasHeaderSlot = headerSlotChildren.length > 0;
+      const hasBodySlot = bodySlotChildren.length > 0;
 
-      const headerContent = indent(`<h5 class="offcanvas-title">${p.title || "Offcanvas"}</h5>`, indentLevel + 2);
+      let headerHTML = hasHeaderSlot
+        ? headerSlotChildren.map(c => generateComponentHTML(c, indentLevel + 2, hiddenComponents)).join("\n")
+        : indent(`<h5 class="offcanvas-title">${p.title || "Offcanvas"}</h5>`, indentLevel + 2);
 
-      const bodyContent = hasChildren
-        ? generateChildrenHTML(component, indentLevel + 2, hiddenComponents)
+      const bodyContent = hasBodySlot
+        ? bodySlotChildren.map(c => generateComponentHTML(c, indentLevel + 2, hiddenComponents)).join("\n")
         : (p.text as string || "").replace(/\n/g, "<br>\n");
 
       const inner = indent(
         wrap("div", "offcanvas-header",
-          headerContent + "\n" +
+          headerHTML + "\n" +
           indent('<button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>', indentLevel + 2)
         ), indentLevel + 1
       ) + "\n" +

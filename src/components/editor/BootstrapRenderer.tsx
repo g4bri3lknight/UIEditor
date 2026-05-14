@@ -59,6 +59,8 @@ interface RendererProps {
   isSelected?: boolean;
   onSelect?: (id: string) => void;
   renderChildren?: React.ReactNode;
+  slotChildren?: Record<string, React.ReactNode>;
+  isDragging?: boolean;
 }
 
 const Wrapper: React.FC<{
@@ -79,7 +81,7 @@ const Wrapper: React.FC<{
   </div>
 );
 
-export function BootstrapRenderer({ component, renderChildren }: RendererProps) {
+export function BootstrapRenderer({ component, renderChildren, slotChildren, isDragging }: RendererProps) {
   const { type, props } = component;
   const p = props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -135,17 +137,17 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
 
     case "col": {
       const hasChildren = component.children && component.children.length > 0;
+      const colSize = String(p.size || "auto");
+      const grow = colSize === "auto" ? 1 : Math.max(0, Number(colSize));
       return (
         <Wrapper customClass={customClass} style={{
-          // Width is 100% — sizing handled by CanvasItem flex-basis
-          width: "100%",
           background: BS_BG[String(p.bgColor)] || BS.light,
           color: BS_TEXT[String(p.textColor)] || BS.body,
           padding: spacing(String(p.padding || "3")),
           borderRadius: "4px",
           minHeight: "50px",
           boxSizing: "border-box",
-          flex: "1 1 0%",
+          flex: `${grow} 0 0%`,
           textAlign: String(p.textAlign) as any,
         }}>
           {renderChildren ?? (hasChildren ? (
@@ -340,14 +342,14 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       return (
         <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           {p.label && <label style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem" }}>{p.label}</label>}
-          <select disabled={!!p.disabled} multiple={!!p.multiple} style={{
+          <select disabled={!!p.disabled} multiple={!!p.multiple} defaultValue={String(p.options || "").split("\n").filter(Boolean)[0] || ""} style={{
             width: "100%", padding: isSmall ? "4px 8px" : isLarge ? "10px 14px" : "8px 12px", border: `1px solid ${BS.borderColor}`,
             borderRadius: "6px", background: BS.white, fontSize: isSmall ? "0.875rem" : isLarge ? "1.25rem" : "1rem", boxSizing: "border-box",
             opacity: p.disabled ? 0.65 : 1, outline: "none",
             height: p.multiple ? "120px" : undefined,
           }}>
             {String(p.options || "").split("\n").filter(Boolean).map((opt, i) => (
-              <option key={i} selected={i === 0}>{opt}</option>
+              <option key={i}>{opt}</option>
             ))}
           </select>
         </Wrapper>
@@ -667,7 +669,12 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const bgColor = bgMap[String(p.variant)] || BS.white;
       const isDark = ["primary", "secondary", "success", "danger", "info", "dark"].includes(String(p.variant));
       const borderColor = p.borderColor ? BS[String(p.borderColor)] : BS.borderColor;
+      const hasSlotChildren = slotChildren && Object.keys(slotChildren).length > 0;
       const hasDirectChildren = component.children && component.children.length > 0;
+      const hasHeaderChildren = component.children?.some(c => c.slot === "header") || false;
+      const hasBodySlot = renderChildren || hasDirectChildren || (hasSlotChildren && slotChildren.body);
+      const hasFooterChildren = component.children?.some(c => c.slot === "footer") || false;
+      const dragging = !!isDragging;
 
       return (
         <Wrapper customClass={customClass} style={{ padding: "0" }}>
@@ -679,16 +686,26 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
             {p.imgSrc && (
               <img src={String(p.imgSrc)} alt="" style={{ width: "100%", height: "180px", objectFit: "cover" }} />
             )}
-            {/* Header from props */}
-            {p.header && !hasDirectChildren && (
-              <div style={{ padding: "12px 20px", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : BS.borderColor}`, fontSize: "0.875rem", fontWeight: 600 }}>
-                {p.header as string}
+            {/* Header */}
+            {(p.header || hasHeaderChildren || dragging) && (
+              <div style={{
+                padding: "12px 20px", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : BS.borderColor}`,
+                fontSize: "0.875rem", fontWeight: 600, minHeight: "20px",
+              }}>
+                {hasHeaderChildren ? (
+                  slotChildren?.header
+                ) : (
+                  <>
+                    {p.header && <span>{p.header as string}</span>}
+                    {slotChildren?.header}
+                  </>
+                )}
               </div>
             )}
             {/* Body */}
             <div style={{ padding: "20px" }}>
-              {renderChildren ?? (hasDirectChildren ? (
-                component.children!.map((child) => <BootstrapRenderer key={child.id} component={child} />)
+              {hasBodySlot ? (
+                renderChildren ?? (hasSlotChildren ? slotChildren.body : null)
               ) : (
                 <>
                   {p.title && <h5 style={{ fontWeight: 600, marginBottom: "8px", fontSize: "1.25rem" }}>{p.title}</h5>}
@@ -705,12 +722,22 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
                     </button>
                   )}
                 </>
-              ))}
+              )}
             </div>
-            {/* Footer from props */}
-            {p.footer && !hasDirectChildren && (
-              <div style={{ padding: "12px 20px", borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : BS.borderColor}`, fontSize: "0.875rem", color: isDark ? "rgba(255,255,255,0.6)" : BS.muted }}>
-                {p.footer as string}
+            {/* Footer */}
+            {(p.footer || hasFooterChildren || dragging) && (
+              <div style={{
+                padding: "12px 20px", borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : BS.borderColor}`,
+                fontSize: "0.875rem", color: isDark ? "rgba(255,255,255,0.6)" : BS.muted, minHeight: "20px",
+              }}>
+                {hasFooterChildren ? (
+                  slotChildren?.footer
+                ) : (
+                  <>
+                    {p.footer && <span>{p.footer as string}</span>}
+                    {slotChildren?.footer}
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -991,7 +1018,12 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const modalMaxWidth = sizeWidthMap[String(p.size)] || "500px";
       const isCentered = !!p.centered;
       const isScrollable = !!p.scrollable;
+      const hasSlotChildren = slotChildren && Object.keys(slotChildren).length > 0;
       const hasDirectChildren = component.children && component.children.length > 0;
+      const hasHeaderChildren = component.children?.some(c => c.slot === "header") || false;
+      const hasBodySlot = renderChildren || hasDirectChildren || (hasSlotChildren && slotChildren.body);
+      const hasFooterChildren = component.children?.some(c => c.slot === "footer") || false;
+      const dragging = !!isDragging;
 
       return (
         <Wrapper customClass={customClass} style={{ padding: "0", display: "flex", justifyContent: "center", alignItems: isCentered ? "center" : "flex-start", minHeight: isCentered ? "200px" : undefined, background: "rgba(0,0,0,0.1)", borderRadius: "8px" }}>
@@ -1002,24 +1034,44 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
             ...(isScrollable ? { maxHeight: "400px" } : {}),
           }}>
             {/* Header */}
-            <div style={{ padding: "16px 20px", borderBottom: `1px solid ${BS.borderColor}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h5 style={{ fontWeight: 600, fontSize: "1.1rem", margin: 0 }}>{p.title || "Modal"}</h5>
-              <button style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: BS.muted, lineHeight: 1 }}>×</button>
+            <div style={{ padding: "16px 20px", borderBottom: `1px solid ${BS.borderColor}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", minHeight: "24px" }}>
+              <div style={{ flex: 1 }}>
+                {hasHeaderChildren ? (
+                  slotChildren?.header
+                ) : (
+                  <>
+                    <h5 style={{ fontWeight: 600, fontSize: "1.1rem", margin: 0 }}>{p.title || "Modal"}</h5>
+                    {slotChildren?.header}
+                  </>
+                )}
+              </div>
+              <button style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: BS.muted, lineHeight: 1, flexShrink: 0 }}>×</button>
             </div>
             {/* Body */}
             <div style={{ padding: "20px", fontSize: "0.9375rem", color: BS.body, flex: 1, overflowY: isScrollable ? "auto" : undefined }}>
-              {renderChildren ?? (hasDirectChildren ? (
-                component.children!.map((child) => <BootstrapRenderer key={child.id} component={child} />)
+              {hasBodySlot ? (
+                renderChildren ?? (hasSlotChildren ? slotChildren.body : null)
               ) : (
                 String(p.text || "").replace(/\\n/g, "\n")
-              ))}
+              )}
             </div>
-            {/* Footer from props */}
-            {p.footer && !hasDirectChildren && (
-              <div style={{ padding: "12px 20px", borderTop: `1px solid ${BS.borderColor}`, display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-                <button style={{ padding: "6px 16px", borderRadius: "6px", border: `1px solid ${BS.borderColor}`, background: BS.white, cursor: "pointer", fontSize: "0.9rem" }}>Close</button>
-                <button style={{ padding: "6px 16px", borderRadius: "6px", background: BS.primary, color: BS.white, border: "none", cursor: "pointer", fontSize: "0.9rem" }}>{p.footer}</button>
-              </div>
+            {/* Footer */}
+            {(p.showCloseButton || p.showPrimaryButton || hasFooterChildren || dragging) && (
+            <div style={{ padding: "12px 20px", borderTop: `1px solid ${BS.borderColor}`, display: "flex", justifyContent: "flex-end", gap: "8px", flexWrap: "wrap" }}>
+              {hasFooterChildren ? (
+                slotChildren?.footer
+              ) : (
+                <>
+                  {p.showCloseButton && (
+                    <button style={{ padding: "6px 16px", borderRadius: "6px", border: `1px solid ${BS.borderColor}`, background: BS.white, cursor: "pointer", fontSize: "0.9rem" }}>{p.closeButtonText || "Close"}</button>
+                  )}
+                  {p.showPrimaryButton && (
+                    <button style={{ padding: "6px 16px", borderRadius: "6px", background: BS.primary, color: BS.white, border: "none", cursor: "pointer", fontSize: "0.9rem" }}>{p.footer || "Save Changes"}</button>
+                  )}
+                  {slotChildren?.footer}
+                </>
+              )}
+            </div>
             )}
           </div>
         </Wrapper>
@@ -1031,7 +1083,10 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
       const isVertical = placement === "start" || placement === "end";
       const width = isVertical ? "350px" : "100%";
       const height = isVertical ? "100%" : "250px";
+      const hasSlotChildren = slotChildren && Object.keys(slotChildren).length > 0;
       const hasDirectChildren = component.children && component.children.length > 0;
+      const hasHeaderChildren = component.children?.some(c => c.slot === "header") || false;
+      const hasBodySlot = renderChildren || hasDirectChildren || (hasSlotChildren && slotChildren.body);
 
       return (
         <Wrapper customClass={customClass} style={{ padding: "0" }}>
@@ -1044,17 +1099,26 @@ export function BootstrapRenderer({ component, renderChildren }: RendererProps) 
             ...(p.backdrop ? { position: "relative" } : {}),
           }}>
             {/* Header */}
-            <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BS.borderColor}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h5 style={{ fontWeight: 600, fontSize: "1.1rem", margin: 0 }}>{p.title || "Offcanvas"}</h5>
-              <button style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: BS.muted, lineHeight: 1 }}>×</button>
+            <div style={{ padding: "12px 16px", borderBottom: `1px solid ${BS.borderColor}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", minHeight: "24px" }}>
+              <div style={{ flex: 1 }}>
+                {hasHeaderChildren ? (
+                  slotChildren?.header
+                ) : (
+                  <>
+                    <h5 style={{ fontWeight: 600, fontSize: "1.1rem", margin: 0 }}>{p.title || "Offcanvas"}</h5>
+                    {slotChildren?.header}
+                  </>
+                )}
+              </div>
+              <button style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: BS.muted, lineHeight: 1, flexShrink: 0 }}>×</button>
             </div>
             {/* Body */}
             <div style={{ padding: "16px", flex: 1, overflowY: "auto" }}>
-              {renderChildren ?? (hasDirectChildren ? (
-                component.children!.map((child) => <BootstrapRenderer key={child.id} component={child} />)
+              {hasBodySlot ? (
+                renderChildren ?? (hasSlotChildren ? slotChildren.body : null)
               ) : (
                 String(p.text || "").replace(/\\n/g, "\n")
-              ))}
+              )}
             </div>
           </div>
           {p.backdrop && (

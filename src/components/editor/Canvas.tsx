@@ -7,6 +7,9 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import {
@@ -15,21 +18,26 @@ import {
   Trash2,
   ArrowUp,
   ArrowDown,
-  Scissors,
   ClipboardCopy,
+  Plus,
 } from "lucide-react";
-import { useEditorStore, isContainer, isAutoManaged } from "@/store/editor-store";
+import { useEditorStore, isContainer, isAutoManaged, isSlottedType } from "@/store/editor-store";
 import { BootstrapRenderer } from "./BootstrapRenderer";
 import { CanvasComponent } from "@/lib/editor/types";
+import { COMPONENTS, CATEGORIES } from "@/lib/editor/bootstrap-components";
 import { toast } from "sonner";
 
 // ── Drop indicator between items ──
 function DropIndicator({
   id,
   isActive,
+  isDragging = false,
+  dropHint,
 }: {
   id: string;
   isActive: boolean;
+  isDragging?: boolean;
+  dropHint?: string;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id,
@@ -37,17 +45,65 @@ function DropIndicator({
   });
 
   const active = isOver || isActive;
+  const isLarge = isDragging && !!dropHint;
 
   return (
     <div
       ref={setNodeRef}
       className={`transition-all duration-200 rounded-lg ${
-        active
+        active && !isLarge
           ? "min-h-3 min-w-3 bg-primary/20 border-2 border-primary/40 border-dashed"
-          : "min-h-1 min-w-[2px]"
+          : isLarge
+            ? `min-h-[48px] border-2 border-dashed ${isOver ? "border-primary/60 bg-primary/10" : "border-primary/30 bg-primary/5"}`
+            : "min-h-1 min-w-[2px]"
       }`}
-      style={{ flex: "0 0 auto" }}
-    />
+      style={{ flex: isLarge ? "1 1 100%" : "0 0 auto", width: isLarge ? "100%" : undefined }}
+    >
+      {isLarge && (
+        <div className={`flex items-center justify-center h-full py-2 transition-opacity ${isOver ? "opacity-100" : "opacity-70"}`}>
+          <span className="text-xs text-primary/60 font-medium">{dropHint}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Slot drop zone (header/footer) for slotted components ──
+function SlotDropZone({
+  slotId,
+  isDragging,
+  children,
+  label,
+}: {
+  slotId: string;
+  isDragging: boolean;
+  children: React.ReactNode;
+  label: string;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: slotId,
+    data: { type: "slot-drop", slotId },
+  });
+
+  const showHint = isOver && isDragging;
+  const isEmpty = !children || (React.Children.count(children) === 0);
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`relative transition-all duration-150 w-full ${
+        showHint ? "ring-1 ring-primary/40 bg-primary/5 rounded" : ""
+      } ${isEmpty && isDragging ? "min-h-[40px]" : ""}`}
+    >
+      {children}
+      {isEmpty && isDragging && (
+        <div className={`absolute inset-0 flex items-center justify-center rounded transition-opacity pointer-events-none ${
+          showHint ? "opacity-100" : "opacity-0"
+        }`}>
+          <span className="text-[10px] text-primary/60 font-medium">{label}</span>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -70,6 +126,7 @@ function CanvasItem({
   const {
     selectedId,
     selectComponent,
+    addComponent,
     duplicateComponent,
     copyComponent,
     pasteComponent,
@@ -83,8 +140,14 @@ function CanvasItem({
   const isSelected = selectedId === component.id;
   const isHidden = hiddenComponents.has(component.id);
   const canContain = isContainer(component.type);
-  const hasChildren = canContain && component.children && component.children.length > 0;
+  const isSlotted = isSlottedType(component.type);
+  const allChildren = component.children || [];
+  const hasAnyChildren = allChildren.length > 0;
   const managed = isAutoManaged(component.type);
+
+  // Inline components should not stretch to full width
+  const INLINE_TYPES = new Set(["button", "badge", "spinner", "progress", "checkbox", "radio", "switch", "range"]);
+  const isInline = INLINE_TYPES.has(component.type);
 
   // ── Draggable (disabled for auto-managed types like col) ──
   const {
@@ -115,10 +178,12 @@ function CanvasItem({
     touchAction: "none",
   };
 
-  // Col components need explicit flex-basis to size correctly inside flex rows
+  // Col components: use flex-grow proportional to size (12-column grid)
+  // flex-basis: 0% ensures gaps are automatically subtracted from available space
   if (component.type === "col") {
-    // Cols inside a row should be equal width
-    dragStyle.flex = "1 1 0%";
+    const size = String(component.props.size || "auto");
+    const grow = size === "auto" ? 1 : Math.max(0, Number(size));
+    dragStyle.flex = `${grow} 0 0%`;
     dragStyle.minWidth = "0";
   }
 
@@ -158,37 +223,108 @@ function CanvasItem({
     toast.success("Componente eliminato");
   }, [removeComponent, component.id]);
 
-  // ── Children rendered as CanvasItems (recursive, no wrapper div) ──
-  const childrenContent = hasChildren ? (
-    <>
-      {component.children!.map((child, i) => (
-        <React.Fragment key={child.id}>
+  // Quick insert via context menu
+  const handleQuickInsert = useCallback((type: string) => {
+    addComponent(type, component.id, undefined, isSlotted ? "body" : undefined);
+    toast.success(`${COMPONENTS.find(c => c.type === type)?.label || type} aggiunto`);
+  }, [addComponent, component.id, isSlotted]);
+
+  // Determine target for quick insert (container or column inside slotted types)
+  const canInsertInto = canContain || managed;
+
+  // ── Build children content (split by slot for slotted types) ──
+  const renderSlotContent = useCallback((slotChildren: CanvasComponent[]) => {
+    if (slotChildren.length === 0) return null;
+    return (
+      <>
+        {slotChildren.map((child, i) => (
+          <React.Fragment key={child.id}>
+            <DropIndicator
+              id={`before::${child.id}::${component.id}`}
+              isActive={false}
+            />
+            <CanvasItem
+              component={child}
+              index={i}
+              siblings={slotChildren}
+              parentId={component.id}
+              isDragging={isDragging}
+              depth={depth + 1}
+            />
+            <DropIndicator
+              id={`after::${child.id}::${component.id}`}
+              isActive={false}
+            />
+          </React.Fragment>
+        ))}
+        {isDragging && (
           <DropIndicator
-            id={`before::${child.id}::${component.id}`}
+            id={`bottom-slot-${component.id}-${slotChildren[0]?.slot || "body"}`}
             isActive={false}
           />
-          <CanvasItem
-            component={child}
-            index={i}
-            siblings={component.children!}
-            parentId={component.id}
+        )}
+      </>
+    );
+  }, [component.id, isDragging, depth]);
+
+  // For slotted types: split children into slot groups
+  let slotChildrenMap: Record<string, React.ReactNode> | undefined;
+  let childrenContent: React.ReactNode | null = null;
+
+  if (isSlotted) {
+    const headerChildren = allChildren.filter(c => c.slot === "header");
+    const bodyChildren = allChildren.filter(c => !c.slot || c.slot === "body");
+    const footerChildren = allChildren.filter(c => c.slot === "footer");
+
+    slotChildrenMap = {
+      header: (
+        <SlotDropZone slotId={`slot-${component.id}-header`} isDragging={isDragging} label="Rilascia componenti qui">
+          {renderSlotContent(headerChildren)}
+        </SlotDropZone>
+      ),
+      body: renderSlotContent(bodyChildren),
+      footer: (
+        <SlotDropZone slotId={`slot-${component.id}-footer`} isDragging={isDragging} label="Rilascia componenti qui">
+          {renderSlotContent(footerChildren)}
+        </SlotDropZone>
+      ),
+    };
+  } else if (canContain && hasAnyChildren) {
+    // Rows auto-manage their columns — don't show "drop at end" inside rows
+    const showBottomDrop = isDragging && component.type !== "row" && !managed;
+    childrenContent = (
+      <>
+        {allChildren.map((child, i) => (
+          <React.Fragment key={child.id}>
+            <DropIndicator
+              id={`before::${child.id}::${component.id}`}
+              isActive={false}
+            />
+            <CanvasItem
+              component={child}
+              index={i}
+              siblings={allChildren}
+              parentId={component.id}
+              isDragging={isDragging}
+              depth={depth + 1}
+            />
+            <DropIndicator
+              id={`after::${child.id}::${component.id}`}
+              isActive={false}
+            />
+          </React.Fragment>
+        ))}
+        {showBottomDrop && (
+          <DropIndicator
+            id={`bottom-${component.id}`}
+            isActive={false}
             isDragging={isDragging}
-            depth={depth + 1}
+            dropHint="Rilascia qui"
           />
-          <DropIndicator
-            id={`after::${child.id}::${component.id}`}
-            isActive={false}
-          />
-        </React.Fragment>
-      ))}
-      {isDragging && (
-        <DropIndicator
-          id={`bottom-${component.id}`}
-          isActive={false}
-        />
-      )}
-    </>
-  ) : null;
+        )}
+      </>
+    );
+  }
 
   return (
     <>
@@ -213,7 +349,7 @@ function CanvasItem({
                   : isSelected
                     ? "ring-2 ring-primary/50 bg-primary/5"
                     : "hover:ring-1 hover:ring-border"
-            }`}
+            }${isInline ? " inline-flex" : ""}`}
             onClick={handleSelect}
             {...attributes}
             {...listeners}
@@ -226,7 +362,7 @@ function CanvasItem({
             )}
 
             {/* Container drop zone hint */}
-            {canContain && isDragging && (
+            {canContain && !isSlotted && isDragging && (
               <div
                 className={`absolute inset-0 rounded-lg border-2 border-dashed pointer-events-none transition-colors z-0 ${
                   isContainerOver
@@ -242,6 +378,8 @@ function CanvasItem({
                 <BootstrapRenderer
                   component={component}
                   renderChildren={childrenContent}
+                  slotChildren={slotChildrenMap}
+                  isDragging={isDragging}
                 />
               ) : (
                 <div className="pointer-events-none">
@@ -252,6 +390,41 @@ function CanvasItem({
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>
+          {/* Quick insert submenu — only for containers and columns */}
+          {canInsertInto && (
+            <ContextMenuSub>
+              <ContextMenuSubTrigger>
+                <Plus className="mr-2 h-4 w-4" />
+                Inserisci
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent className="max-h-[300px] overflow-y-auto">
+                {CATEGORIES.map((cat) => {
+                  const catComponents = COMPONENTS.filter(
+                    (c) => c.category === cat.id && !c.hidden
+                  );
+                  if (catComponents.length === 0) return null;
+                  return (
+                    <ContextMenuSub key={cat.id}>
+                      <ContextMenuSubTrigger>
+                        {cat.label}
+                      </ContextMenuSubTrigger>
+                      <ContextMenuSubContent className="max-h-[250px] overflow-y-auto">
+                        {catComponents.map((comp) => (
+                          <ContextMenuItem
+                            key={comp.type}
+                            onClick={() => handleQuickInsert(comp.type)}
+                          >
+                            {comp.label}
+                          </ContextMenuItem>
+                        ))}
+                      </ContextMenuSubContent>
+                    </ContextMenuSub>
+                  );
+                })}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+          )}
+          {canInsertInto && <ContextMenuSeparator />}
           <ContextMenuItem
             disabled={managed}
             onClick={handleDuplicate}
@@ -367,7 +540,9 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
             <div className="space-y-0">
               <DropIndicator
                 id="top-drop"
-                isActive={isOver && isDragging && components.length > 0}
+                isActive={false}
+                isDragging={isDragging}
+                dropHint="Rilascia all'inizio"
               />
 
               {components.map((comp, index) => (
@@ -384,16 +559,12 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
 
               <DropIndicator
                 id="bottom-drop"
-                isActive={isOver && isDragging && components.length > 0}
+                isActive={false}
+                isDragging={isDragging}
+                dropHint="Rilascia alla fine"
               />
-            </div>
-          )}
-
-          {components.length > 0 && isDragging && !isOver && (
-            <div className="mt-4 h-12 border-2 border-dashed border-primary/30 rounded-xl flex items-center justify-center bg-primary/5 transition-all">
-              <span className="text-xs text-primary/60 font-medium">
-                Rilascia alla fine
-              </span>
+              {/* Extra spacer at bottom to ensure the drop zone has room */}
+              {isDragging && <div className="h-4" />}
             </div>
           )}
         </div>

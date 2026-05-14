@@ -9,12 +9,14 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCorners,
+  pointerWithin,
+  type CollisionDetection,
+  type Collision,
 } from "@dnd-kit/core";
 import { LeftSidebar } from "./LeftSidebar";
 import { Canvas } from "./Canvas";
 import { RightSidebar } from "./RightSidebar";
-import { useEditorStore } from "@/store/editor-store";
+import { useEditorStore, isSlottedType } from "@/store/editor-store";
 import { getComponentByType } from "@/lib/editor/bootstrap-components";
 import { generateFullHTML } from "@/lib/editor/code-generator";
 import { Button } from "@/components/ui/button";
@@ -47,6 +49,48 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { TEMPLATES } from "@/lib/editor/templates";
+
+// ── Custom collision detection ──
+// Prioritizes drop indicators, then picks the innermost (smallest area) container.
+// This fixes the bug where columns inside rows steal focus from the container's
+// bottom drop zone when using closestCorners.
+const editorCollisionDetection: CollisionDetection = (args) => {
+  const { droppableRects } = args;
+
+  // Step 1: Get all droppables that actually contain the pointer
+  const pointerHits = pointerWithin(args);
+  if (pointerHits.length === 0) return [];
+
+  // Step 2: Sort by priority
+  const sorted = [...pointerHits].sort((a, b) => {
+    const aId = String(a.id);
+    const bId = String(b.id);
+
+    // Helper: check if ID is a drop indicator (between-item markers, NOT slot containers)
+    const isIndicator = (id: string) =>
+      id.startsWith("before::") ||
+      id.startsWith("after::") ||
+      id.startsWith("bottom-") ||
+      id.startsWith("top-");
+
+    const aIsInd = isIndicator(aId);
+    const bIsInd = isIndicator(bId);
+
+    // Indicators always win over container drops
+    if (aIsInd && !bIsInd) return -1;
+    if (!aIsInd && bIsInd) return 1;
+
+    // Among same type, prefer smaller area (innermost container wins)
+    const aRect = droppableRects.get(a.id);
+    const bRect = droppableRects.get(b.id);
+    const aArea = aRect ? (aRect.right - aRect.left) * (aRect.bottom - aRect.top) : Infinity;
+    const bArea = bRect ? (bRect.right - bRect.left) * (bRect.bottom - bRect.top) : Infinity;
+
+    return aArea - bArea;
+  });
+
+  return sorted;
+};
 
 // ── Sidebar resize hook ──
 function useSidebarResize(
@@ -275,15 +319,64 @@ export function Editor() {
       if (activeId.startsWith("palette-")) {
         const type = activeId.replace("palette-", "");
 
+        // Dropped ON a slot drop zone (header/footer of card/modal/offcanvas)
+        if (overId.startsWith("slot-")) {
+          const rest = overId.replace("slot-", "");
+          const lastDash = rest.lastIndexOf("-");
+          if (lastDash !== -1) {
+            const parentId = rest.substring(0, lastDash);
+            const slot = rest.substring(lastDash + 1);
+            const parentComp = useEditorStore.getState().findComponent(parentId);
+            if (parentComp && isSlottedType(parentComp.type)) {
+              addComponent(type, parentId, undefined, slot);
+              return;
+            }
+          }
+        }
+
         // Dropped ON a container → add as child of that container
         if (overId.startsWith("container-")) {
           const parentId = overId.replace("container-", "");
           const parentComp = useEditorStore.getState().findComponent(parentId);
-          // If dropping on a row, redirect to its first column
-          if (parentComp?.type === "row" && parentComp.children && parentComp.children.length > 0) {
-            addComponent(type, parentComp.children[0].id);
+          // If dropping on a column, redirect rows to be siblings of the parent row
+          if (parentComp?.type === "col") {
+            const colParentInfo = useEditorStore.getState().getParentInfo(parentId);
+            if (type === "row" && colParentInfo?.parent) {
+              // Add row as sibling of the parent row (inside the container)
+              addComponent(type, colParentInfo.parent.id);
+            } else {
+              addComponent(type, parentId);
+            }
+          } else if (parentComp?.type === "row" && parentComp.children && parentComp.children.length > 0) {
+            if (type === "row") {
+              // Don't nest rows inside rows — add as sibling of the row instead
+              const parentInfo = useEditorStore.getState().getParentInfo(parentId);
+              addComponent(type, parentInfo?.parent?.id ?? null);
+            } else {
+              addComponent(type, parentComp.children[0].id);
+            }
           } else {
-            addComponent(type, parentId);
+            // For slotted types (card/modal/offcanvas), add to body slot by default
+            if (isSlottedType(parentComp.type)) {
+              addComponent(type, parentId, undefined, "body");
+            } else {
+              addComponent(type, parentId);
+            }
+          }
+          return;
+        }
+
+        // Dropped on a container's "bottom" indicator → add as last child
+        if (overId.startsWith("bottom-") && overId !== "bottom-drop") {
+          const parentId = overId.replace("bottom-", "");
+          const parentComp = useEditorStore.getState().findComponent(parentId);
+          if (parentComp) {
+            // For slotted types, add to body slot by default
+            if (isSlottedType(parentComp.type)) {
+              addComponent(type, parentId, undefined, "body");
+            } else {
+              addComponent(type, parentId);
+            }
           }
           return;
         }
@@ -332,9 +425,39 @@ export function Editor() {
           // Don't move into self
           if (newParentId !== activeId) {
             const parentComp = useEditorStore.getState().findComponent(newParentId);
-            // If dropping on a row, redirect to its first column
-            if (parentComp?.type === "row" && parentComp.children && parentComp.children.length > 0) {
-              useEditorStore.getState().moveComponentInTree(activeId, parentComp.children[0].id);
+            const draggedComp = useEditorStore.getState().findComponent(activeId);
+            // If dropping on a column, redirect rows to be siblings of the parent row
+            if (parentComp?.type === "col" && draggedComp?.type === "row") {
+              const colParentInfo = useEditorStore.getState().getParentInfo(newParentId);
+              useEditorStore.getState().moveComponentInTree(activeId, colParentInfo?.parent?.id ?? null);
+            } else if (parentComp?.type === "row" && parentComp.children && parentComp.children.length > 0) {
+              if (draggedComp?.type === "row") {
+                // Don't nest rows inside rows — move as sibling of the target row
+                const parentInfo = useEditorStore.getState().getParentInfo(newParentId);
+                useEditorStore.getState().moveComponentInTree(activeId, parentInfo?.parent?.id ?? null);
+              } else {
+                useEditorStore.getState().moveComponentInTree(activeId, parentComp.children[0].id);
+              }
+            } else {
+              useEditorStore.getState().moveComponentInTree(activeId, newParentId);
+            }
+          }
+          return;
+        }
+
+        // Moving via bottom-{id} indicator → add as last child of that container
+        if (overId.startsWith("bottom-") && overId !== "bottom-drop") {
+          const newParentId = overId.replace("bottom-", "");
+          if (newParentId !== activeId) {
+            const parentComp = useEditorStore.getState().findComponent(newParentId);
+            const draggedComp = useEditorStore.getState().findComponent(activeId);
+            // Prevent dropping rows inside rows or columns
+            if (parentComp?.type === "row") {
+              const parentInfo = useEditorStore.getState().getParentInfo(newParentId);
+              useEditorStore.getState().moveComponentInTree(activeId, parentInfo?.parent?.id ?? null);
+            } else if (parentComp?.type === "col" && draggedComp?.type === "row") {
+              const colParentInfo = useEditorStore.getState().getParentInfo(newParentId);
+              useEditorStore.getState().moveComponentInTree(activeId, colParentInfo?.parent?.id ?? null);
             } else {
               useEditorStore.getState().moveComponentInTree(activeId, newParentId);
             }
@@ -575,7 +698,7 @@ export function Editor() {
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={editorCollisionDetection}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}

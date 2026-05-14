@@ -16,6 +16,13 @@ export function isAutoManaged(type: string): boolean {
   return type === "col";
 }
 
+// ── Types that support slotted children (header/body/footer) ──
+export const SLOTTED_TYPES = new Set(["card", "modal", "offcanvas"]);
+
+export function isSlottedType(type: string): boolean {
+  return SLOTTED_TYPES.has(type);
+}
+
 
 
 // ── ID generation ──
@@ -98,7 +105,7 @@ function syncRowChildren(comp: CanvasComponent): CanvasComponent {
           id: generateId(),
           type: "col",
           label: `Column ${i + 1}`,
-          props: { size: "12", bgColor: "light", textColor: "dark", padding: "3", textAlign: "start" },
+          props: { size: "auto", bgColor: "light", textColor: "dark", padding: "3", textAlign: "start" },
           children: [],
         });
       }
@@ -130,7 +137,7 @@ interface EditorState {
   clipboard: CanvasComponent | null;
   hiddenComponents: Set<string>;
 
-  addComponent: (type: string, parentId?: string | null, index?: number) => void;
+  addComponent: (type: string, parentId?: string | null, index?: number, slot?: string) => void;
   removeComponent: (id: string) => void;
   moveComponent: (fromIndex: number, toIndex: number) => void;
   moveComponentInTree: (compId: string, newParentId: string | null, index?: number) => void;
@@ -177,7 +184,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
-  addComponent: (type, parentId = null, index) => {
+  addComponent: (type, parentId = null, index, slot) => {
     const def = getComponentByType(type);
     if (!def) return;
 
@@ -187,6 +194,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       label: def.label,
       props: {},
       children: undefined,
+      slot: slot ? (slot as "header" | "body" | "footer") : undefined,
     };
 
     // Initialize default props
@@ -200,7 +208,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         id: generateId(),
         type: "col",
         label: `Column ${i + 1}`,
-        props: { size: "12", bgColor: "light", textColor: "dark", padding: "3", textAlign: "start" },
+        props: { size: "auto", bgColor: "light", textColor: "dark", padding: "3", textAlign: "start" },
         children: [],
       }));
     }

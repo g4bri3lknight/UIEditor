@@ -129,7 +129,7 @@ export const COMPONENTS: BootstrapComponentDefinition[] = [
         key: "gutter",
         label: "Gutter",
         type: "select",
-        defaultValue: "3",
+        defaultValue: "0",
         options: [
           { label: "None", value: "0" },
           { label: "1", value: "1" },
@@ -164,7 +164,7 @@ export const COMPONENTS: BootstrapComponentDefinition[] = [
         key: "size",
         label: "Column Width",
         type: "select",
-        defaultValue: "12",
+        defaultValue: "auto",
         options: [
           { label: "1/12", value: "1" },
           { label: "2/12", value: "2" },
@@ -1866,8 +1866,27 @@ export const COMPONENTS: BootstrapComponentDefinition[] = [
         placeholder: "Modal body",
       },
       {
+        key: "showCloseButton",
+        label: "Mostra pulsante Close",
+        type: "boolean",
+        defaultValue: true,
+      },
+      {
+        key: "closeButtonText",
+        label: "Testo pulsante Close",
+        type: "text",
+        defaultValue: "Close",
+        placeholder: "Testo del pulsante close",
+      },
+      {
+        key: "showPrimaryButton",
+        label: "Mostra pulsante primario",
+        type: "boolean",
+        defaultValue: true,
+      },
+      {
         key: "footer",
-        label: "Footer Text",
+        label: "Testo pulsante primario",
         type: "text",
         defaultValue: "Save Changes",
         placeholder: "Primary button text",
