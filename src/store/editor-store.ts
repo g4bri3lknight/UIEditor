@@ -340,6 +340,19 @@ export const useEditorStore = create<EditorState>()(
   moveComponentInTree: (compId, newParentId, index) => {
     const comp = findInTree(get().components, compId);
     if (!comp) return;
+
+    // Self-drop prevention: if same parent and same effective position, skip
+    const info = get().getParentInfo(compId);
+    const currentParentId = info?.parent?.id ?? null;
+    if (currentParentId === newParentId && info !== null) {
+      const siblings = currentParentId
+        ? findInTree(get().components, currentParentId)?.children ?? []
+        : get().components;
+      const currentIdx = siblings.findIndex(c => c.id === compId);
+      const targetIdx = index !== undefined ? index : siblings.length - 1;
+      if (currentIdx === targetIdx) return;
+    }
+
     const clone = deepCloneWithNewIds(comp);
     // Keep original ID for move (not copy)
     clone.id = compId;

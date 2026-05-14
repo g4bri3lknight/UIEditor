@@ -506,19 +506,33 @@ export function Editor() {
           return;
         }
 
-        // Moving via before/after indicators at root level
+        // Moving via before/after indicators
         if (overId.startsWith("before::") || overId.startsWith("after::")) {
           const isBefore = overId.startsWith("before::");
           const rest = overId.replace(isBefore ? "before::" : "after::", "");
           const parts = rest.split("::");
           const targetId = parts[0];
           const parentId = parts.length > 1 ? parts[1] : null;
+
+          // Self-drop on own indicator: skip
+          if (activeId === targetId) return;
+
           const siblings = parentId
             ? useEditorStore.getState().findComponent(parentId)?.children || []
             : components;
           const targetIdx = siblings.findIndex((c) => c.id === targetId);
           if (targetIdx !== -1) {
-            useEditorStore.getState().moveComponentInTree(activeId, parentId, isBefore ? targetIdx : targetIdx + 1);
+            // Adjust index: after removeFromTree removes activeId, the target shifts
+            // if activeId was before the target in the same parent
+            const activeIdx = siblings.findIndex((c) => c.id === activeId);
+            let insertIdx: number;
+            if (activeIdx !== -1 && activeIdx < targetIdx) {
+              // Active was before target — after removal, target shifts left by 1
+              insertIdx = isBefore ? targetIdx - 1 : targetIdx;
+            } else {
+              insertIdx = isBefore ? targetIdx : targetIdx + 1;
+            }
+            useEditorStore.getState().moveComponentInTree(activeId, parentId, insertIdx);
           }
           return;
         }

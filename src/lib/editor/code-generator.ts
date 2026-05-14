@@ -842,31 +842,37 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         ? headerSlotChildren.map(c => generateComponentHTML(c, indentLevel + 3, hiddenComponents)).join("\n")
         : indent(`<h5 class="modal-title">${p.title || "Modal"}</h5>\n`, indentLevel + 3);
 
-      let html = indent(wrap("div", "modal-content",
-        indent(wrap("div", "modal-header",
-          headerHTML +
-          indent('<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>', indentLevel + 3)
-        ), indentLevel + 2) + "\n" +
-        indent(wrap("div", "modal-body", bodyContent), indentLevel + 2)
-      ), indentLevel + 1);
-
-      // Footer — buttons or slot children
+      // Build footer inside modal-content
       const showClose = !!p.showCloseButton;
       const showPrimary = !!p.showPrimaryButton;
+      const closeStyle = String(p.closeButtonStyle || "secondary");
+      const primaryStyle = String(p.primaryButtonStyle || "primary");
+      const closeCls = `btn btn-${closeStyle}`;
+      const primaryCls = `btn btn-${primaryStyle}`;
+      let footerHTML = "";
       if (showClose || showPrimary || hasFooterSlot) {
         let footerContent = "";
         if (hasFooterSlot) {
           footerContent = footerSlotChildren.map(c => generateComponentHTML(c, indentLevel + 3, hiddenComponents)).join("\n");
         } else {
           if (showClose) {
-            footerContent = indent(wrap("button", "btn btn-secondary", p.closeButtonText || "Close", { "data-bs-dismiss": "modal" }, true), indentLevel + 3);
+            footerContent = indent(wrap("button", closeCls, p.closeButtonText || "Close", { "data-bs-dismiss": "modal" }, true), indentLevel + 3);
           }
           if (showPrimary) {
-            footerContent += (footerContent ? "\n" : "") + indent(wrap("button", "btn btn-primary", (p.footer as string) || "Save Changes", {}, true), indentLevel + 3);
+            footerContent += (footerContent ? "\n" : "") + indent(wrap("button", primaryCls, (p.footer as string) || "Save Changes", {}, true), indentLevel + 3);
           }
         }
-        html += "\n" + indent(wrap("div", "modal-footer", footerContent), indentLevel + 2);
+        footerHTML = "\n" + indent(wrap("div", "modal-footer", footerContent), indentLevel + 2);
       }
+
+      let html = indent(wrap("div", "modal-content",
+        indent(wrap("div", "modal-header",
+          headerHTML +
+          indent('<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>', indentLevel + 3)
+        ), indentLevel + 2) + "\n" +
+        indent(wrap("div", "modal-body", bodyContent), indentLevel + 2) +
+        footerHTML
+      ), indentLevel + 1);
 
       const dialogContent = indent(wrap("div", dialogCls.trim(), "\n" + html + "\n"), indentLevel + 1);
 
@@ -940,6 +946,8 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
                   .map((cell, ci) => {
                     const cellP = cell.props as Record<string, string | boolean | number>;
                     const cellText = String(cellP.text || "");
+                    const cellAlign = String(cellP.align || "left");
+                    const alignAttr = cellAlign !== "left" ? ` style="text-align: ${cellAlign}"` : "";
                     const hasCellChildren = cell.children && cell.children.length > 0;
                     let cellContent = "";
                     if (hasCellChildren) {
@@ -949,8 +957,8 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
                     } else {
                       cellContent = cellText;
                     }
-                    if (ci === 0) return `<th scope="row">${cellContent}</th>`;
-                    return `<td>${cellContent}</td>`;
+                    if (ci === 0) return `<th scope="row"${alignAttr}>${cellContent}</th>`;
+                    return `<td${alignAttr}>${cellContent}</td>`;
                   })
                   .join("\n") +
                 "</tr>",

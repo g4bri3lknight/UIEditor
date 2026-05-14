@@ -209,6 +209,20 @@ function CanvasItem({
   if (isTableCell) {
     dragStyle.padding = "12px 16px";
     dragStyle.verticalAlign = "middle";
+    // Default subtle border to make cells visible
+    dragStyle.borderBottomWidth = "1px";
+    dragStyle.borderBottomStyle = "solid";
+    dragStyle.borderBottomColor = "#e5e7eb";
+    // Empty cells get a min-height for visibility
+    const hasCellChildren = component.children && component.children.length > 0;
+    if (!hasCellChildren) {
+      dragStyle.minHeight = "36px";
+    }
+    // Text alignment
+    const cellAlign = String(component.props.align || "left");
+    if (cellAlign !== "left") {
+      dragStyle.textAlign = cellAlign as "center" | "right" | "justify";
+    }
   }
 
   // For table structure, look up parent table props for styling
@@ -231,9 +245,19 @@ function CanvasItem({
     const bc = String(tableProps.borderColor || "");
     const bordered = !!tableProps.bordered;
     if (bordered && bc) {
-      dragStyle.borderWidth = "1px";
-      dragStyle.borderStyle = "solid";
-      dragStyle.borderColor = bc === "primary" ? "#0d6efd" : bc === "secondary" ? "#6c757d" : bc === "success" ? "#198754" : bc === "danger" ? "#dc3545" : bc === "warning" ? "#ffc107" : bc === "info" ? "#0dcaf0" : "#dee2e6";
+      const color = bc === "primary" ? "#0d6efd" : bc === "secondary" ? "#6c757d" : bc === "success" ? "#198754" : bc === "danger" ? "#dc3545" : bc === "warning" ? "#ffc107" : bc === "info" ? "#0dcaf0" : "#dee2e6";
+      dragStyle.borderTopWidth = "1px";
+      dragStyle.borderTopStyle = "solid";
+      dragStyle.borderTopColor = color;
+      dragStyle.borderLeftWidth = "1px";
+      dragStyle.borderLeftStyle = "solid";
+      dragStyle.borderLeftColor = color;
+      dragStyle.borderRightWidth = "1px";
+      dragStyle.borderRightStyle = "solid";
+      dragStyle.borderRightColor = color;
+      dragStyle.borderBottomWidth = "1px";
+      dragStyle.borderBottomStyle = "solid";
+      dragStyle.borderBottomColor = color;
     }
     if (tableProps.condensed) {
       dragStyle.padding = "6px 12px";

@@ -289,7 +289,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
           </div>
 
           <Separator />
-          {Object.entries(propGroups).map(([groupName, props]) => (
+          {Object.entries(propGroups).map(([groupName, props], idx) => (
             <div key={groupName}>
               {Object.keys(propGroups).length > 1 && (
                 <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">
@@ -310,14 +310,8 @@ export function RightSidebar({ width }: RightSidebarProps) {
                   />
                 ))}
               </div>
-              {Object.entries(propGroups).indexOf([groupName, props] as any) <
-                Object.entries(propGroups).length - 1 && (
-                <Separator className="my-3" />
-              )}
             </div>
           ))}
-
-          <Separator />
 
           {/* Avanzato (Advanced) */}
           <div>

@@ -1078,7 +1078,9 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
                   </>
                 )}
               </div>
-              <button style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: BS.muted, lineHeight: 1, flexShrink: 0 }}>×</button>
+              <button style={{ background: "transparent", border: "none", width: "32px", height: "32px", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, padding: 0 }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="#6c757d"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>
+              </button>
             </div>
             {/* Body */}
             <div style={{ padding: "20px", fontSize: "0.9375rem", color: BS.body, flex: 1, overflowY: isScrollable ? "auto" : undefined }}>
@@ -1096,10 +1098,16 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
               ) : (
                 <>
                   {p.showCloseButton && (
-                    <button style={{ padding: "6px 16px", borderRadius: "6px", border: `1px solid ${BS.borderColor}`, background: BS.white, cursor: "pointer", fontSize: "0.9rem" }}>{p.closeButtonText || "Close"}</button>
+                    <button style={{
+                      ...getButtonStyle(String(p.closeButtonStyle || "secondary"), String(p.closeButtonStyle || "").startsWith("outline-")),
+                      padding: "6px 16px", borderRadius: "6px", cursor: "pointer", fontSize: "0.875rem", fontWeight: 400, lineHeight: 1.5,
+                    }}>{p.closeButtonText || "Close"}</button>
                   )}
                   {p.showPrimaryButton && (
-                    <button style={{ padding: "6px 16px", borderRadius: "6px", background: BS.primary, color: BS.white, border: "none", cursor: "pointer", fontSize: "0.9rem" }}>{p.footer || "Save Changes"}</button>
+                    <button style={{
+                      ...getButtonStyle(String(p.primaryButtonStyle || "primary"), String(p.primaryButtonStyle || "").startsWith("outline-")),
+                      padding: "6px 16px", borderRadius: "6px", cursor: "pointer", fontSize: "0.875rem", fontWeight: 400, lineHeight: 1.5,
+                    }}>{p.footer || "Save Changes"}</button>
                   )}
                   {slotChildren?.footer}
                 </>
@@ -1143,7 +1151,9 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
                   </>
                 )}
               </div>
-              <button style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: BS.muted, lineHeight: 1, flexShrink: 0 }}>×</button>
+              <button style={{ background: "transparent", border: "none", width: "32px", height: "32px", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, padding: 0 }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="#6c757d"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>
+              </button>
             </div>
             {/* Body */}
             <div style={{ padding: "16px", flex: 1, overflowY: "auto" }}>
@@ -1170,7 +1180,11 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
           <div style={{ overflowX: "auto" }}>
             <table style={{
               width: "100%", borderCollapse: "collapse", fontSize: "0.9375rem",
-              ...(p.bordered ? { borderWidth: "1px", borderStyle: "solid", borderColor: p.borderColor ? BS[String(p.borderColor)] : BS.borderColor } : {}),
+              ...(p.bordered ? {
+                borderWidth: "1px",
+                borderStyle: "solid",
+                borderColor: p.borderColor ? BS[String(p.borderColor)] : BS.borderColor,
+              } : {}),
             }}>
               <thead>
                 <tr style={{
@@ -1179,7 +1193,14 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
                   {headers.map((h, i) => (
                     <th key={i} style={{
                       padding: p.condensed ? "6px 12px" : "12px 16px",
-                      ...(p.bordered ? { borderWidth: "1px", borderStyle: "solid" } : {}),
+                      ...(p.bordered ? {
+                        borderTopWidth: "1px",
+                        borderTopStyle: "solid",
+                        borderLeftWidth: "1px",
+                        borderLeftStyle: "solid",
+                        borderRightWidth: "1px",
+                        borderRightStyle: "solid",
+                      } : {}),
                       borderBottomWidth: "2px",
                       borderBottomStyle: "solid",
                       borderBottomColor: BS.borderColor,
@@ -1317,11 +1338,13 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
 
 function getButtonStyle(variant: string, isOutline: boolean): React.CSSProperties {
   if (isOutline) {
+    // Strip "outline-" prefix if present (e.g. "outline-danger" -> "danger")
+    const baseVariant = variant.startsWith("outline-") ? variant.replace("outline-", "") : variant;
     const colorMap: Record<string, string> = {
       primary: BS.primary, secondary: BS.secondary, success: BS.success,
       danger: BS.danger, warning: BS.warning, info: BS.info,
     };
-    const color = colorMap[variant] || BS.primary;
+    const color = colorMap[baseVariant] || BS.primary;
     return {
       background: "transparent",
       color,
