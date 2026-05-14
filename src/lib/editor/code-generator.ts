@@ -162,6 +162,14 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.textColor) cls += ` text-${p.textColor}`;
       if (p.textAlign && p.textAlign !== "start") cls += ` text-${p.textAlign}`;
       if (p.textSize && p.textSize !== "lead") cls += ` ${p.textSize}`;
+      if (p.bgColor && p.bgColor !== "transparent") cls += ` bg-${p.bgColor}`;
+      const pPad = String(p.padding || "0");
+      if (pPad !== "0") cls += ` p-${pPad}`;
+      const pRadius = String(p.borderRadius || "0");
+      if (pRadius === "4px") cls += " rounded";
+      else if (pRadius === "8px") cls += " rounded-3";
+      else if (pRadius === "12px") cls += " rounded-4";
+      else if (pRadius === "50px") cls += " rounded-pill";
       cls = cls.trim();
       const text = (p.text as string).replace(/\n/g, "<br>\n");
       return indent(wrap("p", cls, text, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
@@ -211,15 +219,39 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.disabled) extras.push("disabled");
       if (p.readonly) extras.push("readonly");
       if (p.required) extras.push("required");
+      if (p.text) extras.push('value="' + String(p.text) + '"');
 
       if (p.plaintext) inputCls = "form-control-plaintext";
 
       const label = p.label as string;
       const inputType = p.type as string;
+      const isCurrency = inputType === "currency";
+
+      // Helper: format number as Italian currency (1.234,56 €)
+      const formatEuroForCode = (val: string | number | undefined) => {
+        if (!val && val !== 0) return "";
+        const raw = String(val).replace(/[^\d.,\-]/g, "").replace(/\./g, "").replace(",", ".");
+        const num = parseFloat(raw);
+        if (isNaN(num)) return "";
+        return String(num.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })) + " €";
+      };
+
+      // For currency, override the value with formatted version
+      const actualExtras = [...extras];
+      if (isCurrency && p.text) {
+        // Remove the raw value from extras, add formatted one
+        const formatted = formatEuroForCode(p.text);
+        const idx = actualExtras.indexOf('value="' + String(p.text) + '"');
+        if (idx !== -1) actualExtras.splice(idx, 1);
+        actualExtras.push('value="' + formatted + '"');
+      }
+      const finalExtras = actualExtras.join(" ");
+      const htmlInputType = isCurrency ? "text" : inputType;
+      const inputModeAttr = isCurrency ? " inputmode=\"decimal\"" : "";
 
       if (p.floating) {
         let html = indent(`<label for="floating${indentLevel}" class="form-label">${label}</label>`, indentLevel + 1);
-        html = indent(`<input type="${inputType}" class="form-control" id="floating${indentLevel}" placeholder="${p.placeholder || ""}" ${extras.join(" ")}>`) + "\n" + html;
+        html = indent(`<input type="${htmlInputType}" class="form-control" id="floating${indentLevel}" placeholder="${p.placeholder || ""}"${inputModeAttr} ${finalExtras}>`) + "\n" + html;
         html = indent(wrap("div", "form-floating mb-3", html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
         return html;
       }
@@ -229,7 +261,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         html += indent(`<label for="input${indentLevel}" class="form-label">${label}</label>\n`, indentLevel);
       }
       html += indent(
-        `<input type="${inputType}" class="${inputCls}" id="input${indentLevel}" placeholder="${p.placeholder || ""}" ${extras.join(" ")}>\n`,
+        `<input type="${htmlInputType}" class="${inputCls}" id="input${indentLevel}" placeholder="${p.placeholder || ""}"${inputModeAttr} ${finalExtras}>\n`,
         indentLevel
       );
       if (p.helpText) {
@@ -248,7 +280,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         html += indent(`<label for="ta${indentLevel}" class="form-label">${p.label}</label>\n`, indentLevel);
       }
       html += indent(
-        `<textarea class="${sizeCls}" id="ta${indentLevel}" rows="${p.rows || 3}" placeholder="${p.placeholder || ""}" ${extras.join(" ")}></textarea>\n`,
+        `<textarea class="${sizeCls}" id="ta${indentLevel}" rows="${p.rows || 3}" placeholder="${p.placeholder || ""}" ${extras.join(" ")}>${String(p.text || "")}</textarea>\n`,
         indentLevel
       );
       if (p.helpText) {
@@ -518,7 +550,6 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
     // ── CONTENT ──
     case "card": {
       let cls = "card";
-      if (p.variant) cls += ` text-bg-${p.variant}`;
       if (p.borderColor) cls += ` border-${p.borderColor}`;
       if (p.textAlign && p.textAlign !== "start") cls += ` text-${p.textAlign}`;
 
@@ -529,17 +560,25 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       const hasHeaderSlot = headerChildren.length > 0;
       const hasBodySlot = bodyChildren.length > 0;
       const hasFooterSlot = footerChildren.length > 0;
+      const isDarkHeader = ["primary", "secondary", "success", "danger", "info", "dark"].includes(String(p.variant));
 
       let html = "";
       if (p.imgSrc) {
         html += indent(wrap("img", "card-img-top", "", { src: p.imgSrc as string, alt: "Card image" }), indentLevel + 1) + "\n";
       }
       // Header
-      if (p.header || hasHeaderSlot) {
+      if (p.header || hasHeaderSlot || p.variant) {
+        let headerCls = "card-header";
+        if (p.variant) headerCls += ` bg-${p.variant}`;
+        if (isDarkHeader) headerCls += " text-white";
+        const headerSizeStyleMap: Record<string, string> = { "": "", sm: "0.75rem", md: "0.875rem", lg: "1.25rem", xl: "1.5rem" };
+        const headerFs = headerSizeStyleMap[String(p.headerSize)] || "";
+        const headerStyleObj: Record<string, string> = {};
+        if (headerFs) headerStyleObj.style = "font-size:" + headerFs;
         const headerContent = hasHeaderSlot
           ? headerChildren.map(c => generateComponentHTML(c, indentLevel + 2, hiddenComponents)).join("\n")
           : (p.header as string);
-        html += indent(wrap("div", "card-header", headerContent), indentLevel + 1) + "\n";
+        html += indent(wrap("div", headerCls, headerContent, headerStyleObj), indentLevel + 1) + "\n";
       }
       // Body
       html += indent('<div class="card-body">\n', indentLevel + 1);
@@ -873,12 +912,10 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
     // ── TABLES ──
     case "table": {
       const headers = ((p.headers as string) || "")
-        .split(",")
-        .map((h) => h.trim());
-      const rows = ((p.rows as string) || "")
-        .split("\n")
-        .filter(Boolean)
-        .map((r) => r.split(",").map((c) => c.trim()));
+        .split("|")
+        .map((h) => h.trim())
+        .filter(Boolean);
+      const tableRows = children || [];
 
       let cls = "table";
       if (p.striped) cls += " table-striped";
@@ -894,18 +931,28 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         indentLevel + 2
       );
 
-      const bodyHtml = rows
+      const bodyHtml = tableRows
         .map(
           (row, i) =>
             indent(
               "<tr>" +
-                row
-                  .map((cell) =>
-                    i === 0
-                      ? `<th scope="row">${cell}</th>`
-                      : `<td>${cell}</td>`
-                  )
-                  .join("") +
+                (row.children || [])
+                  .map((cell, ci) => {
+                    const cellP = cell.props as Record<string, string | boolean | number>;
+                    const cellText = String(cellP.text || "");
+                    const hasCellChildren = cell.children && cell.children.length > 0;
+                    let cellContent = "";
+                    if (hasCellChildren) {
+                      cellContent = cell.children!
+                        .map(c => generateComponentHTML(c, indentLevel + 3, hiddenComponents))
+                        .join("\n");
+                    } else {
+                      cellContent = cellText;
+                    }
+                    if (ci === 0) return `<th scope="row">${cellContent}</th>`;
+                    return `<td>${cellContent}</td>`;
+                  })
+                  .join("\n") +
                 "</tr>",
               indentLevel + 2
             )
@@ -921,6 +968,16 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         return indent(wrap("div", "table-responsive", indent(table, indentLevel + 1), wrapExtraAttrs, false, undefined, isHidden), indentLevel);
       }
       return indent(wrap("div", "", table, wrapExtraAttrs, false, undefined, isHidden), indentLevel);
+    }
+
+    case "table-row": {
+      // Handled by the table case — no standalone output
+      return "";
+    }
+
+    case "table-cell": {
+      // Handled by the table case — no standalone output
+      return "";
     }
 
     // ── IMAGES ──
@@ -1004,15 +1061,16 @@ export function generateFullHTML(components: CanvasComponent[], hiddenComponents
     .join("\n\n");
 
   return `<!doctype html>
-<html lang="en">
+<html lang="en" style="height:100%">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Bootstrap Page</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>html,body{height:100%;margin:0}</style>
   </head>
-  <body>
+  <body style="display:flex;flex-direction:column;min-height:100%">
 ${body}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   </body>

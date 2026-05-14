@@ -43,7 +43,7 @@ const CONTENT_TYPES = new Set([
   "card", "modal", "alert", "offcanvas", "badge", "spinner",
   "accordion", "carousel", "jumbotron", "progress", "toast",
 ]);
-const TABLE_TYPES = new Set(["table"]);
+const TABLE_TYPES = new Set(["table", "table-row", "table-cell"]);
 const IMAGE_TYPES = new Set(["image", "video"]);
 
 function getLayerIcon(type: string): React.ElementType {
@@ -233,6 +233,7 @@ function countComponents(comps: CanvasComponent[]): number {
 // ── Saved Templates Panel ──
 function TemplatesPanel() {
   const savedSnippets = useEditorStore((s) => s.savedSnippets);
+  const hydrated = useEditorStore((s) => s._hydrated);
   const insertSnippet = useEditorStore((s) => s.insertSnippet);
   const deleteSnippet = useEditorStore((s) => s.deleteSnippet);
   const renameSnippet = useEditorStore((s) => s.renameSnippet);
@@ -278,6 +279,19 @@ function TemplatesPanel() {
     const d = new Date(timestamp);
     return d.toLocaleDateString("it-IT", { day: "2-digit", month: "short" });
   };
+
+  if (!hydrated) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full px-6 py-12">
+        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-3">
+          <Bookmark className="w-5 h-5 text-muted-foreground/50" />
+        </div>
+        <p className="text-xs text-muted-foreground text-center leading-relaxed">
+          Caricamento...
+        </p>
+      </div>
+    );
+  }
 
   if (savedSnippets.length === 0) {
     return (

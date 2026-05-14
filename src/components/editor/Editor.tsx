@@ -28,6 +28,16 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Code,
@@ -213,6 +223,7 @@ export function Editor() {
 
   const [codeDialogOpen, setCodeDialogOpen] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [activeDragData, setActiveDragData] = useState<{
     fromPalette: boolean;
@@ -355,6 +366,15 @@ export function Editor() {
             } else {
               addComponent(type, parentComp.children[0].id);
             }
+          } else if (parentComp?.type === "table-row" && parentComp.children && parentComp.children.length > 0) {
+            // Dropping on a table-row — redirect to first cell
+            addComponent(type, parentComp.children[0].id);
+          } else if (parentComp?.type === "table") {
+            // Dropping on a table — redirect to first cell of first row
+            const firstRow = parentComp.children?.[0];
+            if (firstRow?.children?.[0]) {
+              addComponent(type, firstRow.children[0].id);
+            }
           } else {
             // For slotted types (card/modal/offcanvas), add to body slot by default
             if (isSlottedType(parentComp.type)) {
@@ -438,6 +458,15 @@ export function Editor() {
               } else {
                 useEditorStore.getState().moveComponentInTree(activeId, parentComp.children[0].id);
               }
+            } else if (parentComp?.type === "table-row" && parentComp.children && parentComp.children.length > 0) {
+              // Dropping on table-row — redirect to first cell
+              useEditorStore.getState().moveComponentInTree(activeId, parentComp.children[0].id);
+            } else if (parentComp?.type === "table") {
+              // Dropping on table — redirect to first cell of first row
+              const firstRow = parentComp.children?.[0];
+              if (firstRow?.children?.[0]) {
+                useEditorStore.getState().moveComponentInTree(activeId, firstRow.children[0].id);
+              }
             } else {
               useEditorStore.getState().moveComponentInTree(activeId, newParentId);
             }
@@ -458,6 +487,18 @@ export function Editor() {
             } else if (parentComp?.type === "col" && draggedComp?.type === "row") {
               const colParentInfo = useEditorStore.getState().getParentInfo(newParentId);
               useEditorStore.getState().moveComponentInTree(activeId, colParentInfo?.parent?.id ?? null);
+            } else if (parentComp?.type === "table-row") {
+              // Dropping on table-row bottom — redirect to first cell
+              const firstCell = parentComp.children?.[0];
+              if (firstCell) {
+                useEditorStore.getState().moveComponentInTree(activeId, firstCell.id);
+              }
+            } else if (parentComp?.type === "table") {
+              // Dropping on table bottom — redirect to first cell of first row
+              const firstRow = parentComp.children?.[0];
+              if (firstRow?.children?.[0]) {
+                useEditorStore.getState().moveComponentInTree(activeId, firstRow.children[0].id);
+              }
             } else {
               useEditorStore.getState().moveComponentInTree(activeId, newParentId);
             }
@@ -863,7 +904,7 @@ export function Editor() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={clearCanvas}
+              onClick={() => setClearDialogOpen(true)}
               disabled={components.length === 0}
               className="h-8 px-2 text-destructive hover:text-destructive"
               title="Svuota canvas"
@@ -994,11 +1035,11 @@ export function Editor() {
               </button>
             </div>
           </div>
-          {/* Iframe with scrollable container */}
-          <div className="flex-1 min-h-0 overflow-auto bg-muted/30">
+          {/* Iframe container */}
+          <div className="flex-1 min-h-0 min-w-0 relative">
             <iframe
               srcDoc={htmlCode}
-              style={{ minWidth: "100%", border: "none", background: "white", display: "block" }}
+              style={{ width: "100%", height: "100%", border: "none", background: "white", display: "block" }}
               title="Bootstrap Preview"
               sandbox="allow-scripts"
             />
@@ -1019,6 +1060,31 @@ export function Editor() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Clear Canvas Confirmation */}
+      <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Svuota canvas</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sei sicuro di voler eliminare tutti i componenti dal canvas? Questa azione non può essere annullata.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setClearDialogOpen(false)}>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                clearCanvas();
+                setClearDialogOpen(false);
+                toast.success("Canvas svuotato");
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Elimina tutto
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DndContext>
   );
 }

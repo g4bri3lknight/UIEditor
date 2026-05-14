@@ -1,11 +1,14 @@
 // Bootstrap GUI Editor - Editor Store (Zustand with undo/redo)
+"use client";
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { CanvasComponent, SavedSnippet } from "@/lib/editor/types";
 import { getComponentByType } from "@/lib/editor/bootstrap-components";
 
 // ── Container types that can accept children ──
 export const CONTAINER_TYPES = new Set([
   "container", "row", "col", "card", "modal", "offcanvas",
+  "table", "table-row", "table-cell",
 ]);
 
 export function isContainer(type: string): boolean {
@@ -13,7 +16,7 @@ export function isContainer(type: string): boolean {
 }
 
 export function isAutoManaged(type: string): boolean {
-  return type === "col";
+  return type === "col" || type === "table-row" || type === "table-cell";
 }
 
 // ── Types that support slotted children (header/body/footer) ──
@@ -105,7 +108,7 @@ function syncRowChildren(comp: CanvasComponent): CanvasComponent {
           id: generateId(),
           type: "col",
           label: `Column ${i + 1}`,
-          props: { size: "auto", bgColor: "light", textColor: "dark", padding: "3", textAlign: "start" },
+          props: { size: "auto", bgColor: "transparent", textColor: "dark", padding: "3", textAlign: "start" },
           children: [],
         });
       }
@@ -124,6 +127,66 @@ function syncRowChildren(comp: CanvasComponent): CanvasComponent {
   }
   if (comp.children) {
     return { ...comp, children: comp.children.map(syncRowChildren) };
+  }
+  return comp;
+}
+
+// ── Sync table structure (rows and cells) ──
+function syncTableStructure(comp: CanvasComponent): CanvasComponent {
+  if (comp.type === "table") {
+    const headers = String(comp.props.headers || "")
+      .split("|")
+      .map(h => h.trim())
+      .filter(Boolean);
+    const numCols = Math.max(headers.length, 1);
+    const numRows = Number(comp.props.numRows) || 3;
+
+    let rows = comp.children ? [...comp.children] : [];
+
+    // Sync row count
+    while (rows.length < numRows) {
+      const cells = Array.from({ length: numCols }, () => ({
+        id: generateId(),
+        type: "table-cell",
+        label: "Cell",
+        props: { text: "" },
+        children: [],
+      }));
+      rows.push({
+        id: generateId(),
+        type: "table-row",
+        label: `Row ${rows.length + 1}`,
+        props: {},
+        children: cells,
+      });
+    }
+    if (rows.length > numRows) {
+      rows = rows.slice(0, numRows);
+    }
+
+    // Sync cell count for each row
+    rows = rows.map((row, ri) => {
+      let cells = row.children ? [...row.children] : [];
+      while (cells.length < numCols) {
+        cells.push({
+          id: generateId(),
+          type: "table-cell",
+          label: "Cell",
+          props: { text: "" },
+          children: [],
+        });
+      }
+      if (cells.length > numCols) {
+        cells = cells.slice(0, numCols);
+      }
+      return { ...row, label: `Row ${ri + 1}`, children: cells };
+    });
+
+    return { ...comp, children: rows };
+  }
+  // Recurse into children for nested tables
+  if (comp.children) {
+    return { ...comp, children: comp.children.map(syncTableStructure) };
   }
   return comp;
 }
@@ -162,6 +225,7 @@ interface EditorState {
 
   // ── Saved Snippets (reusable templates) ──
   savedSnippets: SavedSnippet[];
+  _hydrated: boolean;
   saveSnippet: (name: string, componentIds: string[]) => void;
   deleteSnippet: (id: string) => void;
   renameSnippet: (id: string, newName: string) => void;
@@ -172,14 +236,17 @@ interface EditorState {
 const MAX_HISTORY = 100;
 
 // ── Store ──
-export const useEditorStore = create<EditorState>((set, get) => ({
+export const useEditorStore = create<EditorState>()(
+  persist(
+    (set, get) => ({
   components: [],
   selectedId: null,
   history: [[]],
   historyIndex: 0,
   clipboard: null,
   hiddenComponents: new Set<string>(),
-  savedSnippets: loadSavedSnippets(),
+  savedSnippets: [],
+  _hydrated: false,
 
   pushHistory: () => {
     set(s => {
@@ -216,8 +283,30 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         id: generateId(),
         type: "col",
         label: `Column ${i + 1}`,
-        props: { size: "auto", bgColor: "light", textColor: "dark", padding: "3", textAlign: "start" },
+        props: { size: "auto", bgColor: "transparent", textColor: "dark", padding: "3", textAlign: "start" },
         children: [],
+      }));
+    }
+
+    if (type === "table") {
+      const headers = String(comp.props.headers || "")
+        .split("|")
+        .map(h => h.trim())
+        .filter(Boolean);
+      const numCols = Math.max(headers.length, 1);
+      const numRows = Number(comp.props.numRows) || 3;
+      comp.children = Array.from({ length: numRows }, (_, ri) => ({
+        id: generateId(),
+        type: "table-row",
+        label: `Row ${ri + 1}`,
+        props: {},
+        children: Array.from({ length: numCols }, () => ({
+          id: generateId(),
+          type: "table-cell",
+          label: "Cell",
+          props: { text: "" },
+          children: [],
+        })),
       }));
     }
 
@@ -283,7 +372,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         comps.map(c => {
           if (c.id === id) {
             const updated = { ...c, props: { ...c.props, ...props } };
-            return syncRowChildren(updated);
+            let synced = syncRowChildren(updated);
+            synced = syncTableStructure(synced);
+            return synced;
           }
           if (c.children) return { ...c, children: updateInTree(c.children) };
           return c;
@@ -443,13 +534,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     const newSnippets = [...savedSnippets, snippet];
     set({ savedSnippets: newSnippets });
-    persistSnippets(newSnippets);
   },
 
   deleteSnippet: (id) => {
     const newSnippets = get().savedSnippets.filter(s => s.id !== id);
     set({ savedSnippets: newSnippets });
-    persistSnippets(newSnippets);
   },
 
   renameSnippet: (id, newName) => {
@@ -457,7 +546,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       s.id === id ? { ...s, name: newName, updatedAt: Date.now() } : s
     );
     set({ savedSnippets: newSnippets });
-    persistSnippets(newSnippets);
   },
 
   insertSnippet: (snippetId, parentId, index, slot) => {
@@ -481,26 +569,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
     get().pushHistory();
   },
-}));
-
-// ── Snippet localStorage persistence ──
-const SNIPPETS_STORAGE_KEY = "bootstrap-editor-saved-snippets";
-
-function loadSavedSnippets(): SavedSnippet[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const saved = localStorage.getItem(SNIPPETS_STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) return parsed;
+}),
+    {
+      name: "bootstrap-editor-saved-snippets",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ savedSnippets: state.savedSnippets }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state._hydrated = true;
+          useEditorStore.setState({ _hydrated: true });
+        }
+      },
     }
-  } catch { /* ignore */ }
-  return [];
-}
-
-function persistSnippets(snippets: SavedSnippet[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(SNIPPETS_STORAGE_KEY, JSON.stringify(snippets));
-  } catch { /* ignore */ }
-}
+  )
+);

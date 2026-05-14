@@ -188,15 +188,20 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
     }
 
     case "paragraph": {
+      const pBg = BS_BG[String(p.bgColor)];
+      const isDarkBg = ["primary", "secondary", "success", "danger", "info", "dark"].includes(String(p.bgColor));
       return (
         <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           <p style={{
             fontSize: p.textSize === "fs-6" ? "1rem" : p.textSize === "fs-4" ? "1.5rem" : p.textSize === "fs-2" ? "2rem" : "1rem",
             fontWeight: p.lead ? 300 : 400,
             lineHeight: p.lead ? 1.7 : 1.6,
-            color: BS_TEXT[String(p.textColor)] || BS.body,
+            color: isDarkBg ? BS.white : (BS_TEXT[String(p.textColor)] || BS.body),
             textAlign: String(p.textAlign) as any,
             margin: 0,
+            background: pBg || "transparent",
+            padding: spacing(String(p.padding || "2")),
+            borderRadius: String(p.borderRadius || "0"),
           }}>
             {p.text || "Paragraph text"}
           </p>
@@ -266,16 +271,31 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
       const inputSize: Record<string, string> = { "sm": "0.75rem", "": "1rem", "lg": "1.25rem" };
       const inputPadding: Record<string, string> = { "sm": "4px 8px", "": "8px 12px", "lg": "12px 16px" };
       const sz = String(p.size || "");
+      const isCurrency = String(p.type || "") === "currency";
 
-      if (p.floating) {
+      // Helper: format number as Italian currency (1.234,56 €)
+      const formatEuro = (val: string | number | undefined) => {
+        if (!val && val !== 0) return "";
+        const raw = String(val).replace(/[^\d.,\-]/g, "").replace(/\./g, "").replace(",", ".");
+        const num = parseFloat(raw);
+        if (isNaN(num)) return "";
+        return num.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+      };
+
+      const displayValue = isCurrency ? formatEuro(p.text) : String(p.text || "");
+      const inputKey = component.id + "-" + String(p.type || "") + "-" + String(p.text || "");
+
+      if (p.floating && !isCurrency) {
         return (
           <Wrapper customClass={customClass} style={{ padding: "4px" }}>
             <div style={{ position: "relative" }}>
               <input
+                key={inputKey}
                 type={String(p.type || "text")}
                 placeholder={String(p.placeholder || "")}
+                value={String(p.text || "")}
+                readOnly
                 disabled={!!p.disabled}
-                readOnly={!!p.readonly}
                 style={{
                   width: "100%", padding: p.floating ? "24px 12px 6px 12px" : inputPadding[sz],
                   fontSize: inputSize[sz], border: `1px solid ${BS.borderColor}`, borderRadius: "8px",
@@ -299,10 +319,13 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
         <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           {p.label && <label style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem", color: BS.body }}>{p.label}{p.required && <span style={{ color: BS.danger, marginLeft: "2px" }}>*</span>}</label>}
           <input
-            type={String(p.type || "text")}
+            key={inputKey}
+            type={isCurrency ? "text" : String(p.type || "text")}
             placeholder={String(p.placeholder || "")}
+            value={displayValue}
+            readOnly
             disabled={!!p.disabled}
-            readOnly={!!p.readonly || !!p.plaintext}
+            inputMode={isCurrency ? "decimal" : undefined}
             style={{
               width: "100%", padding: inputPadding[sz], fontSize: inputSize[sz],
               border: p.plaintext ? "none" : `1px solid ${BS.borderColor}`,
@@ -317,11 +340,15 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
 
     case "textarea": {
       const sz = String(p.size || "");
+      const taKey = component.id + "-" + String(p.text || "");
       return (
         <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           {p.label && <label style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem" }}>{p.label}</label>}
           <textarea
+            key={taKey}
             placeholder={String(p.placeholder || "")}
+            value={String(p.text || "")}
+            readOnly
             rows={Number(p.rows) || 3}
             disabled={!!p.disabled}
             style={{
@@ -661,13 +688,13 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
 
     // ── CONTENT ──
     case "card": {
-      const bgMap: Record<string, string> = {
-        "": BS.white, primary: BS.primary, secondary: BS.secondary,
+      const headerBgMap: Record<string, string> = {
+        "": BS.transparent, primary: BS.primary, secondary: BS.secondary,
         success: BS.success, danger: BS.danger, warning: BS.warning,
         info: BS.info, light: BS.light, dark: BS.dark,
       };
-      const bgColor = bgMap[String(p.variant)] || BS.white;
-      const isDark = ["primary", "secondary", "success", "danger", "info", "dark"].includes(String(p.variant));
+      const headerBg = headerBgMap[String(p.variant)] || BS.transparent;
+      const isDarkHeader = ["primary", "secondary", "success", "danger", "info", "dark"].includes(String(p.variant));
       const borderColor = p.borderColor ? BS[String(p.borderColor)] : BS.borderColor;
       const hasSlotChildren = slotChildren && Object.keys(slotChildren).length > 0;
       const hasDirectChildren = component.children && component.children.length > 0;
@@ -675,22 +702,28 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
       const hasBodySlot = renderChildren || hasDirectChildren || (hasSlotChildren && slotChildren.body);
       const hasFooterChildren = component.children?.some(c => c.slot === "footer") || false;
       const dragging = !!isDragging;
+      const showHeader = p.header || hasHeaderChildren || dragging || p.variant;
+      const headerFontSizeMap: Record<string, string> = { "": "0.875rem", sm: "0.75rem", md: "0.875rem", lg: "1.25rem", xl: "1.5rem" };
+      const headerFontSize = headerFontSizeMap[String(p.headerSize)] || "0.875rem";
 
       return (
         <Wrapper customClass={customClass} style={{ padding: "0" }}>
           <div style={{
             border: `1px solid ${borderColor}`, borderRadius: "12px", overflow: "hidden",
-            background: bgColor, color: isDark ? BS.white : BS.body,
+            background: BS.white, color: BS.body,
             textAlign: String(p.textAlign) as any,
           }}>
             {p.imgSrc && (
               <img src={String(p.imgSrc)} alt="" style={{ width: "100%", height: "180px", objectFit: "cover" }} />
             )}
             {/* Header */}
-            {(p.header || hasHeaderChildren || dragging) && (
+            {showHeader && (
               <div style={{
-                padding: "12px 20px", borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : BS.borderColor}`,
-                fontSize: "0.875rem", fontWeight: 600, minHeight: "20px",
+                padding: "12px 20px",
+                borderBottom: `1px solid ${isDarkHeader ? "rgba(255,255,255,0.15)" : BS.borderColor}`,
+                fontSize: headerFontSize, fontWeight: 600, minHeight: "20px",
+                background: headerBg,
+                color: isDarkHeader ? BS.white : BS.body,
               }}>
                 {hasHeaderChildren ? (
                   slotChildren?.header
@@ -709,13 +742,13 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
               ) : (
                 <>
                   {p.title && <h5 style={{ fontWeight: 600, marginBottom: "8px", fontSize: "1.25rem" }}>{p.title}</h5>}
-                  {p.subtitle && <h6 style={{ fontSize: "0.875rem", color: isDark ? "rgba(255,255,255,0.7)" : BS.muted, marginBottom: "12px", fontWeight: 400 }}>{p.subtitle}</h6>}
-                  {p.text && <p style={{ fontSize: "0.9375rem", lineHeight: 1.6, margin: 0, color: isDark ? "rgba(255,255,255,0.85)" : "inherit" }}>{String(p.text).replace(/\\n/g, "\n")}</p>}
+                  {p.subtitle && <h6 style={{ fontSize: "0.875rem", color: BS.muted, marginBottom: "12px", fontWeight: 400 }}>{p.subtitle}</h6>}
+                  {p.text && <p style={{ fontSize: "0.9375rem", lineHeight: 1.6, margin: 0 }}>{String(p.text).replace(/\\n/g, "\n")}</p>}
                   {p.showButton && (
                     <button style={{
                       marginTop: "16px", padding: "6px 16px", borderRadius: "6px",
-                      background: isDark ? "transparent" : BS.primary, color: BS.white,
-                      border: isDark ? `1px solid rgba(255,255,255,0.5)` : "none",
+                      background: BS.primary, color: BS.white,
+                      border: "none",
                       cursor: "pointer", fontSize: "0.9rem", fontWeight: 400,
                     }}>
                       {p.buttonText || "Go somewhere"}
@@ -727,8 +760,8 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
             {/* Footer */}
             {(p.footer || hasFooterChildren || dragging) && (
               <div style={{
-                padding: "12px 20px", borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : BS.borderColor}`,
-                fontSize: "0.875rem", color: isDark ? "rgba(255,255,255,0.6)" : BS.muted, minHeight: "20px",
+                padding: "12px 20px", borderTop: `1px solid ${BS.borderColor}`,
+                fontSize: "0.875rem", color: BS.muted, minHeight: "20px",
               }}>
                 {hasFooterChildren ? (
                   slotChildren?.footer
@@ -1130,8 +1163,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
 
     // ── TABLES ──
     case "table": {
-      const headers = String(p.headers || "").split(",").map(h => h.trim());
-      const rows = String(p.rows || "").split("\n").filter(Boolean).map(r => r.split(",").map(c => c.trim()));
+      const headers = String(p.headers || "").split("|").map(h => h.trim()).filter(Boolean);
 
       return (
         <Wrapper customClass={customClass} style={{ padding: "0" }}>
@@ -1160,28 +1192,25 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row, ri) => (
-                  <tr key={ri} style={{
-                    background: p.striped && ri % 2 === 1 ? BS.light : BS.white,
-                    borderBottom: `1px solid ${BS.borderColor}`,
-                    cursor: p.hover ? "pointer" : undefined,
-                  }}>
-                    {row.map((cell, ci) => (
-                      <td key={ci} style={{
-                        padding: p.condensed ? "6px 12px" : "12px 16px",
-                        ...(p.bordered ? { borderWidth: "1px", borderStyle: "solid" } : {}),
-                        borderColor: p.borderColor ? BS[String(p.borderColor)] : (p.bordered ? BS.borderColor : undefined),
-                      }}>
-                        {ci === 0 ? <strong>{cell}</strong> : cell}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
+                {renderChildren ?? null}
               </tbody>
             </table>
           </div>
         </Wrapper>
       );
+    }
+
+    case "table-row": {
+      // The CanvasItem wrapper has display:table-row, so we just pass through children
+      return <>{renderChildren ?? null}</>;
+    }
+
+    case "table-cell": {
+      // The CanvasItem wrapper has display:table-cell, so we just pass through children
+      // If cell has no children and has text, show the text directly
+      const cellText = String(p.text || "");
+      const hasCellChildren = component.children && component.children.length > 0;
+      return <>{hasCellChildren ? (renderChildren ?? null) : cellText}</>;
     }
 
     // ── IMAGES ──
