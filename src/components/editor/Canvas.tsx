@@ -155,10 +155,13 @@ function CanvasItem({
   const hasAnyChildren = allChildren.length > 0;
   const managed = isAutoManaged(component.type);
 
-  // Table structure types use table display roles to not break table layout
+  // Table structure types
+  const isTable = component.type === "table";
   const isTableRow = component.type === "table-row";
   const isTableCell = component.type === "table-cell";
   const isTableStructure = isTableRow || isTableCell;
+  // Table and table-structure children must not have DropIndicator <div>s (invalid inside <tbody>)
+  const skipDropIndicators = isTable || isTableStructure;
 
   // Inline components should not stretch to full width
   const INLINE_TYPES = new Set(["button", "badge", "spinner", "progress", "checkbox", "radio", "switch", "range"]);
@@ -177,13 +180,14 @@ function CanvasItem({
   });
 
   // ── Droppable (for container types) ──
+  // Disable for table and table-row so drops go directly to table-cell
   const {
     setNodeRef: setDropRef,
     isOver: isContainerOver,
   } = useDroppable({
     id: `container-${component.id}`,
     data: { type: "container-drop", componentId: component.id },
-    disabled: !canContain,
+    disabled: !canContain || component.type === "table" || component.type === "table-row",
   });
 
   const dragStyle: React.CSSProperties = {
@@ -194,7 +198,6 @@ function CanvasItem({
   };
 
   // Col components: use flex-grow proportional to size (12-column grid)
-  // flex-basis: 0% ensures gaps are automatically subtracted from available space
   if (component.type === "col") {
     const size = String(component.props.size || "auto");
     const grow = size === "auto" ? 1 : Math.max(0, Number(size));
@@ -202,19 +205,13 @@ function CanvasItem({
     dragStyle.minWidth = "0";
   }
 
-  // Table structure: use table display roles so the wrapper acts as the table element
-  // This gives a real bounding box for DnD while preserving table layout
-  if (isTableRow) {
-    dragStyle.display = "table-row";
-  } else if (isTableCell) {
-    dragStyle.display = "table-cell";
-    // Default cell styling
+  // Table cell styling (rendered as actual <td> element, no CSS display needed)
+  if (isTableCell) {
     dragStyle.padding = "12px 16px";
     dragStyle.verticalAlign = "middle";
   }
 
   // For table structure, look up parent table props for styling
-  // We need to find the table ancestor to get striped/bordered/condensed/borderColor
   let tableProps: Record<string, string | boolean | number> | null = null;
   if (isTableStructure && parentId) {
     const findTableAncestor = (id: string): CanvasComponent | null => {
@@ -275,7 +272,7 @@ function CanvasItem({
   );
 
   const mergedRef = useCallback(
-    (node: HTMLDivElement | null) => {
+    (node: HTMLElement | null) => {
       setDragRef(node);
       setDropRef(node);
     },
@@ -387,12 +384,12 @@ function CanvasItem({
   } else if (canContain && hasAnyChildren) {
     // Rows auto-manage their columns — don't show "drop at end" inside rows
     // Table structure also skips drop indicators to not break table layout
-    const showBottomDrop = isDragging && component.type !== "row" && !managed && !isTableStructure;
+    const showBottomDrop = isDragging && component.type !== "row" && !managed && !skipDropIndicators;
     childrenContent = (
       <>
         {allChildren.map((child, i) => (
           <React.Fragment key={child.id}>
-            {!isTableStructure && (
+            {!skipDropIndicators && (
               <DropIndicator
                 id={`before::${child.id}::${component.id}`}
                 isActive={false}
@@ -406,7 +403,7 @@ function CanvasItem({
               isDragging={isDragging}
               depth={depth + 1}
             />
-            {!isTableStructure && (
+            {!skipDropIndicators && (
               <DropIndicator
                 id={`after::${child.id}::${component.id}`}
                 isActive={false}
@@ -429,12 +426,11 @@ function CanvasItem({
   // Skip outer DropIndicators for table structure (breaks table layout)
   const showOuterDropIndicators = !isTableStructure;
 
-  // Selection styles for table structure: use outline instead of ring (ring adds box-shadow which breaks layout)
-  const tableSelectionStyle = isTableStructure ? (
-    isSelected ? "outline: 2px solid hsl(var(--primary) / 0.6); outline-offset: -2px;"
-      : isContainerOver && isDragging ? "outline: 2px solid hsl(var(--primary) / 0.4); outline-offset: -2px;"
-        : undefined
-  ) : undefined;
+  // Shared base style for table structure (tr/td)
+  const tableBaseStyle: React.CSSProperties = {
+    ...dragStyle,
+    ...(isHidden && !isDragging && !isSelected ? { opacity: 0.3 } : {}),
+  };
 
   return (
     <>
@@ -445,6 +441,51 @@ function CanvasItem({
         />
       )}
 
+      {/* Table structure: render <tr>/<td> directly — no ContextMenu wrapper (ContextMenu with asChild
+          may not work correctly inside <tbody> since only <tr> elements are valid children) */}
+      {isTableStructure ? (
+        isTableRow ? (
+          <tr
+            ref={mergedRef}
+            style={{
+              ...tableBaseStyle,
+              ...(isSelected ? { outline: "2px solid hsl(var(--primary) / 0.6)", outlineOffset: "-2px" } : {}),
+            }}
+            className="group/canvas-item transition-all duration-150 hover:bg-muted/20"
+            onClick={handleSelect}
+            {...attributes}
+            {...listeners}
+          >
+            <BootstrapRenderer
+              component={component}
+              renderChildren={childrenContent}
+              slotChildren={slotChildrenMap}
+              isDragging={isDragging}
+            />
+          </tr>
+        ) : (
+          <td
+            ref={mergedRef}
+            style={{
+              ...tableBaseStyle,
+              ...(isHidden && !isDragging && !(isContainerOver && isDragging) && !isSelected ? { opacity: 0.3 } : {}),
+              ...(isSelected ? { outline: "2px solid hsl(var(--primary) / 0.6)", outlineOffset: "-2px" } : {}),
+              ...(isContainerOver && isDragging ? { outline: "2px solid hsl(var(--primary) / 0.4)", outlineOffset: "-2px" } : {}),
+            }}
+            className="group/canvas-item transition-all duration-150 hover:bg-muted/30"
+            onClick={handleSelect}
+            {...attributes}
+            {...listeners}
+          >
+            <BootstrapRenderer
+              component={component}
+              renderChildren={childrenContent}
+              slotChildren={slotChildrenMap}
+              isDragging={isDragging}
+            />
+          </td>
+        )
+      ) : (
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <div
@@ -452,32 +493,30 @@ function CanvasItem({
             style={{
               ...dragStyle,
               ...(isHidden && !isDragging && !(isContainerOver && isDragging) && !isSelected ? { opacity: 0.3 } : {}),
-              ...(!isTableStructure ? { borderRadius: "8px" } : {}),
-              ...tableSelectionStyle,
+              borderRadius: "8px",
             }}
             className={`relative group/canvas-item transition-all duration-150 ${
-              isTableStructure ? "" :
-                isDragging && selectedId === component.id
-                  ? "opacity-30 ring-2 ring-primary/40 rounded-lg"
-                  : isContainerOver && isDragging
-                    ? "ring-2 ring-primary/40 bg-primary/5 rounded-lg"
-                    : isSelected
-                      ? "ring-2 ring-primary/50 bg-primary/5 rounded-lg"
-                      : "hover:ring-1 hover:ring-border rounded-lg"
-            }${isInline && !isTableStructure ? " inline-flex" : ""}`}
+              isDragging && selectedId === component.id
+                ? "opacity-30 ring-2 ring-primary/40 rounded-lg"
+                : isContainerOver && isDragging
+                  ? "ring-2 ring-primary/40 bg-primary/5 rounded-lg"
+                  : isSelected
+                    ? "ring-2 ring-primary/50 bg-primary/5 rounded-lg"
+                    : "hover:ring-1 hover:ring-border rounded-lg"
+            }${isInline ? " inline-flex" : ""}`}
             onClick={handleSelect}
             {...attributes}
             {...listeners}
           >
-            {/* Selection label — only show for non-table-structure or table itself */}
-            {isSelected && !isTableStructure && (
+            {/* Selection label */}
+            {isSelected && (
               <div className="absolute -top-1.5 left-2 bg-primary text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-t-md z-10 leading-tight">
                 {managed ? `Column ${index + 1}` : component.label}
               </div>
             )}
 
-            {/* Container drop zone hint — skip for table structure */}
-            {canContain && !isSlotted && !isTableStructure && isDragging && (
+            {/* Container drop zone hint */}
+            {canContain && !isSlotted && isDragging && (
               <div
                 className={`absolute inset-0 rounded-lg border-2 border-dashed pointer-events-none transition-colors z-0 ${
                   isContainerOver
@@ -488,7 +527,7 @@ function CanvasItem({
             )}
 
             {/* Rendered component content */}
-            <div className="relative z-[1]" style={{ padding: canContain && !isTableStructure ? "0" : isTableStructure ? "0" : "6px 4px" }}>
+            <div className="relative z-[1]" style={{ padding: canContain ? "0" : "6px 4px" }}>
               {canContain ? (
                 <BootstrapRenderer
                   component={component}
@@ -592,6 +631,7 @@ function CanvasItem({
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
+      )}
 
       {/* Save as Template Dialog */}
       <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
