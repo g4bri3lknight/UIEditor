@@ -1,6 +1,6 @@
 // Bootstrap GUI Editor - Editor Store (Zustand with undo/redo)
 import { create } from "zustand";
-import { CanvasComponent } from "@/lib/editor/types";
+import { CanvasComponent, SavedSnippet } from "@/lib/editor/types";
 import { getComponentByType } from "@/lib/editor/bootstrap-components";
 
 // ── Container types that can accept children ──
@@ -159,6 +159,13 @@ interface EditorState {
   moveUp: (id: string) => void;
   moveDown: (id: string) => void;
   toggleComponentVisibility: (id: string) => void;
+
+  // ── Saved Snippets (reusable templates) ──
+  savedSnippets: SavedSnippet[];
+  saveSnippet: (name: string, componentIds: string[]) => void;
+  deleteSnippet: (id: string) => void;
+  renameSnippet: (id: string, newName: string) => void;
+  insertSnippet: (snippetId: string, parentId?: string | null, index?: number, slot?: string) => void;
 }
 
 // ── History size limit ──
@@ -172,6 +179,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   historyIndex: 0,
   clipboard: null,
   hiddenComponents: new Set<string>(),
+  savedSnippets: loadSavedSnippets(),
 
   pushHistory: () => {
     set(s => {
@@ -410,4 +418,89 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return { hiddenComponents: next };
     });
   },
+
+  // ── Saved Snippets ──
+  saveSnippet: (name, componentIds) => {
+    const { components, savedSnippets } = get();
+    // Extract the specified components from the canvas tree (deep clone with new IDs)
+    const snippetComponents = componentIds
+      .map(id => findInTree(components, id))
+      .filter((c): c is CanvasComponent => c !== null)
+      .map(c => deepCloneWithNewIds(c));
+
+    if (snippetComponents.length === 0) return;
+
+    // For single component, use its label as a suggestion if name is empty
+    const snippetName = name || snippetComponents.map(c => c.label).join(", ");
+
+    const snippet: SavedSnippet = {
+      id: `snippet-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      name: snippetName,
+      components: snippetComponents,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    const newSnippets = [...savedSnippets, snippet];
+    set({ savedSnippets: newSnippets });
+    persistSnippets(newSnippets);
+  },
+
+  deleteSnippet: (id) => {
+    const newSnippets = get().savedSnippets.filter(s => s.id !== id);
+    set({ savedSnippets: newSnippets });
+    persistSnippets(newSnippets);
+  },
+
+  renameSnippet: (id, newName) => {
+    const newSnippets = get().savedSnippets.map(s =>
+      s.id === id ? { ...s, name: newName, updatedAt: Date.now() } : s
+    );
+    set({ savedSnippets: newSnippets });
+    persistSnippets(newSnippets);
+  },
+
+  insertSnippet: (snippetId, parentId, index, slot) => {
+    const snippet = get().savedSnippets.find(s => s.id === snippetId);
+    if (!snippet) return;
+
+    const now = Date.now();
+    // Deep clone with fresh IDs for each component
+    const cloned = snippet.components.map(comp => {
+      const freshClone = deepCloneWithNewIds(comp);
+      return freshClone;
+    });
+
+    // Insert all components (they go to the same parent/index)
+    set(s => {
+      let newComps = [...s.components];
+      for (let i = 0; i < cloned.length; i++) {
+        newComps = addToTree(newComps, parentId, cloned[i], index !== undefined ? index + i : undefined);
+      }
+      return { components: newComps, selectedId: cloned[0].id };
+    });
+    get().pushHistory();
+  },
 }));
+
+// ── Snippet localStorage persistence ──
+const SNIPPETS_STORAGE_KEY = "bootstrap-editor-saved-snippets";
+
+function loadSavedSnippets(): SavedSnippet[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const saved = localStorage.getItem(SNIPPETS_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch { /* ignore */ }
+  return [];
+}
+
+function persistSnippets(snippets: SavedSnippet[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(SNIPPETS_STORAGE_KEY, JSON.stringify(snippets));
+  } catch { /* ignore */ }
+}

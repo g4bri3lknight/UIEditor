@@ -61,3 +61,12 @@ export interface PropertyDefinition {
   description?: string;
   group?: string;
 }
+
+// ── Saved Snippet (reusable component template) ──
+export interface SavedSnippet {
+  id: string;
+  name: string;
+  components: CanvasComponent[];  // Can be 1 or more components
+  createdAt: number;
+  updatedAt: number;
+}

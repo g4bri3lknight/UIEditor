@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import {
   ContextMenu,
@@ -13,6 +13,15 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
   Copy,
   ClipboardPaste,
   Trash2,
@@ -20,6 +29,7 @@ import {
   ArrowDown,
   ClipboardCopy,
   Plus,
+  BookmarkPlus,
 } from "lucide-react";
 import { useEditorStore, isContainer, isAutoManaged, isSlottedType } from "@/store/editor-store";
 import { BootstrapRenderer } from "./BootstrapRenderer";
@@ -222,6 +232,22 @@ function CanvasItem({
     removeComponent(component.id);
     toast.success("Componente eliminato");
   }, [removeComponent, component.id]);
+
+  // Save as template
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [snippetName, setSnippetName] = useState("");
+  const { saveSnippet } = useEditorStore();
+
+  const handleSaveAsTemplate = () => {
+    setSnippetName(component.label);
+    setSaveDialogOpen(true);
+  };
+
+  const handleConfirmSave = () => {
+    saveSnippet(snippetName, [component.id]);
+    setSaveDialogOpen(false);
+    toast.success("Template salvato!");
+  };
 
   // Quick insert via context menu
   const handleQuickInsert = useCallback((type: string) => {
@@ -445,6 +471,12 @@ function CanvasItem({
             Incolla
             <span className="ml-auto text-xs text-muted-foreground">Ctrl+V</span>
           </ContextMenuItem>
+          {!managed && (
+            <ContextMenuItem onClick={handleSaveAsTemplate}>
+              <BookmarkPlus className="mr-2 h-4 w-4" />
+              Salva come template
+            </ContextMenuItem>
+          )}
           <ContextMenuSeparator />
           <ContextMenuItem
             disabled={managed}
@@ -471,6 +503,47 @@ function CanvasItem({
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
+
+      {/* Save as Template Dialog */}
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookmarkPlus className="w-5 h-5 text-primary" />
+              Salva come template
+            </DialogTitle>
+            <DialogDescription>
+              Salva questo componente come template riutilizzabile. Potrai inserirlo in qualsiasi momento dalla sidebar.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Nome template</label>
+              <Input
+                value={snippetName}
+                onChange={(e) => setSnippetName(e.target.value)}
+                placeholder="Es. Hero section, Footer, Login form..."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && snippetName.trim()) handleConfirmSave();
+                }}
+                autoFocus
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setSaveDialogOpen(false)}>
+              Annulla
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleConfirmSave}
+              disabled={!snippetName.trim()}
+            >
+              Salva
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <DropIndicator
         id={parentId ? `after::${component.id}::${parentId}` : `after::${component.id}`}
