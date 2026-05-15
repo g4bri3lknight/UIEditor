@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { createPortal } from "react-dom";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -30,12 +31,59 @@ import {
   ClipboardCopy,
   Plus,
   BookmarkPlus,
+  Pencil,
 } from "lucide-react";
-import { useEditorStore, isContainer, isAutoManaged, isSlottedType } from "@/store/editor-store";
+import { useEditorStore, isContainer, isAutoManaged, isSlottedType, getTabSlots, getAccordionSlots } from "@/store/editor-store";
 import { BootstrapRenderer } from "./BootstrapRenderer";
 import { CanvasComponent } from "@/lib/editor/types";
 import { COMPONENTS, CATEGORIES } from "@/lib/editor/bootstrap-components";
 import { toast } from "sonner";
+
+// ── Editable text props per component type ──
+// Maps component types to their editable text prop keys and whether they need a textarea (multiline)
+const EDITABLE_TEXT_PROPS: Record<string, Array<{ key: string; multiline: boolean }>> = {
+  "heading": [{ key: "text", multiline: false }],
+  "paragraph": [{ key: "text", multiline: true }],
+  "blockquote": [{ key: "text", multiline: true }, { key: "attribution", multiline: false }],
+  "list": [{ key: "items", multiline: true }],
+  "code-block": [{ key: "code", multiline: true }],
+  "button": [{ key: "text", multiline: false }],
+  "button-group": [{ key: "buttons", multiline: false }],
+  "input": [{ key: "label", multiline: false }, { key: "placeholder", multiline: false }, { key: "helpText", multiline: false }],
+  "textarea": [{ key: "label", multiline: false }, { key: "placeholder", multiline: false }, { key: "helpText", multiline: false }],
+  "select-input": [{ key: "label", multiline: false }],
+  "checkbox": [{ key: "label", multiline: false }],
+  "radio": [{ key: "label", multiline: false }],
+  "switch": [{ key: "label", multiline: false }],
+  "range": [{ key: "label", multiline: false }],
+  "file-input": [{ key: "label", multiline: false }],
+  "input-group": [{ key: "label", multiline: false }, { key: "prepend", multiline: false }, { key: "append", multiline: false }],
+  "card": [{ key: "header", multiline: false }, { key: "title", multiline: false }, { key: "subtitle", multiline: false }, { key: "text", multiline: true }, { key: "footer", multiline: false }],
+  "alert": [{ key: "text", multiline: false }, { key: "heading", multiline: false }],
+  "badge": [{ key: "text", multiline: false }],
+  "accordion": [{ key: "items", multiline: true }],
+  "list-group": [{ key: "items", multiline: true }],
+  "toast": [{ key: "title", multiline: false }, { key: "text", multiline: false }],
+  "jumbotron": [{ key: "title", multiline: false }, { key: "lead", multiline: false }],
+  "carousel": [{ key: "slides", multiline: true }],
+  "modal": [{ key: "title", multiline: false }, { key: "closeButtonText", multiline: false }, { key: "footer", multiline: false }],
+  "offcanvas": [{ key: "title", multiline: false }],
+  "link": [{ key: "text", multiline: false }],
+  "collapse": [{ key: "title", multiline: false }, { key: "body", multiline: true }],
+  "tab-content": [{ key: "items", multiline: true }],
+  "tooltip": [{ key: "text", multiline: false }, { key: "tooltipText", multiline: false }],
+  "popover": [{ key: "text", multiline: false }, { key: "title", multiline: false }, { key: "body", multiline: true }],
+  "table-cell": [{ key: "text", multiline: false }],
+};
+
+function getFirstEditableProp(type: string): { key: string; multiline: boolean } | null {
+  const props = EDITABLE_TEXT_PROPS[type];
+  return props && props.length > 0 ? props[0] : null;
+}
+
+function hasEditableProps(type: string): boolean {
+  return !!EDITABLE_TEXT_PROPS[type];
+}
 
 // ── Drop indicator between items ──
 function DropIndicator({
@@ -125,6 +173,7 @@ function CanvasItem({
   parentId,
   isDragging,
   depth = 0,
+  onStartInlineEdit,
 }: {
   component: CanvasComponent;
   index: number;
@@ -132,6 +181,7 @@ function CanvasItem({
   parentId: string | null;
   isDragging: boolean;
   depth?: number;
+  onStartInlineEdit: (id: string, propKey: string, rect: DOMRect, currentValue: string, multiline: boolean) => void;
 }) {
   const {
     selectedId,
@@ -295,6 +345,21 @@ function CanvasItem({
     [selectComponent, component.id]
   );
 
+  // ── Inline text editing on double-click ──
+  const editableProp = getFirstEditableProp(component.type);
+  const isEditable = !!editableProp;
+
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!editableProp) return;
+      const currentValue = String(component.props[editableProp.key] ?? "");
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      onStartInlineEdit(component.id, editableProp.key, rect, currentValue, editableProp.multiline);
+    },
+    [editableProp, component.props, component.id, onStartInlineEdit]
+  );
+
   const mergedRef = useCallback(
     (node: HTMLElement | null) => {
       setDragRef(node);
@@ -366,6 +431,7 @@ function CanvasItem({
               parentId={component.id}
               isDragging={isDragging}
               depth={depth + 1}
+              onStartInlineEdit={onStartInlineEdit}
             />
             <DropIndicator
               id={`after::${child.id}::${component.id}`}
@@ -381,13 +447,61 @@ function CanvasItem({
         )}
       </>
     );
-  }, [component.id, isDragging, depth]);
+  }, [component.id, isDragging, depth, onStartInlineEdit]);
 
   // For slotted types: split children into slot groups
   let slotChildrenMap: Record<string, React.ReactNode> | undefined;
   let childrenContent: React.ReactNode | null = null;
 
-  if (isSlotted) {
+  if (isSlotted && component.type === "tab-content") {
+    // Tab-content: dynamic slots based on the number of tabs
+    const tabSlotIds = getTabSlots(component.props.items);
+    const active = Number(component.props.active) || 0;
+
+    // Get tab labels for display
+    const rawItems = String(component.props.items || "").split("\n").filter(Boolean);
+    const tabLabels = rawItems.map((item) => item.split("|")[0] || "Tab");
+
+    slotChildrenMap = {};
+    tabSlotIds.forEach((slotId, tabIndex) => {
+      const tabChildren = allChildren.filter(c => c.slot === slotId);
+      const isActive = tabIndex === active;
+      slotChildrenMap[slotId] = (
+        <div key={slotId} style={{ display: isActive ? "block" : "none" }}>
+          <SlotDropZone
+            slotId={`slot-${component.id}-${slotId}`}
+            isDragging={isDragging}
+            label={isActive ? `Rilascia nella tab "${tabLabels[tabIndex]}"` : undefined}
+          >
+            {renderSlotContent(tabChildren)}
+          </SlotDropZone>
+        </div>
+      );
+    });
+  } else if (isSlotted && component.type === "accordion") {
+    // Accordion: dynamic slots based on the number of accordion items
+    const accSlotIds = getAccordionSlots(component.props.items);
+
+    // Get accordion item titles for display
+    const rawItems = String(component.props.items || "").split("\n").filter(Boolean);
+    const accTitles = rawItems.map((item) => item.split("|")[0] || "Item");
+
+    slotChildrenMap = {};
+    accSlotIds.forEach((slotId, accIndex) => {
+      const accChildren = allChildren.filter(c => c.slot === slotId);
+      slotChildrenMap[slotId] = (
+        <div key={slotId}>
+          <SlotDropZone
+            slotId={`slot-${component.id}-${slotId}`}
+            isDragging={isDragging}
+            label={`Rilascia nel pannello "${accTitles[accIndex]}"`}
+          >
+            {renderSlotContent(accChildren)}
+          </SlotDropZone>
+        </div>
+      );
+    });
+  } else if (isSlotted) {
     const headerChildren = allChildren.filter(c => c.slot === "header");
     const bodyChildren = allChildren.filter(c => !c.slot || c.slot === "body");
     const footerChildren = allChildren.filter(c => c.slot === "footer");
@@ -426,6 +540,7 @@ function CanvasItem({
               parentId={component.id}
               isDragging={isDragging}
               depth={depth + 1}
+              onStartInlineEdit={onStartInlineEdit}
             />
             {!skipDropIndicators && (
               <DropIndicator
@@ -477,6 +592,7 @@ function CanvasItem({
             }}
             className="group/canvas-item transition-all duration-150 hover:bg-muted/20"
             onClick={handleSelect}
+            onDoubleClick={handleDoubleClick}
             {...attributes}
             {...listeners}
           >
@@ -498,6 +614,7 @@ function CanvasItem({
             }}
             className="group/canvas-item transition-all duration-150 hover:bg-muted/30"
             onClick={handleSelect}
+            onDoubleClick={handleDoubleClick}
             {...attributes}
             {...listeners}
           >
@@ -529,9 +646,20 @@ function CanvasItem({
                     : "hover:ring-1 hover:ring-border rounded-lg"
             }${isInline ? " inline-flex" : ""}`}
             onClick={handleSelect}
+            onDoubleClick={handleDoubleClick}
             {...attributes}
             {...listeners}
           >
+            {/* Inline edit hover indicator */}
+            {isEditable && !isSelected && (
+              <div className="absolute top-1.5 right-1.5 opacity-0 group-hover/canvas-item:opacity-100 transition-opacity duration-150 z-20 pointer-events-none">
+                <div className="flex items-center gap-1 bg-background/90 backdrop-blur-sm border border-border rounded px-1.5 py-0.5 shadow-sm">
+                  <Pencil className="w-2.5 h-2.5 text-muted-foreground" />
+                  <span className="text-[9px] text-muted-foreground font-medium">Doppio click</span>
+                </div>
+              </div>
+            )}
+
             {/* Selection label */}
             {isSelected && (
               <div className="absolute -top-1.5 left-2 bg-primary text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-t-md z-10 leading-tight">
@@ -710,15 +838,62 @@ function CanvasItem({
 
 // ── Main Canvas ──
 export function Canvas({ activeDragId }: { activeDragId: string | null }) {
-  const { components, selectComponent } = useEditorStore();
+  const { components, selectComponent, updateComponentProps } = useEditorStore();
   const isDragging = !!activeDragId;
 
-  const { setNodeRef, isOver } = useDroppable({
-    id: "canvas-drop-zone",
-    data: { type: "canvas-zone" },
-  });
+  // ── Inline text editing state ──
+  const [inlineEdit, setInlineEdit] = useState<{
+    id: string;
+    propKey: string;
+    rect: DOMRect;
+    multiline: boolean;
+  } | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const editInputRef = useRef<HTMLTextAreaElement | HTMLInputElement>(null);
+  const committedRef = useRef(false);
+  const cancelRef = useRef(false);
 
-  const handleCanvasClick = () => selectComponent(null);
+  const { setNodeRef, isOver } = useDroppable({ id: "canvas-root" });
+
+  const handleStartInlineEdit = useCallback(
+    (id: string, propKey: string, rect: DOMRect, currentValue: string, multiline: boolean) => {
+      committedRef.current = false;
+      cancelRef.current = false;
+      setInlineEdit({ id, propKey, rect, multiline });
+      setEditValue(currentValue);
+    },
+    []
+  );
+
+  const commitEdit = useCallback(() => {
+    if (!inlineEdit || committedRef.current || cancelRef.current) return;
+    committedRef.current = true;
+    updateComponentProps(inlineEdit.id, { [inlineEdit.propKey]: editValue });
+    setInlineEdit(null);
+  }, [inlineEdit, editValue, updateComponentProps]);
+
+  const handleCancelInlineEdit = useCallback(() => {
+    cancelRef.current = true;
+    committedRef.current = true;
+    setInlineEdit(null);
+  }, []);
+
+  // Auto-resize textarea when value changes
+  useEffect(() => {
+    if (inlineEdit?.multiline && editInputRef.current) {
+      const el = editInputRef.current;
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
+    }
+  }, [inlineEdit, editValue]);
+
+  // Close inline editor when clicking on canvas background
+  const handleCanvasClick = useCallback(() => {
+    if (inlineEdit) {
+      commitEdit();
+    }
+    selectComponent(null);
+  }, [inlineEdit, commitEdit, selectComponent]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-muted/30 overflow-hidden">
@@ -782,6 +957,7 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
                   parentId={null}
                   isDragging={isDragging}
                   depth={0}
+                  onStartInlineEdit={handleStartInlineEdit}
                 />
               ))}
 
@@ -797,6 +973,95 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
           )}
         </div>
       </div>
+
+      {/* Inline text editing overlay */}
+      {inlineEdit &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              left: inlineEdit.rect.left,
+              top: inlineEdit.rect.top,
+              width: Math.max(inlineEdit.rect.width, 200),
+              zIndex: 9999,
+            }}
+            onMouseDown={(e) => e.preventDefault()}
+          >
+            {inlineEdit.multiline ? (
+              <textarea
+                ref={editInputRef as React.RefObject<HTMLTextAreaElement>}
+                autoFocus
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    commitEdit();
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    handleCancelInlineEdit();
+                  }
+                }}
+                onBlur={commitEdit}
+                className="w-full"
+                style={{
+                  padding: "6px 10px",
+                  border: "2px solid hsl(var(--primary))",
+                  borderRadius: "6px",
+                  fontSize: "14px",
+                  fontFamily: "inherit",
+                  background: "white",
+                  outline: "none",
+                  resize: "vertical",
+                  minHeight: "36px",
+                  width: "100%",
+                  boxSizing: "border-box",
+                  lineHeight: "1.5",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+                }}
+              />
+            ) : (
+              <input
+                ref={editInputRef as React.RefObject<HTMLInputElement>}
+                autoFocus
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    commitEdit();
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    handleCancelInlineEdit();
+                  }
+                }}
+                onBlur={commitEdit}
+                style={{
+                  padding: "6px 10px",
+                  border: "2px solid hsl(var(--primary))",
+                  borderRadius: "6px",
+                  fontSize: "14px",
+                  fontFamily: "inherit",
+                  background: "white",
+                  outline: "none",
+                  width: "100%",
+                  boxSizing: "border-box",
+                  lineHeight: "1.5",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+                }}
+              />
+            )}
+            <div className="flex items-center justify-between mt-1 px-1">
+              <span className="text-[10px] text-muted-foreground">
+                {inlineEdit.multiline ? "Ctrl+Enter per salvare" : "Enter per salvare"}
+              </span>
+              <span className="text-[10px] text-muted-foreground">Esc per annullare</span>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

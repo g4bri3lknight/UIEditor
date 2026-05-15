@@ -256,16 +256,21 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         return html;
       }
 
+      const validationClass = p.validation && p.validation !== "none" ? ` is-${String(p.validation)}` : "";
+
       let html = "";
       if (label) {
         html += indent(`<label for="input${indentLevel}" class="form-label">${label}</label>\n`, indentLevel);
       }
       html += indent(
-        `<input type="${htmlInputType}" class="${inputCls}" id="input${indentLevel}" placeholder="${p.placeholder || ""}"${inputModeAttr} ${finalExtras}>\n`,
+        `<input type="${htmlInputType}" class="${inputCls}${validationClass}" id="input${indentLevel}" placeholder="${p.placeholder || ""}"${inputModeAttr} ${finalExtras}>\n`,
         indentLevel
       );
       if (p.helpText) {
         html += indent(`<div id="help${indentLevel}" class="form-text">${p.helpText}</div>\n`, indentLevel);
+      }
+      if (p.validation && p.validation !== "none") {
+        html += indent(`<div class="${p.validation === "valid" ? "valid-feedback" : "invalid-feedback"}">${p.feedbackMessage || (p.validation === "valid" ? "Looks good!" : "Please correct this field.")}</div>\n`, indentLevel);
       }
       return indent(wrap("div", "", html.trimEnd(), wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
@@ -275,16 +280,21 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       const extras: string[] = [];
       if (p.disabled) extras.push("disabled");
 
+      const validationClass = p.validation && p.validation !== "none" ? ` is-${String(p.validation)}` : "";
+
       let html = "";
       if (p.label) {
         html += indent(`<label for="ta${indentLevel}" class="form-label">${p.label}</label>\n`, indentLevel);
       }
       html += indent(
-        `<textarea class="${sizeCls}" id="ta${indentLevel}" rows="${p.rows || 3}" placeholder="${p.placeholder || ""}" ${extras.join(" ")}>${String(p.text || "")}</textarea>\n`,
+        `<textarea class="${sizeCls}${validationClass}" id="ta${indentLevel}" rows="${p.rows || 3}" placeholder="${p.placeholder || ""}" ${extras.join(" ")}>${String(p.text || "")}</textarea>\n`,
         indentLevel
       );
       if (p.helpText) {
         html += indent(`<div class="form-text">${p.helpText}</div>\n`, indentLevel);
+      }
+      if (p.validation && p.validation !== "none") {
+        html += indent(`<div class="${p.validation === "valid" ? "valid-feedback" : "invalid-feedback"}">${p.feedbackMessage || (p.validation === "valid" ? "Looks good!" : "Please correct this field.")}</div>\n`, indentLevel);
       }
       return indent(wrap("div", "", html.trimEnd(), wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
@@ -301,11 +311,16 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         .map((opt, i) => `  <option${i === 0 ? " selected" : ""}>${opt}</option>`)
         .join("\n");
 
+      const validationClass = p.validation && p.validation !== "none" ? ` is-${String(p.validation)}` : "";
+
       let html = "";
       if (p.label) {
         html += indent(`<label for="sel${indentLevel}" class="form-label">${p.label}</label>\n`, indentLevel);
       }
-      html += indent(`<select class="${sizeCls}" id="sel${indentLevel}" ${extras.join(" ")}>\n${options}\n</select>`, indentLevel);
+      html += indent(`<select class="${sizeCls}${validationClass}" id="sel${indentLevel}" ${extras.join(" ")}>\n${options}\n</select>`, indentLevel);
+      if (p.validation && p.validation !== "none") {
+        html += indent(`<div class="${p.validation === "valid" ? "valid-feedback" : "invalid-feedback"}">${p.feedbackMessage || (p.validation === "valid" ? "Looks good!" : "Please correct this field.")}</div>\n`, indentLevel);
+      }
       return indent(wrap("div", "", html.trimEnd(), wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
@@ -653,6 +668,8 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
     }
 
     case "accordion": {
+      const children = component.children || [];
+      const hasChildren = children && children.length > 0;
       const rawItems = ((p.items as string) || "")
         .split("\n")
         .filter(Boolean);
@@ -690,8 +707,15 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
               indent("</h2>", indentLevel + 2),
             indentLevel + 1
           );
+
+          // Get children for this accordion item slot
+          const accChildren = hasChildren ? children.filter(c => c.slot === `acc-${i}`) : [];
+          const bodyContent = accChildren.length > 0
+            ? accChildren.map(c => generateComponentHTML(c, indentLevel + 3, hiddenComponents)).join("\n")
+            : item.body;
+
           html += "\n" + indent(
-            wrap("div", `accordion-collapse collapse${show}`, indent(wrap("div", "accordion-body", item.body), indentLevel + 3), {
+            wrap("div", `accordion-collapse collapse${show}`, indent(wrap("div", "accordion-body", bodyContent), indentLevel + 3), {
               id: collapseId,
               "aria-labelledby": headerId,
               "data-bs-parent": "#accordionExample",
@@ -702,7 +726,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         })
         .join("\n");
 
-      return indent(wrap("div", `accordion${flushCls}`, items.map(item => indent(item, indentLevel)).join("\n"), { id: "accordionExample", ...wrapExtraAttrs }, false, customClass, isHidden), indentLevel);
+      return indent(wrap("div", `accordion${flushCls}`, accordionItems, { id: "accordionExample", ...wrapExtraAttrs }, false, customClass, isHidden), indentLevel);
     }
 
     case "spinner": {
@@ -884,6 +908,123 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       );
     }
 
+    case "form-builder": {
+      let formFields: Array<Record<string, any>> = [];
+      try {
+        formFields = JSON.parse(String(p.fields || "[]"));
+      } catch {
+        formFields = [];
+      }
+      const layout = String(p.layout || "stacked");
+      const submitVariant = String(p.submitVariant || "primary");
+      const isSubmitOutline = submitVariant.startsWith("outline-");
+      const submitBaseVariant = isSubmitOutline ? submitVariant.replace("outline-", "") : submitVariant;
+      const submitBtnCls = isSubmitOutline ? `btn btn-outline-${submitBaseVariant}` : `btn btn-${submitBaseVariant}`;
+      const formName = String(p.formName || "contactForm");
+      const noValidateAttr = p.noValidate ? " novalidate" : "";
+      const isHorizontal = layout === "horizontal";
+      const isInline = layout === "inline";
+
+      const formAttrs: Record<string, string> = { ...wrapExtraAttrs };
+      if (p.noValidate) formAttrs["novalidate"] = "";
+
+      const generateFieldHTML = (field: Record<string, any>, idx: number): string => {
+        const fieldType = String(field.type || "input");
+        const fieldLabel = String(field.label || "");
+        const isCheckLike = fieldType === "checkbox" || fieldType === "switch" || fieldType === "radio";
+        const requiredAttr = field.required ? " required" : "";
+        const disabledAttr = field.disabled ? " disabled" : "";
+        const id = `fb-${formName}-${idx}`;
+
+        if (isHorizontal && !isCheckLike) {
+          // Horizontal: row with col-sm-3 label and col-sm-9 control
+          let controlHtml = "";
+          if (fieldType === "input" || fieldType === "file") {
+            const inputType = String(field.inputType || (fieldType === "file" ? "file" : "text"));
+            controlHtml = `<input type="${inputType}" class="form-control" id="${id}" placeholder="${field.placeholder || ""}"${requiredAttr}${disabledAttr}>`;
+          } else if (fieldType === "textarea") {
+            controlHtml = `<textarea class="form-control" id="${id}" rows="${field.rows || 3}" placeholder="${field.placeholder || ""}"${requiredAttr}${disabledAttr}></textarea>`;
+          } else if (fieldType === "select") {
+            const opts = Array.isArray(field.options) ? field.options.map((o: any) => `  <option value="${o.value || o.label}">${o.label}</option>`).join("\n") : "";
+            controlHtml = `<select class="form-select" id="${id}"${requiredAttr}${disabledAttr}>\n<option value="" disabled selected>${field.placeholder || "Scegli..."}</option>\n${opts}\n</select>`;
+          } else if (fieldType === "range") {
+            controlHtml = `<input type="range" class="form-range" id="${id}" min="${field.min || 0}" max="${field.max || 100}" step="${field.step || 1}" value="${field.defaultValue || 50}"${disabledAttr}>`;
+          }
+          const labelHtml = fieldLabel ? `<label for="${id}" class="col-sm-3 col-form-label">${fieldLabel}${field.required ? ' <span class="text-danger">*</span>' : ""}</label>` : "";
+          return indent(`<div class="row mb-3">\n${indent(labelHtml, 1)}\n${indent(`<div class="col-sm-9">\n${indent(controlHtml, 1)}\n</div>`, 1)}\n</div>`, indentLevel);
+        }
+
+        // Stacked and inline
+        if (isCheckLike) {
+          if (fieldType === "switch") {
+            const cls = "form-check form-switch" + (isInline ? " form-check-inline" : "");
+            return indent(`<div class="${cls}">\n${indent(`<input class="form-check-input" type="checkbox" role="switch" id="${id}"${field.checked ? " checked" : ""}${disabledAttr}>\n<label class="form-check-label" for="${id}">${fieldLabel}</label>`, indentLevel + 1)}\n</div>`, indentLevel);
+          }
+          if (fieldType === "checkbox") {
+            const cls = "form-check" + (isInline ? " form-check-inline" : "");
+            return indent(`<div class="${cls}">\n${indent(`<input class="form-check-input" type="checkbox" id="${id}"${field.checked ? " checked" : ""}${disabledAttr}>\n<label class="form-check-label" for="${id}">${fieldLabel}</label>`, indentLevel + 1)}\n</div>`, indentLevel);
+          }
+          if (fieldType === "radio") {
+            const radioOpts = Array.isArray(field.options) ? field.options : [];
+            const radioName = field.name || `fb-radio-${idx}`;
+            let html = "";
+            if (fieldLabel && !isInline) {
+              html += indent(`<label class="form-label">${fieldLabel}${field.required ? ' <span class="text-danger">*</span>' : ""}</label>\n`, indentLevel);
+            }
+            html += radioOpts.map((opt: any, ri: number) => {
+              const cls = "form-check" + (isInline ? " form-check-inline" : "");
+              return indent(`<div class="${cls}">\n${indent(`<input class="form-check-input" type="radio" name="${radioName}" id="${id}-${ri}"${opt.checked ? " checked" : ""}${disabledAttr}>\n<label class="form-check-label" for="${id}-${ri}">${opt.label}</label>`, indentLevel + 1)}\n</div>`, indentLevel);
+            }).join("\n");
+            return html;
+          }
+        }
+
+        const mbCls = isInline ? " mb-2 me-2" : " mb-3";
+        let html = "";
+        if (fieldLabel && !isInline) {
+          html += indent(`<label for="${id}" class="form-label">${fieldLabel}${field.required ? ' <span class="text-danger">*</span>' : ""}</label>\n`, indentLevel);
+        }
+
+        if (fieldType === "input" || fieldType === "file") {
+          const inputType = String(field.inputType || (fieldType === "file" ? "file" : "text"));
+          if (isInline && fieldLabel) {
+            html += indent(`<div class="d-flex align-items-center gap-1${mbCls}">\n${indent(`<label for="${id}" class="form-label mb-0 visually-hidden">${fieldLabel}</label>\n<input type="${inputType}" class="form-control${isInline ? " form-control-sm" : ""}" id="${id}" placeholder="${field.placeholder || ""}"${requiredAttr}${disabledAttr}>`, indentLevel + 1)}\n</div>`, indentLevel);
+          } else {
+            html += indent(`<input type="${inputType}" class="form-control" id="${id}" placeholder="${field.placeholder || ""}"${requiredAttr}${disabledAttr}>`, indentLevel);
+          }
+        } else if (fieldType === "textarea") {
+          html += indent(`<textarea class="form-control" id="${id}" rows="${field.rows || 3}" placeholder="${field.placeholder || ""}"${requiredAttr}${disabledAttr}></textarea>`, indentLevel);
+        } else if (fieldType === "select") {
+          const opts = Array.isArray(field.options) ? field.options.map((o: any) => `  <option value="${o.value || o.label}">${o.label}</option>`).join("\n") : "";
+          html += indent(`<select class="form-select" id="${id}"${requiredAttr}${disabledAttr}>\n<option value="" disabled selected>${field.placeholder || "Scegli..."}</option>\n${opts}\n</select>`, indentLevel);
+        } else if (fieldType === "range") {
+          html += indent(`<input type="range" class="form-range" id="${id}" min="${field.min || 0}" max="${field.max || 100}" step="${field.step || 1}" value="${field.defaultValue || 50}"${disabledAttr}>`, indentLevel);
+        }
+
+        if (!isInline) {
+          return html;
+        }
+        return html;
+      };
+
+      let fieldsHtml = formFields.map((field, idx) => generateFieldHTML(field, idx)).join("\n");
+
+      // Buttons
+      let submitHtml = indent(`<button type="submit" class="${submitBtnCls}">${p.submitText || "Invia"}</button>`, indentLevel + 1);
+      if (p.showReset) {
+        submitHtml += "\n" + indent(`<button type="reset" class="btn btn-secondary">Reset</button>`, indentLevel + 1);
+      }
+      const buttonsHtml = isInline
+        ? submitHtml
+        : "\n" + indent(wrap("div", "mt-3", submitHtml), indentLevel);
+
+      const formCls = isInline ? "row g-3 align-items-center" : "";
+      return indent(
+        `<form${noValidateAttr ? " novalidate" : ""}${wrapExtraAttrs.id ? ` id="${wrapExtraAttrs.id}"` : ""} name="${formName}">\n${fieldsHtml}${buttonsHtml}\n</form>`,
+        indentLevel
+      );
+    }
+
     case "offcanvas": {
       const placement = String(p.placement || "start");
       const backdropClass = p.backdrop !== false ? " offcanvas-backdrop" : "";
@@ -1050,10 +1191,184 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       return indent(`<div${idAttr}${hiddenAttr} style="height: ${height[size as string] || "1.5rem"}"></div>`, indentLevel);
     }
 
+    case "link": {
+      let cls = "";
+      if (p.variant) cls += `link-${p.variant}`;
+      if (!p.underline) cls += " text-decoration-none";
+      const sizeMap: Record<string, string> = { "": "", sm: " link-sm", lg: " link-lg" };
+      cls += sizeMap[String(p.size || "")];
+      cls = cls.trim();
+
+      const linkAttrs: Record<string, string> = { href: String(p.href || "#"), ...wrapExtraAttrs };
+      if (p.target === "_blank") {
+        linkAttrs["target"] = "_blank";
+        linkAttrs["rel"] = "noopener noreferrer";
+      }
+      return indent(wrap("a", cls, p.text as string, linkAttrs, true, customClass, isHidden), indentLevel);
+    }
+
+    case "collapse": {
+      const variant = String(p.variant || "");
+      const isShown = !!p.show;
+      const collapseId = `collapse${indentLevel}`;
+
+      let btnCls = "btn";
+      if (variant) btnCls += ` btn-${variant}`;
+      else btnCls += " btn-secondary";
+      if (!p.bordered) btnCls += " rounded-0";
+
+      const html = indent(
+        wrap("button", btnCls, (p.title || "Toggle collapse") + ' <span class="collapse-icon">▾</span>', {
+          "data-bs-toggle": "collapse",
+          "data-bs-target": `#${collapseId}`,
+          "aria-expanded": isShown ? "true" : "false",
+          "aria-controls": collapseId,
+          type: "button",
+        }, true),
+        indentLevel + 1
+      ) + "\n" + indent(
+        wrap("div", `collapse${isShown ? " show" : ""}`, wrap("div", "card card-body", (p.body || "This is the collapsible content.").replace(/\n/g, "<br>\n")), {
+          id: collapseId,
+        }),
+        indentLevel + 1
+      );
+
+      const wrapperCls = p.bordered ? "" : "";
+      return indent(wrap("div", wrapperCls, html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
+    }
+
+    case "icon": {
+      const iconName = String(p.name || "bi-house");
+      const iconSize = Number(p.size) || 16;
+      const iconColor = String(p.color || "");
+
+      let cls = iconName;
+      if (iconColor && BS_TEXT_COLORS[iconColor]) cls += ` text-${iconColor}`;
+      if (customClass) cls += ` ${customClass}`;
+      cls = cls.trim();
+
+      const styleAttrs: Record<string, string> = { ...wrapExtraAttrs };
+      styleAttrs["style"] = `font-size: ${iconSize}px;`;
+
+      const idAttr = customId ? ` id="${customId}"` : "";
+      const hiddenAttr = isHidden ? "display:none;" : "";
+      const fullStyle = styleAttrs["style"] ? `${hiddenAttr}${styleAttrs["style"]}` : hiddenAttr;
+      if (fullStyle) styleAttrs["style"] = fullStyle;
+      else delete styleAttrs["style"];
+
+      return indent(`<i class="${cls}"${idAttr}${fullStyle ? ` style="${fullStyle}"` : ""}></i>`, indentLevel);
+    }
+
     case "embed-video": {
       let ratioCls = `ratio ratio-${p.ratio}`;
       let html = indent(`<iframe src="${p.url}" title="Video embed" allowfullscreen></iframe>`, indentLevel + 1);
       return indent(wrap("div", ratioCls, html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
+    }
+
+    case "tab-content": {
+      const children = component.children || [];
+      const hasChildren = children && children.length > 0;
+      const rawItems = ((p.items as string) || "")
+        .split("\n")
+        .filter(Boolean);
+      const items = rawItems.map((item, i) => {
+        const parts = item.split("|");
+        return { label: parts[0] || `Tab ${i + 1}`, content: parts[1] || `Content for tab ${i + 1}` };
+      });
+      const activeIdx = Number(p.active) || 0;
+      const style = String(p.style || "tabs");
+      const hasFade = !!p.fade;
+
+      // Build nav class
+      let navCls = "nav";
+      if (style === "tabs") navCls += " nav-tabs";
+      else if (style === "pills") navCls += " nav-pills";
+      else if (style === "underline") navCls += " nav-underline";
+      if (p.fill === "justify") navCls += " nav-justified";
+      else if (p.fill === "fill") navCls += " nav-fill";
+
+      // Build tab nav items
+      const navItems = items.map((item, i) => {
+        const isActive = i === activeIdx;
+        return indent(
+          `<li class="nav-item" role="presentation">\n` +
+            indent(
+              `<button class="nav-link${isActive ? " active" : ""}" id="${customId || "tc"}-tab-${i}" data-bs-toggle="tab" data-bs-target="#${customId || "tc"}-pane-${i}" type="button" role="tab"${isActive ? ' aria-selected="true"' : ' aria-selected="false"'} tabindex="${isActive ? "0" : "-1"}">${item.label}</button>`,
+              indentLevel + 3
+            ) +
+            "\n" +
+            indent("</li>", indentLevel + 2),
+          indentLevel + 1
+        );
+      }).join("\n");
+
+      // Build tab panes — support children or static content
+      const tabSlotChildren = hasChildren ? children.filter(c => c.slot && String(c.slot).startsWith("tab-")) : [];
+      const paneIdPrefix = customId || "tc";
+
+      const tabPanes = items.map((item, i) => {
+        const isActive = i === activeIdx;
+        let paneCls = `tab-pane fade${isActive ? " show active" : ""}`;
+        // Get children for this tab pane
+        const paneChildren = tabSlotChildren.filter(c => c.slot === `tab-${i}`);
+        const paneContent = paneChildren.length > 0
+          ? paneChildren.map(c => generateComponentHTML(c, indentLevel + 3, hiddenComponents)).join("\n")
+          : (item.content || `Content for tab ${i + 1}`);
+        return indent(
+          `<div class="${paneCls}" id="${paneIdPrefix}-pane-${i}" role="tabpanel" tabindex="0">\n` +
+            indent(paneContent, indentLevel + 3) +
+            "\n" +
+            indent("</div>", indentLevel + 2),
+          indentLevel + 1
+        );
+      }).join("\n");
+
+      let html = indent(wrap("ul", navCls, navItems, { role: "tablist" }), indentLevel + 1);
+      html += "\n" + indent(wrap("div", "tab-content mt-3", tabPanes), indentLevel + 1);
+
+      return indent(wrap("div", "", html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
+    }
+
+    case "tooltip": {
+      const placement = String(p.placement || "top");
+      const trigger = String(p.trigger || "hover");
+      const variant = String(p.variant || "dark");
+
+      // Map trigger to Bootstrap data-bs-trigger attribute
+      let bsTrigger = "";
+      if (trigger === "focus") bsTrigger = " data-bs-trigger=\"focus\"";
+      else if (trigger === "click") bsTrigger = " data-bs-trigger=\"click\"";
+      // hover is default, no attribute needed
+
+      let btnCls = "btn btn-outline-secondary btn-sm";
+      if (variant === "light") btnCls = "btn btn-outline-dark btn-sm";
+
+      let html = indent(
+        `<button type="button" class="${btnCls}" data-bs-toggle="tooltip" data-bs-placement="${placement}" title="${p.tooltipText || "Tooltip text}"}${bsTrigger}>${p.text || "Hover me"}</button>`,
+        indentLevel + 1
+      );
+      html += "\n" + indent(
+        `<script>var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')); tooltipTriggerList.forEach(function (tooltipTriggerEl) { new bootstrap.Tooltip(tooltipTriggerEl); });</script>`,
+        indentLevel + 1
+      );
+
+      return indent(wrap("div", "", html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
+    }
+
+    case "popover": {
+      const placement = String(p.placement || "top");
+      const trigger = String(p.trigger || "focus");
+
+      let btnHtml = indent(
+        `<button type="button" tabindex="0" class="btn btn-lg btn-danger" data-bs-toggle="popover" data-bs-placement="${placement}" data-bs-title="${p.title || "Popover Title"}" data-bs-content="${p.body || "Popover body content"}" data-bs-trigger="${trigger}">${p.text || "Click to toggle popover"}</button>`,
+        indentLevel + 1
+      );
+      btnHtml += "\n" + indent(
+        `<script>var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]')); popoverTriggerList.forEach(function (popoverTriggerEl) { new bootstrap.Popover(popoverTriggerEl); });</script>`,
+        indentLevel + 1
+      );
+
+      return indent(wrap("div", "", btnHtml, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     default:

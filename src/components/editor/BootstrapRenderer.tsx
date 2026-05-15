@@ -298,7 +298,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
                 disabled={!!p.disabled}
                 style={{
                   width: "100%", padding: p.floating ? "24px 12px 6px 12px" : inputPadding[sz],
-                  fontSize: inputSize[sz], border: `1px solid ${BS.borderColor}`, borderRadius: "8px",
+                  fontSize: inputSize[sz], border: `1px solid ${p.validation === "valid" ? BS.success : p.validation === "invalid" ? BS.danger : BS.borderColor}`, borderRadius: "8px",
                   background: BS.white, boxSizing: "border-box",
                   opacity: p.disabled ? 0.65 : 1,
                 }}
@@ -311,6 +311,11 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
               </label>
             </div>
             {p.helpText && <div style={{ fontSize: "0.875rem", color: BS.muted, marginTop: "4px" }}>{p.helpText}</div>}
+            {p.validation && p.validation !== "none" && (
+              <div style={{ fontSize: "0.875rem", marginTop: "4px", color: p.validation === "valid" ? BS.success : BS.danger }}>
+                {p.feedbackMessage || (p.validation === "valid" ? "Looks good!" : "Please correct this field.")}
+              </div>
+            )}
           </Wrapper>
         );
       }
@@ -328,12 +333,17 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
             inputMode={isCurrency ? "decimal" : undefined}
             style={{
               width: "100%", padding: inputPadding[sz], fontSize: inputSize[sz],
-              border: p.plaintext ? "none" : `1px solid ${BS.borderColor}`,
+              border: p.plaintext ? "none" : `1px solid ${p.validation === "valid" ? BS.success : p.validation === "invalid" ? BS.danger : BS.borderColor}`,
               borderRadius: "6px", background: BS.white, boxSizing: "border-box",
               opacity: p.disabled ? 0.65 : 1, outline: "none",
             }}
           />
           {p.helpText && <div style={{ fontSize: "0.875rem", color: BS.muted, marginTop: "4px" }}>{p.helpText}</div>}
+          {p.validation && p.validation !== "none" && (
+            <div style={{ fontSize: "0.875rem", marginTop: "4px", color: p.validation === "valid" ? BS.success : BS.danger }}>
+              {p.feedbackMessage || (p.validation === "valid" ? "Looks good!" : "Please correct this field.")}
+            </div>
+          )}
         </Wrapper>
       );
     }
@@ -353,11 +363,16 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
             disabled={!!p.disabled}
             style={{
               width: "100%", padding: "8px 12px", fontSize: sz === "sm" ? "0.875rem" : sz === "lg" ? "1.25rem" : "1rem",
-              border: `1px solid ${BS.borderColor}`, borderRadius: "6px", background: BS.white,
+              border: `1px solid ${p.validation === "valid" ? BS.success : p.validation === "invalid" ? BS.danger : BS.borderColor}`, borderRadius: "6px", background: BS.white,
               boxSizing: "border-box", resize: "vertical", opacity: p.disabled ? 0.65 : 1, outline: "none",
             }}
           />
           {p.helpText && <div style={{ fontSize: "0.875rem", color: BS.muted, marginTop: "4px" }}>{p.helpText}</div>}
+          {p.validation && p.validation !== "none" && (
+            <div style={{ fontSize: "0.875rem", marginTop: "4px", color: p.validation === "valid" ? BS.success : BS.danger }}>
+              {p.feedbackMessage || (p.validation === "valid" ? "Looks good!" : "Please correct this field.")}
+            </div>
+          )}
         </Wrapper>
       );
     }
@@ -370,7 +385,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
         <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           {p.label && <label style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem" }}>{p.label}</label>}
           <select disabled={!!p.disabled} multiple={!!p.multiple} defaultValue={String(p.options || "").split("\n").filter(Boolean)[0] || ""} style={{
-            width: "100%", padding: isSmall ? "4px 8px" : isLarge ? "10px 14px" : "8px 12px", border: `1px solid ${BS.borderColor}`,
+            width: "100%", padding: isSmall ? "4px 8px" : isLarge ? "10px 14px" : "8px 12px", border: `1px solid ${p.validation === "valid" ? BS.success : p.validation === "invalid" ? BS.danger : BS.borderColor}`,
             borderRadius: "6px", background: BS.white, fontSize: isSmall ? "0.875rem" : isLarge ? "1.25rem" : "1rem", boxSizing: "border-box",
             opacity: p.disabled ? 0.65 : 1, outline: "none",
             height: p.multiple ? "120px" : undefined,
@@ -379,6 +394,11 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
               <option key={i}>{opt}</option>
             ))}
           </select>
+          {p.validation && p.validation !== "none" && (
+            <div style={{ fontSize: "0.875rem", marginTop: "4px", color: p.validation === "valid" ? BS.success : BS.danger }}>
+              {p.feedbackMessage || (p.validation === "valid" ? "Looks good!" : "Please correct this field.")}
+            </div>
+          )}
         </Wrapper>
       );
     }
@@ -865,29 +885,38 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
         return { title: parts[0] || "Item", body: parts[1] || "" };
       });
       const isFlush = !!p.flush;
+      const hasDirectChildren = component.children && component.children.length > 0;
 
       return (
         <Wrapper customClass={customClass} style={{ padding: "0" }}>
           <div style={{ borderRadius: isFlush ? "0" : "8px", overflow: "hidden", border: isFlush ? "none" : `1px solid ${BS.borderColor}` }}>
-            {items.map((item, i) => (
-              <div key={i} style={{ borderBottom: i < items.length - 1 ? `1px solid ${BS.borderColor}` : "none" }}>
-                <div style={{
-                  padding: "16px 20px", fontWeight: 600, fontSize: "1rem", cursor: "pointer",
-                  background: i === 0 ? BS.light : BS.white,
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
-                  borderBottom: i === 0 ? `1px solid ${BS.borderColor}` : "none",
-                  borderRadius: isFlush ? "0" : (i === 0 ? "8px 8px 0 0" : i === items.length - 1 ? "0 0 8px 8px" : "0"),
-                }}>
-                  {item.title}
-                  <span style={{ fontSize: "0.875rem", color: BS.muted, transform: i === 0 ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▾</span>
-                </div>
-                {i === 0 && (
-                  <div style={{ padding: "16px 20px", background: BS.white, fontSize: "0.9375rem", color: BS.body }}>
-                    <div dangerouslySetInnerHTML={{ __html: item.body }} />
+            {items.map((item, i) => {
+              const accSlotKey = `acc-${i}`;
+              const slotContent = slotChildren?.[accSlotKey];
+              const hasSlotChildren = slotContent !== undefined && slotContent !== null;
+
+              return (
+                <React.Fragment key={i}>
+                  <div style={{ borderBottom: i < items.length - 1 ? `1px solid ${BS.borderColor}` : "none" }}>
+                    <div style={{
+                      padding: "16px 20px", fontWeight: 600, fontSize: "1rem", cursor: "pointer",
+                      background: i === 0 ? BS.light : BS.white,
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                      borderBottom: i === 0 ? `1px solid ${BS.borderColor}` : "none",
+                      borderRadius: isFlush ? "0" : (i === 0 ? "8px 8px 0 0" : i === items.length - 1 ? "0 0 8px 8px" : "0"),
+                    }}>
+                      {item.title}
+                      <span style={{ fontSize: "0.875rem", color: BS.muted, transform: i === 0 ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▾</span>
+                    </div>
+                    {i === 0 && (
+                      <div style={{ padding: "16px 20px", background: BS.white, fontSize: "0.9375rem", color: BS.body, minHeight: "40px" }}>
+                        {hasSlotChildren ? slotContent : <div dangerouslySetInnerHTML={{ __html: item.body }} />}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
+                </React.Fragment>
+              );
+            })}
           </div>
         </Wrapper>
       );
@@ -1119,6 +1148,195 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
       );
     }
 
+    case "form-builder": {
+      let formFields: Array<Record<string, any>> = [];
+      try {
+        formFields = JSON.parse(String(p.fields || "[]"));
+      } catch {
+        formFields = [];
+      }
+      const layout = String(p.layout || "stacked");
+      const submitVariant = String(p.submitVariant || "primary");
+      const isSubmitOutline = submitVariant.startsWith("outline-");
+      const submitBaseVariant = isSubmitOutline ? submitVariant.replace("outline-", "") : submitVariant;
+      const submitBtnStyle = getButtonStyle(submitBaseVariant, isSubmitOutline);
+      const isInline = layout === "inline";
+
+      const renderFormField = (field: Record<string, any>, idx: number) => {
+        const fieldLabel = String(field.label || "");
+        const fieldType = String(field.type || "input");
+        const isCheckLike = fieldType === "checkbox" || fieldType === "switch" || fieldType === "radio";
+        const fieldMargin = isInline ? "0 8px 0 0" : "0 0 12px 0";
+        const displayStyle = isInline ? "inline-flex" : "flex";
+
+        // Horizontal layout wrapper for non-check fields
+        const horizontalWrapper = (labelEl: React.ReactNode, controlEl: React.ReactNode) => (
+          <div key={idx} style={{ display: "flex", alignItems: "center", marginBottom: "12px", gap: "12px" }}>
+            <label style={{ width: "120px", flexShrink: 0, fontWeight: 500, fontSize: "0.9rem", color: BS.body, marginBottom: 0 }}>
+              {fieldLabel}{field.required && <span style={{ color: BS.danger, marginLeft: "2px" }}>*</span>}
+            </label>
+            <div style={{ flex: 1 }}>{controlEl}</div>
+          </div>
+        );
+
+        const controlBaseStyle: React.CSSProperties = {
+          width: "100%",
+          padding: "8px 12px",
+          fontSize: "1rem",
+          border: `1px solid ${BS.borderColor}`,
+          borderRadius: "6px",
+          background: BS.white,
+          boxSizing: "border-box",
+          outline: "none",
+        };
+
+        if (isCheckLike) {
+          if (fieldType === "switch") {
+            return (
+              <div key={idx} style={{ marginBottom: fieldMargin }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                  <div style={{ position: "relative", width: "44px", height: "24px", background: field.checked ? BS.primary : BS.secondary, borderRadius: "24px", transition: "background 0.2s", flexShrink: 0 }}>
+                    <div style={{ position: "absolute", top: "2px", left: field.checked ? "22px" : "2px", width: "20px", height: "20px", background: BS.white, borderRadius: "50%", transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
+                  </div>
+                  <span style={{ fontSize: "1rem", color: BS.body }}>{fieldLabel}</span>
+                </label>
+              </div>
+            );
+          }
+          if (fieldType === "checkbox") {
+            return (
+              <div key={idx} style={{ marginBottom: fieldMargin }}>
+                <label style={{ display: displayStyle, alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                  <input type="checkbox" defaultChecked={!!field.checked} disabled={!!field.disabled} style={{ width: "18px", height: "18px", accentColor: BS.primary }} />
+                  <span style={{ fontSize: "1rem", color: BS.body }}>{fieldLabel}</span>
+                </label>
+              </div>
+            );
+          }
+          if (fieldType === "radio") {
+            const radioOptions: Array<{ label: string; value: string }> = Array.isArray(field.options) ? field.options : [];
+            return (
+              <div key={idx} style={{ marginBottom: fieldMargin }}>
+                {fieldLabel && <span style={{ fontWeight: 500, fontSize: "0.9rem", color: BS.body, display: "block", marginBottom: "4px" }}>{fieldLabel}{field.required && <span style={{ color: BS.danger, marginLeft: "2px" }}>*</span>}</span>}
+                {radioOptions.map((opt, ri) => (
+                  <label key={ri} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", marginBottom: "4px" }}>
+                    <input type="radio" name={field.name || `fb-radio-${idx}`} defaultChecked={!!opt.checked} disabled={!!field.disabled} style={{ width: "18px", height: "18px", accentColor: BS.primary }} />
+                    <span style={{ fontSize: "1rem", color: BS.body }}>{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            );
+          }
+        }
+
+        if (fieldType === "input" || fieldType === "file") {
+          const inputEl = (
+            <input
+              type={String(field.inputType || (fieldType === "file" ? "file" : "text"))}
+              placeholder={String(field.placeholder || "")}
+              readOnly
+              disabled={!!field.disabled}
+              required={!!field.required}
+              style={fieldType === "file" ? { fontSize: "0.875rem", color: BS.body } : controlBaseStyle}
+            />
+          );
+          if (layout === "horizontal") {
+            return horizontalWrapper(null, inputEl);
+          }
+          return (
+            <div key={idx} style={{ marginBottom: fieldMargin, display: displayStyle, flexDirection: "column", gap: "4px" }}>
+              {fieldLabel && <label style={{ fontWeight: 500, fontSize: "0.9rem", color: BS.body, marginBottom: 0, whiteSpace: "nowrap" }}>{fieldLabel}{field.required && <span style={{ color: BS.danger, marginLeft: "2px" }}>*</span>}</label>}
+              {inputEl}
+            </div>
+          );
+        }
+
+        if (fieldType === "textarea") {
+          const taEl = (
+            <textarea
+              placeholder={String(field.placeholder || "")}
+              readOnly
+              rows={Number(field.rows) || 3}
+              disabled={!!field.disabled}
+              required={!!field.required}
+              style={{ ...controlBaseStyle, resize: "vertical" }}
+            />
+          );
+          if (layout === "horizontal") {
+            return horizontalWrapper(null, taEl);
+          }
+          return (
+            <div key={idx} style={{ marginBottom: fieldMargin, display: displayStyle, flexDirection: "column", gap: "4px" }}>
+              {fieldLabel && <label style={{ fontWeight: 500, fontSize: "0.9rem", color: BS.body, marginBottom: 0, whiteSpace: "nowrap" }}>{fieldLabel}{field.required && <span style={{ color: BS.danger, marginLeft: "2px" }}>*</span>}</label>}
+              {taEl}
+            </div>
+          );
+        }
+
+        if (fieldType === "select") {
+          const selectOptions: Array<{ label: string; value: string }> = Array.isArray(field.options) ? field.options : [];
+          const selEl = (
+            <select disabled={!!field.disabled} required={!!field.required} defaultValue="" style={controlBaseStyle}>
+              <option value="" disabled>{String(field.placeholder || "Scegli...")}</option>
+              {selectOptions.map((opt, oi) => (
+                <option key={oi} value={opt.value || opt.label}>{opt.label}</option>
+              ))}
+            </select>
+          );
+          if (layout === "horizontal") {
+            return horizontalWrapper(null, selEl);
+          }
+          return (
+            <div key={idx} style={{ marginBottom: fieldMargin, display: displayStyle, flexDirection: "column", gap: "4px" }}>
+              {fieldLabel && <label style={{ fontWeight: 500, fontSize: "0.9rem", color: BS.body, marginBottom: 0, whiteSpace: "nowrap" }}>{fieldLabel}{field.required && <span style={{ color: BS.danger, marginLeft: "2px" }}>*</span>}</label>}
+              {selEl}
+            </div>
+          );
+        }
+
+        if (fieldType === "range") {
+          const rangeEl = (
+            <input type="range" min={Number(field.min) || 0} max={Number(field.max) || 100} step={Number(field.step) || 1} defaultValue={Number(field.defaultValue) || 50} disabled={!!field.disabled} style={{ width: "100%", accentColor: BS.primary }} />
+          );
+          if (layout === "horizontal") {
+            return horizontalWrapper(null, rangeEl);
+          }
+          return (
+            <div key={idx} style={{ marginBottom: fieldMargin, display: displayStyle, flexDirection: "column", gap: "4px" }}>
+              {fieldLabel && <label style={{ fontWeight: 500, fontSize: "0.9rem", color: BS.body, marginBottom: 0, whiteSpace: "nowrap" }}>{fieldLabel}</label>}
+              {rangeEl}
+            </div>
+          );
+        }
+
+        return null;
+      };
+
+      return (
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
+          <div style={{
+            display: isInline ? "inline-flex" : "flex",
+            flexDirection: isInline ? "row" : "column",
+            flexWrap: isInline ? "wrap" : "nowrap",
+            alignItems: isInline ? "center" : "stretch",
+            gap: isInline ? "8px" : "0",
+          }}>
+            {formFields.map((field, idx) => renderFormField(field, idx))}
+          </div>
+          <div style={{ display: "flex", gap: "8px", marginTop: "12px", alignItems: "center" }}>
+            <button type="button" style={{ ...submitBtnStyle, padding: "6px 16px", borderRadius: "6px", cursor: "pointer", fontSize: "1rem", fontWeight: 400 }}>
+              {p.submitText || "Invia"}
+            </button>
+            {p.showReset && (
+              <button type="button" style={{ ...getButtonStyle("secondary", false), padding: "6px 16px", borderRadius: "6px", cursor: "pointer", fontSize: "1rem", fontWeight: 400 }}>
+                Reset
+              </button>
+            )}
+          </div>
+        </Wrapper>
+      );
+    }
+
     case "offcanvas": {
       const placement = String(p.placement || "start");
       const isVertical = placement === "start" || placement === "end";
@@ -1167,6 +1385,149 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
           {p.backdrop && (
             <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.1)", borderRadius: "8px", marginTop: "-4px", pointerEvents: "none" }} />
           )}
+        </Wrapper>
+      );
+    }
+
+    case "link": {
+      const linkColor = BS_TEXT[String(p.variant)] || BS.primary;
+      const linkSize: Record<string, string> = { "": "1rem", sm: "0.875rem", lg: "1.25rem" };
+      return (
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
+          <a
+            href="#"
+            style={{
+              color: linkColor,
+              textDecoration: p.underline ? "underline" : "none",
+              fontSize: linkSize[String(p.size || "")],
+              cursor: "pointer",
+            }}
+            target={p.target === "_blank" ? "_blank" : undefined}
+            rel={p.target === "_blank" ? "noopener noreferrer" : undefined}
+          >
+            {p.text || "Link"}
+            {p.target === "_blank" && (
+              <sup style={{ fontSize: "0.65em", marginLeft: "2px", verticalAlign: "super" }}>↗</sup>
+            )}
+          </a>
+        </Wrapper>
+      );
+    }
+
+    case "collapse": {
+      const variant = String(p.variant || "");
+      const isShown = !!p.show;
+      const btnBgMap: Record<string, string> = { "": BS.secondary, primary: BS.primary, secondary: BS.secondary };
+      const btnBg = btnBgMap[variant] || BS.secondary;
+      const isDarkBtn = variant === "primary" || variant === "secondary";
+      return (
+        <Wrapper customClass={customClass} style={{ padding: "0" }}>
+          <div style={{
+            border: p.bordered ? `1px solid ${BS.borderColor}` : "none",
+            borderRadius: "8px",
+            overflow: "hidden",
+          }}>
+            <button style={{
+              width: "100%", padding: "12px 16px", border: "none",
+              background: btnBg, color: isDarkBtn ? BS.white : BS.white,
+              fontSize: "1rem", fontWeight: 500, cursor: "pointer",
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              textAlign: "left" as const,
+            }}>
+              {p.title || "Toggle collapse"}
+              <span style={{
+                fontSize: "0.875rem", transition: "transform 0.2s",
+                transform: isShown ? "rotate(180deg)" : "rotate(0deg)",
+              }}>▾</span>
+            </button>
+            <div style={{
+              padding: isShown ? "16px" : "0 16px",
+              maxHeight: isShown ? "500px" : "0",
+              overflow: "hidden",
+              transition: "all 0.2s ease",
+              fontSize: "0.9375rem", lineHeight: 1.6, color: BS.body,
+              background: BS.white,
+            }}>
+              {p.body || "This is the collapsible content."}
+            </div>
+          </div>
+        </Wrapper>
+      );
+    }
+
+    case "tab-content": {
+      const rawItems = String(p.items || "").split("\n").filter(Boolean);
+      const items = rawItems.map((item) => {
+        const parts = item.split("|");
+        return { label: parts[0] || "Tab", content: parts[1] || "" };
+      });
+      const active = Number(p.active) || 0;
+      const style = String(p.style || "tabs");
+
+      // Check if any tab has slotted children
+      const hasSlotChildren = slotChildren && Object.keys(slotChildren).length > 0;
+      const hasDirectChildren = component.children && component.children.length > 0;
+
+      return (
+        <Wrapper customClass={customClass} style={{ padding: "4px" }}>
+          {/* Tab navigation */}
+          <div style={{
+            display: "flex",
+            borderBottom: style === "tabs" ? `2px solid ${BS.borderColor}` : "none",
+            gap: "2px",
+            ...(p.fill ? { flex: 1 } : {}),
+          }}>
+            {items.map((item, i) => (
+              <button key={i} style={{
+                padding: "8px 16px",
+                background: "transparent",
+                ...(style === "tabs" ? {
+                  borderWidth: "1px",
+                  borderStyle: "solid",
+                  borderColor: "transparent",
+                  borderRightColor: i === active ? BS.borderColor : "transparent",
+                  borderLeftColor: i === active ? BS.borderColor : "transparent",
+                } : style === "underline" ? {
+                  borderWidth: "0",
+                  borderBottomWidth: "2px",
+                  borderBottomStyle: "solid",
+                  borderBottomColor: i === active ? BS.primary : "transparent",
+                } : {
+                  borderWidth: "0",
+                  borderStyle: "none",
+                }),
+                borderRadius: style === "pills" ? "20px" : style === "tabs" ? "6px 6px 0 0" : "6px",
+                color: i === active ? BS.primary : BS.muted,
+                fontWeight: i === active ? 600 : 400,
+                cursor: "pointer",
+                fontSize: "0.95rem",
+                backgroundColor: style === "pills" && i === active ? BS.primary : "transparent",
+                ...(style === "pills" && i === active ? { color: BS.white } : {}),
+              }}>
+                {item.label}
+              </button>
+            ))}
+          </div>
+          {/* Tab panes — show slotted children or static content */}
+          <div style={{
+            marginTop: "12px",
+            padding: "16px",
+            background: BS.light,
+            borderRadius: style === "pills" ? "8px" : "0 0 8px 8px",
+            minHeight: "60px",
+          }}>
+            {/* Render each tab's slot content (only active tab visible in Canvas via display:none) */}
+            {hasDirectChildren && items.map((_, tabIndex) => {
+              const slotKey = `tab-${tabIndex}`;
+              return <React.Fragment key={slotKey}>{slotChildren?.[slotKey] || null}</React.Fragment>;
+            })}
+            {/* Fallback: if no children, show static text content */}
+            {(!hasDirectChildren) && active >= 0 && active < items.length && (
+              <div style={{ fontSize: "0.9375rem", color: BS.body }}>
+                {items[active].content}
+              </div>
+            )}
+          </div>
         </Wrapper>
       );
     }
@@ -1272,6 +1633,25 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
       );
     }
 
+    case "icon": {
+      const iconName = String(p.name || "bi-house");
+      const iconSize = Number(p.size) || 16;
+      const iconColor = BS_TEXT[String(p.color)] || BS.body;
+      return (
+        <Wrapper customClass={customClass} style={{ padding: "4px", display: "inline-block" }}>
+          <i
+            className={`bi ${iconName}`}
+            style={{
+              fontSize: `${iconSize}px`,
+              color: iconColor,
+              lineHeight: 1,
+              display: "inline-block",
+            }}
+          />
+        </Wrapper>
+      );
+    }
+
     // ── UTILITIES ──
     case "divider": {
       return (
@@ -1320,6 +1700,108 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
                 <div style={{ fontSize: "0.875rem", opacity: 0.7 }}>Video Embed</div>
               </div>
             </div>
+          </div>
+        </Wrapper>
+      );
+    }
+
+    case "tooltip": {
+      const placement = String(p.placement || "top");
+      const isDark = p.variant === "dark" || !p.variant;
+      return (
+        <Wrapper customClass={customClass} style={{ padding: "8px 4px" }}>
+          <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "8px", position: "relative" }}>
+            {/* Tooltip indicator */}
+            <div style={{
+              padding: "4px 10px",
+              borderRadius: "4px",
+              background: isDark ? BS.dark : BS.white,
+              color: isDark ? BS.white : BS.body,
+              fontSize: "0.75rem",
+              border: `1px solid ${isDark ? BS.dark : BS.borderColor}`,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+              whiteSpace: "nowrap",
+              maxWidth: "200px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}>
+              💬 {p.tooltipText || "Tooltip text"}
+            </div>
+            {/* Trigger button */}
+            <button style={{
+              padding: "6px 16px",
+              borderRadius: "6px",
+              border: `1px solid ${BS.borderColor}`,
+              background: BS.white,
+              color: BS.body,
+              fontSize: "0.875rem",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+            }}>
+              {p.text || "Hover me"}
+              <span style={{
+                fontSize: "0.65rem",
+                padding: "1px 5px",
+                borderRadius: "3px",
+                background: isDark ? BS.dark : BS.light,
+                color: isDark ? BS.white : BS.muted,
+              }}>
+                {placement}
+              </span>
+            </button>
+          </div>
+        </Wrapper>
+      );
+    }
+
+    case "popover": {
+      const placement = String(p.placement || "top");
+      return (
+        <Wrapper customClass={customClass} style={{ padding: "8px 4px" }}>
+          <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+            {/* Popover preview card */}
+            <div style={{
+              width: "240px",
+              border: `1px solid ${BS.borderColor}`,
+              borderRadius: "8px",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+              background: BS.white,
+              overflow: "hidden",
+            }}>
+              {p.title && (
+                <div style={{
+                  padding: "10px 14px",
+                  borderBottom: `1px solid ${BS.borderColor}`,
+                  background: BS.light,
+                  fontWeight: 600,
+                  fontSize: "0.9375rem",
+                  color: BS.body,
+                }}>
+                  {p.title}
+                </div>
+              )}
+              <div style={{
+                padding: "10px 14px",
+                fontSize: "0.875rem",
+                color: BS.muted,
+              }}>
+                {p.body || "Popover body content"}
+              </div>
+            </div>
+            {/* Trigger button */}
+            <button style={{
+              padding: "8px 20px",
+              borderRadius: "6px",
+              border: "none",
+              background: BS.danger,
+              color: BS.white,
+              fontSize: "1rem",
+              cursor: "pointer",
+            }}>
+              {p.text || "Click to toggle popover"}
+            </button>
           </div>
         </Wrapper>
       );

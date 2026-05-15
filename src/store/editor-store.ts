@@ -8,7 +8,7 @@ import { getComponentByType } from "@/lib/editor/bootstrap-components";
 // ── Container types that can accept children ──
 export const CONTAINER_TYPES = new Set([
   "container", "row", "col", "card", "modal", "offcanvas",
-  "table", "table-row", "table-cell",
+  "table", "table-row", "table-cell", "tab-content", "accordion",
 ]);
 
 export function isContainer(type: string): boolean {
@@ -19,11 +19,27 @@ export function isAutoManaged(type: string): boolean {
   return type === "col" || type === "table-row" || type === "table-cell";
 }
 
-// ── Types that support slotted children (header/body/footer) ──
-export const SLOTTED_TYPES = new Set(["card", "modal", "offcanvas"]);
+// ── Types that support slotted children (header/body/footer or dynamic tabs) ──
+export const SLOTTED_TYPES = new Set(["card", "modal", "offcanvas", "tab-content", "accordion"]);
 
 export function isSlottedType(type: string): boolean {
   return SLOTTED_TYPES.has(type);
+}
+
+// For tab-content: extract tab labels from the items property
+export function getTabSlots(itemsProp: unknown): string[] {
+  const raw = String(itemsProp || "");
+  if (!raw) return ["tab-0"];
+  const lines = raw.split("\n").filter(Boolean);
+  return lines.map((_, i) => `tab-${i}`);
+}
+
+// For accordion: extract accordion item slots from the items property
+export function getAccordionSlots(itemsProp: unknown): string[] {
+  const raw = String(itemsProp || "");
+  if (!raw) return ["acc-0"];
+  const lines = raw.split("\n").filter(Boolean);
+  return lines.map((_, i) => `acc-${i}`);
 }
 
 
@@ -203,7 +219,7 @@ interface EditorState {
   addComponent: (type: string, parentId?: string | null, index?: number, slot?: string) => void;
   removeComponent: (id: string) => void;
   moveComponent: (fromIndex: number, toIndex: number) => void;
-  moveComponentInTree: (compId: string, newParentId: string | null, index?: number) => void;
+  moveComponentInTree: (compId: string, newParentId: string | null, index?: number, slot?: string) => void;
   duplicateComponent: (id: string) => void;
   selectComponent: (id: string | null) => void;
   updateComponentProps: (id: string, props: Record<string, string | boolean | number>) => void;
@@ -337,7 +353,7 @@ export const useEditorStore = create<EditorState>()(
     get().pushHistory();
   },
 
-  moveComponentInTree: (compId, newParentId, index) => {
+  moveComponentInTree: (compId, newParentId, index, slot) => {
     const comp = findInTree(get().components, compId);
     if (!comp) return;
 
@@ -357,6 +373,10 @@ export const useEditorStore = create<EditorState>()(
     // Keep original ID for move (not copy)
     clone.id = compId;
     clone.children = comp.children;
+    // Update slot if specified (e.g. moving to a different tab pane)
+    if (slot !== undefined) {
+      clone.slot = slot as CanvasComponent["slot"];
+    }
 
     set(s => {
       let newComps = removeFromTree(s.components, compId);
@@ -370,8 +390,17 @@ export const useEditorStore = create<EditorState>()(
     const comp = findInTree(get().components, id);
     if (!comp || isAutoManaged(comp.type)) return;
     const clone = deepCloneWithNewIds(comp);
+    // Find parent and position to insert clone next to the original
+    const parentInfo = getParentInfo(get().components, id);
     set(s => {
-      const newComps = addToTree(s.components, null, clone);
+      let newComps: CanvasComponent[];
+      if (parentInfo) {
+        newComps = addToTree(s.components, parentInfo.parentId, clone, parentInfo.index + 1);
+      } else {
+        // Root level — find index and insert after
+        const rootIndex = s.components.findIndex(c => c.id === id);
+        newComps = addToTree(s.components, null, clone, rootIndex >= 0 ? rootIndex + 1 : undefined);
+      }
       return { components: newComps, selectedId: clone.id };
     });
     get().pushHistory();

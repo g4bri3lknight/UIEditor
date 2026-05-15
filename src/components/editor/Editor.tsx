@@ -330,13 +330,19 @@ export function Editor() {
       if (activeId.startsWith("palette-")) {
         const type = activeId.replace("palette-", "");
 
-        // Dropped ON a slot drop zone (header/footer of card/modal/offcanvas)
+        // Dropped ON a slot drop zone (header/footer/body of card/modal/offcanvas, tab-N of tab-content, acc-N of accordion)
         if (overId.startsWith("slot-")) {
           const rest = overId.replace("slot-", "");
-          const lastDash = rest.lastIndexOf("-");
-          if (lastDash !== -1) {
-            const parentId = rest.substring(0, lastDash);
-            const slot = rest.substring(lastDash + 1);
+          // Slot IDs follow format: slot-{parentId}-{slotName}
+          // parentId = comp-{timestamp}-{counter} (contains dashes)
+          // slotName = header | footer | body | tab-0 | tab-1 | acc-0 | acc-1 | etc.
+          // Strategy: strip known slot suffixes, remaining prefix is parentId
+          const numberedSlotMatch = rest.match(/^(comp-\d+-\d+)-(tab|acc)-(\d+)$/);
+          const simpleMatch = rest.match(/^(comp-\d+-\d+)-(header|footer|body)$/);
+          const match = numberedSlotMatch || simpleMatch;
+          if (match) {
+            const parentId = match[1];
+            const slot = numberedSlotMatch ? `${numberedSlotMatch[2]}-${numberedSlotMatch[3]}` : match[2];
             const parentComp = useEditorStore.getState().findComponent(parentId);
             if (parentComp && isSlottedType(parentComp.type)) {
               addComponent(type, parentId, undefined, slot);
@@ -439,6 +445,25 @@ export function Editor() {
 
       // ── Canvas item reordered ──
       if (activeId !== overId && !overId.startsWith("palette-")) {
+        // Moving into a slot drop zone (header/footer/body, tab-N, or acc-N)
+        if (overId.startsWith("slot-")) {
+          const rest = overId.replace("slot-", "");
+          const numberedSlotMatch = rest.match(/^(comp-\d+-\d+)-(tab|acc)-(\d+)$/);
+          const simpleMatch = rest.match(/^(comp-\d+-\d+)-(header|footer|body)$/);
+          const match = numberedSlotMatch || simpleMatch;
+          if (match) {
+            const parentId = match[1];
+            const slot = numberedSlotMatch ? `${numberedSlotMatch[2]}-${numberedSlotMatch[3]}` : match[2];
+            if (parentId !== activeId) {
+              const parentComp = useEditorStore.getState().findComponent(parentId);
+              if (parentComp && isSlottedType(parentComp.type)) {
+                useEditorStore.getState().moveComponentInTree(activeId, parentId, undefined, slot);
+              }
+            }
+          }
+          return;
+        }
+
         // Moving into a container
         if (overId.startsWith("container-")) {
           const newParentId = overId.replace("container-", "");
