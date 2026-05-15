@@ -1208,14 +1208,22 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
     }
 
     case "collapse": {
+      const children = component.children || [];
+      const hasChildren = children && children.length > 0;
       const variant = String(p.variant || "");
       const isShown = !!p.show;
-      const collapseId = `collapse${indentLevel}`;
+      const collapseId = customId || `collapse${indentLevel}`;
 
       let btnCls = "btn";
       if (variant) btnCls += ` btn-${variant}`;
       else btnCls += " btn-secondary";
       if (!p.bordered) btnCls += " rounded-0";
+
+      // Get body children for this collapse
+      const bodyChildren = hasChildren ? children.filter(c => !c.slot || c.slot === "body") : [];
+      const bodyContent = bodyChildren.length > 0
+        ? bodyChildren.map(c => generateComponentHTML(c, indentLevel + 2, hiddenComponents)).join("\n")
+        : (p.body || "This is the collapsible content.").replace(/\n/g, "<br>\n");
 
       const html = indent(
         wrap("button", btnCls, (p.title || "Toggle collapse") + ' <span class="collapse-icon">▾</span>', {
@@ -1227,7 +1235,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         }, true),
         indentLevel + 1
       ) + "\n" + indent(
-        wrap("div", `collapse${isShown ? " show" : ""}`, wrap("div", "card card-body", (p.body || "This is the collapsible content.").replace(/\n/g, "<br>\n")), {
+        wrap("div", `collapse${isShown ? " show" : ""}`, indent(wrap("div", "card card-body", bodyContent), indentLevel + 2), {
           id: collapseId,
         }),
         indentLevel + 1

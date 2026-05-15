@@ -8,7 +8,7 @@ import { getComponentByType } from "@/lib/editor/bootstrap-components";
 // ── Container types that can accept children ──
 export const CONTAINER_TYPES = new Set([
   "container", "row", "col", "card", "modal", "offcanvas",
-  "table", "table-row", "table-cell", "tab-content", "accordion",
+  "table", "table-row", "table-cell", "tab-content", "accordion", "collapse",
 ]);
 
 export function isContainer(type: string): boolean {
@@ -20,7 +20,7 @@ export function isAutoManaged(type: string): boolean {
 }
 
 // ── Types that support slotted children (header/body/footer or dynamic tabs) ──
-export const SLOTTED_TYPES = new Set(["card", "modal", "offcanvas", "tab-content", "accordion"]);
+export const SLOTTED_TYPES = new Set(["card", "modal", "offcanvas", "tab-content", "accordion", "collapse"]);
 
 export function isSlottedType(type: string): boolean {
   return SLOTTED_TYPES.has(type);

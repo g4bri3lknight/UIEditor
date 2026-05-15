@@ -1420,6 +1420,10 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
       const btnBgMap: Record<string, string> = { "": BS.secondary, primary: BS.primary, secondary: BS.secondary };
       const btnBg = btnBgMap[variant] || BS.secondary;
       const isDarkBtn = variant === "primary" || variant === "secondary";
+      const hasDirectChildren = component.children && component.children.length > 0;
+      const bodySlotContent = slotChildren?.body;
+      const hasSlotChildren = bodySlotContent !== undefined && bodySlotContent !== null;
+
       return (
         <Wrapper customClass={customClass} style={{ padding: "0" }}>
           <div style={{
@@ -1447,8 +1451,9 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
               transition: "all 0.2s ease",
               fontSize: "0.9375rem", lineHeight: 1.6, color: BS.body,
               background: BS.white,
+              minHeight: isShown ? "40px" : "0",
             }}>
-              {p.body || "This is the collapsible content."}
+              {hasSlotChildren ? bodySlotContent : (p.body || "This is the collapsible content.")}
             </div>
           </div>
         </Wrapper>

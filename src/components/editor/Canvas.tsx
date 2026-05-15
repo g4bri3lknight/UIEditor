@@ -501,6 +501,20 @@ function CanvasItem({
         </div>
       );
     });
+  } else if (isSlotted && component.type === "collapse") {
+    // Collapse: single body slot with drop zone
+    const bodyChildren = allChildren.filter(c => !c.slot || c.slot === "body");
+    slotChildrenMap = {
+      body: (
+        <SlotDropZone
+          slotId={`slot-${component.id}-body`}
+          isDragging={isDragging}
+          label="Rilascia componenti qui"
+        >
+          {renderSlotContent(bodyChildren)}
+        </SlotDropZone>
+      ),
+    };
   } else if (isSlotted) {
     const headerChildren = allChildren.filter(c => c.slot === "header");
     const bodyChildren = allChildren.filter(c => !c.slot || c.slot === "body");
