@@ -1121,7 +1121,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
             </div>
             {/* Footer */}
             {(p.showCloseButton || p.showPrimaryButton || hasFooterChildren || dragging) && (
-            <div style={{ padding: "12px 20px", borderTop: `1px solid ${BS.borderColor}`, display: "flex", justifyContent: "flex-end", gap: "8px", flexWrap: "wrap" }}>
+            <div style={{ padding: "12px 20px", borderTop: `1px solid ${BS.borderColor}`, display: hasFooterChildren ? "block" : "flex", justifyContent: hasFooterChildren ? undefined : "flex-end", gap: hasFooterChildren ? undefined : "8px", flexWrap: hasFooterChildren ? undefined : "wrap" }}>
               {hasFooterChildren ? (
                 slotChildren?.footer
               ) : (

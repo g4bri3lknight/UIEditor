@@ -63,7 +63,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { TEMPLATES } from "@/lib/editor/templates";
-import html2canvas from "html2canvas";
+import { domToPng } from "modern-screenshot";
 
 // ── Custom collision detection ──
 // Prioritizes drop indicators, then picks the innermost (smallest area) container.
@@ -245,8 +245,13 @@ export function Editor() {
   const rightSidebar = useSidebarResize("editor-right-width", 288, 200, 500, "right");
 
   // ── Preview dialog resizing ──
-  const previewSizeRef = useRef({ w: 1024, h: 680 });
-  const [previewSize, setPreviewSize] = useState({ w: 1024, h: 680 });
+  // Default to the current device screen size
+  const getDefaultPreviewSize = useCallback(() => {
+    if (typeof window === "undefined") return { w: 1024, h: 680 };
+    return { w: window.innerWidth, h: window.innerHeight };
+  }, []);
+  const previewSizeRef = useRef(getDefaultPreviewSize());
+  const [previewSize, setPreviewSize] = useState(getDefaultPreviewSize);
   const [isResizing, setIsResizing] = useState(false);
   const resizeStartRef = useRef({ x: 0, y: 0, w: 0, h: 0 });
 
@@ -303,32 +308,89 @@ export function Editor() {
     setPreviewZoom(100);
   }, []);
 
+  // ── Generated HTML code (must be before handleScreenshot) ──
+  const htmlCode = useMemo(() => generateFullHTML(components, hiddenComponents), [components, hiddenComponents]);
+
   // ── Screenshot handler ──
-  // Uses File System Access API for "Save As" dialog (Chrome/Edge/Firefox 126+)
-  // Falls back to direct download for unsupported browsers
+  // Uses modern-screenshot (SVG foreignObject approach) instead of html2canvas
+  // because html2canvas has fundamental bugs rendering text inside form controls
+  // and buttons — text appears vertically shifted / cut off.
+  // modern-screenshot captures the real browser rendering via SVG, so text,
+  // tables, and all CSS properties are rendered correctly.
   const [isCapturing, setIsCapturing] = useState(false);
   const handleScreenshot = useCallback(async () => {
-    const iframe = previewIframeRef.current;
-    if (!iframe?.contentDocument?.body) {
-      toast.error("Impossibile accedere al contenuto dell'anteprima");
+    if (!htmlCode) {
+      toast.error("Nessun contenuto da catturare");
       return;
     }
     setIsCapturing(true);
+
+    let tempIframe: HTMLIFrameElement | null = null;
+
     try {
       toast.info("Generazione screenshot in corso...");
-      const canvas = await html2canvas(iframe.contentDocument.body, {
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
+
+      const captureWidth = previewSizeRef.current.w;
+
+      // Create a temporary off-screen iframe sized to the full content
+      tempIframe = document.createElement("iframe");
+      tempIframe.style.position = "fixed";
+      tempIframe.style.left = "-99999px";
+      tempIframe.style.top = "0";
+      tempIframe.style.width = `${captureWidth}px`;
+      tempIframe.style.height = "8000px";
+      tempIframe.style.border = "none";
+      tempIframe.style.background = "white";
+      document.body.appendChild(tempIframe);
+
+      // Load the HTML content
+      await new Promise<void>((resolve, reject) => {
+        tempIframe!.onload = () => resolve();
+        tempIframe!.onerror = () => reject(new Error("Errore nel caricamento del contenuto"));
+        tempIframe!.srcdoc = htmlCode;
+      });
+
+      // Wait for Bootstrap CSS/JS from CDN to fully load and render
+      await new Promise((r) => setTimeout(r, 1500));
+
+      const tempDoc = tempIframe.contentDocument;
+      const tempBody = tempDoc?.body;
+      const tempHtml = tempDoc?.documentElement;
+      if (!tempBody || !tempHtml || !tempDoc) {
+        throw new Error("Impossibile accedere al contenuto dell'iframe temporaneo");
+      }
+
+      // Measure the actual full content size
+      const fullWidth = Math.max(tempBody.scrollWidth, tempHtml.scrollWidth, captureWidth);
+      const fullHeight = Math.max(tempBody.scrollHeight, tempHtml.scrollHeight);
+
+      // Resize iframe to exactly match the content so nothing is clipped
+      tempIframe.style.width = `${fullWidth}px`;
+      tempIframe.style.height = `${fullHeight + 20}px`;
+
+      // Wait for re-layout after resize
+      await new Promise((r) => setTimeout(r, 300));
+
+      // Use modern-screenshot to capture the full iframe body
+      // Unlike html2canvas, modern-screenshot uses SVG foreignObject which
+      // preserves the real browser rendering — text, form controls, tables,
+      // and all CSS are pixel-perfect.
+      const dataUrl = await domToPng(tempBody, {
         scale: 2,
+        width: fullWidth,
+        height: fullHeight,
+        backgroundColor: "#ffffff",
+        fetchOptions: {
+          requestInit: {
+            mode: "cors",
+          },
+        },
       });
-      // Convert canvas to Blob
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((b) => {
-          if (b) resolve(b);
-          else reject(new Error("Impossibile generare l'immagine"));
-        }, "image/png");
-      });
+
+      // Convert data URL to Blob
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+
       const fileName = `bootstrap-preview-${new Date().toISOString().slice(0, 19).replace(/[:.]/g, "-")}.png`;
       // Try File System Access API ("Save As" dialog)
       if (typeof window !== "undefined" && "showSaveFilePicker" in window) {
@@ -351,7 +413,7 @@ export function Editor() {
           throw err;
         }
       } else {
-        // Fallback: direct download (saves to default Downloads folder)
+        // Fallback: direct download
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.download = fileName;
@@ -364,9 +426,12 @@ export function Editor() {
       console.error("Screenshot error:", err);
       toast.error("Errore durante la generazione dello screenshot");
     } finally {
+      if (tempIframe && tempIframe.parentNode) {
+        tempIframe.parentNode.removeChild(tempIframe);
+      }
       setIsCapturing(false);
     }
-  }, []);
+  }, [htmlCode]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -657,8 +722,6 @@ export function Editor() {
     setActiveDragId(null);
     setActiveDragData(null);
   }, []);
-
-  const htmlCode = useMemo(() => generateFullHTML(components, hiddenComponents), [components, hiddenComponents]);
 
   const handleCopyCode = async () => {
     try {

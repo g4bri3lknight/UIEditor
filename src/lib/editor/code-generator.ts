@@ -614,7 +614,10 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         const footerContent = hasFooterSlot
           ? footerChildren.map(c => generateComponentHTML(c, indentLevel + 2, hiddenComponents)).join("\n")
           : (p.footer as string);
-        html += indent(wrap("div", "card-footer text-muted", footerContent), indentLevel + 1);
+        // Use d-block w-100 when footer has slot children (like rows/cols) so the
+        // Bootstrap grid system works correctly without overflow
+        const footerClass = hasFooterSlot ? "card-footer text-muted d-block w-100" : "card-footer text-muted";
+        html += indent(wrap("div", footerClass, footerContent), indentLevel + 1);
       }
 
       return indent(wrap("div", cls, html.trimEnd(), wrapExtraAttrs, false, customClass, isHidden), indentLevel);
@@ -876,6 +879,10 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       let footerHTML = "";
       if (showClose || showPrimary || hasFooterSlot) {
         let footerContent = "";
+        // When footer has slot children (like rows/cols), use d-block w-100 so the
+        // Bootstrap grid system works correctly. Default modal-footer is flex which
+        // causes rows with negative gutters to overflow.
+        const footerClass = hasFooterSlot ? "modal-footer d-block w-100" : "modal-footer";
         if (hasFooterSlot) {
           footerContent = footerSlotChildren.map(c => generateComponentHTML(c, indentLevel + 3, hiddenComponents)).join("\n");
         } else {
@@ -886,7 +893,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
             footerContent += (footerContent ? "\n" : "") + indent(wrap("button", primaryCls, (p.footer as string) || "Save Changes", {}, true), indentLevel + 3);
           }
         }
-        footerHTML = "\n" + indent(wrap("div", "modal-footer", footerContent), indentLevel + 2);
+        footerHTML = "\n" + indent(wrap("div", footerClass, footerContent), indentLevel + 2);
       }
 
       let html = indent(wrap("div", "modal-content",
