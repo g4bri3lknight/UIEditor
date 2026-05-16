@@ -391,11 +391,11 @@ export const useEditorStore = create<EditorState>()(
     if (!comp || isAutoManaged(comp.type)) return;
     const clone = deepCloneWithNewIds(comp);
     // Find parent and position to insert clone next to the original
-    const parentInfo = getParentInfo(get().components, id);
+    const parentInfo = get().getParentInfo(id);
     set(s => {
       let newComps: CanvasComponent[];
       if (parentInfo) {
-        newComps = addToTree(s.components, parentInfo.parentId, clone, parentInfo.index + 1);
+        newComps = addToTree(s.components, parentInfo.parent?.id ?? null, clone, parentInfo.index + 1);
       } else {
         // Root level — find index and insert after
         const rootIndex = s.components.findIndex(c => c.id === id);

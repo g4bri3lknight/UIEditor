@@ -32,6 +32,9 @@ import {
   Plus,
   BookmarkPlus,
   Pencil,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
 } from "lucide-react";
 import { useEditorStore, isContainer, isAutoManaged, isSlottedType, getTabSlots, getAccordionSlots } from "@/store/editor-store";
 import { BootstrapRenderer } from "./BootstrapRenderer";
@@ -851,9 +854,42 @@ function CanvasItem({
 }
 
 // ── Main Canvas ──
+// ── Zoom constants ──
+const MIN_ZOOM = 25;
+const MAX_ZOOM = 200;
+const ZOOM_STEP = 10;
+const ZOOM_LEVELS = [25, 50, 75, 100, 125, 150, 200];
+
 export function Canvas({ activeDragId }: { activeDragId: string | null }) {
   const { components, selectComponent, updateComponentProps } = useEditorStore();
   const isDragging = !!activeDragId;
+
+  // ── Zoom state ──
+  const [zoom, setZoom] = useState(100);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleZoomIn = useCallback(() => {
+    setZoom((z) => Math.min(MAX_ZOOM, z + ZOOM_STEP));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoom((z) => Math.max(MIN_ZOOM, z - ZOOM_STEP));
+  }, []);
+
+  const handleZoomReset = useCallback(() => {
+    setZoom(100);
+  }, []);
+
+  // Ctrl+Scroll to zoom
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      setZoom((z) => {
+        const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+        return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z + delta));
+      });
+    }
+  }, []);
 
   // ── Inline text editing state ──
   const [inlineEdit, setInlineEdit] = useState<{
@@ -926,31 +962,72 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
             {components.length} componente{components.length !== 1 ? "i" : ""}
           </span>
         </div>
-        <div className="flex items-center gap-1 text-[10px] text-muted-foreground/50">
-          <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-mono">
-            Ctrl+Z
-          </kbd>
-          <span>Annulla</span>
-          <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-mono ml-2">
-            Del
-          </kbd>
-          <span>Elimina</span>
-          <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-mono ml-2">
-            Esc
-          </kbd>
-          <span>Deseleziona</span>
+        <div className="flex items-center gap-3">
+          {/* Zoom controls */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleZoomOut}
+              disabled={zoom <= MIN_ZOOM}
+              className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Riduci zoom (Ctrl+Scroll)"
+            >
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+            <select
+              value={zoom}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              className="h-6 w-[58px] text-[11px] text-center bg-muted border-0 rounded px-1 text-muted-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary/30 appearance-none"
+            >
+              {[25, 50, 75, 100, 125, 150, 200].map((level) => (
+                <option key={level} value={level}>{level}%</option>
+              ))}
+            </select>
+            <button
+              onClick={handleZoomIn}
+              disabled={zoom >= MAX_ZOOM}
+              className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Aumenta zoom (Ctrl+Scroll)"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+            {zoom !== 100 && (
+              <button
+                onClick={handleZoomReset}
+                className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                title="Resetta zoom (100%)"
+              >
+                <RotateCcw className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+          <div className="w-px h-4 bg-border" />
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground/50">
+            <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-mono">Ctrl+Z</kbd>
+            <span>Annulla</span>
+            <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-mono ml-2">Del</kbd>
+            <span>Elimina</span>
+            <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-mono ml-2">Esc</kbd>
+            <span>Deseleziona</span>
+          </div>
         </div>
       </div>
 
       {/* Drop Zone */}
       <div
-        ref={setNodeRef}
+        ref={(node) => {
+          setNodeRef(node);
+          if (node) scrollContainerRef.current = node;
+        }}
         onClick={handleCanvasClick}
-        className={`flex-1 overflow-y-auto transition-colors duration-200 ${
+        onWheel={handleWheel}
+        className={`flex-1 overflow-auto transition-colors duration-200 ${
           isOver && isDragging ? "bg-primary/5" : ""
         }`}
       >
-        <div className="w-[95%] mx-auto p-6">
+        <div
+          className="w-[95%] mx-auto p-6 origin-top"
+          style={{ transform: `scale(${zoom / 100})`, transition: 'transform 150ms ease-out' }}
+        >
           {components.length === 0 ? (
             <EmptyCanvas isOver={isOver && isDragging} />
           ) : (

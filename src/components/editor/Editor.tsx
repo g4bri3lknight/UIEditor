@@ -56,9 +56,14 @@ import {
   Monitor,
   LayoutTemplate,
   ChevronDown,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Camera,
 } from "lucide-react";
 import { toast } from "sonner";
 import { TEMPLATES } from "@/lib/editor/templates";
+import html2canvas from "html2canvas";
 
 // ── Custom collision detection ──
 // Prioritizes drop indicators, then picks the innermost (smallest area) container.
@@ -280,6 +285,87 @@ export function Editor() {
     const clampedH = Math.min(h, maxH);
     previewSizeRef.current = { w: clampedW, h: clampedH };
     setPreviewSize({ w: clampedW, h: clampedH });
+  }, []);
+
+  // ── Preview zoom state ──
+  const [previewZoom, setPreviewZoom] = useState(100);
+  const previewIframeRef = useRef<HTMLIFrameElement>(null);
+
+  const handlePreviewZoomIn = useCallback(() => {
+    setPreviewZoom((z) => Math.min(200, z + 10));
+  }, []);
+
+  const handlePreviewZoomOut = useCallback(() => {
+    setPreviewZoom((z) => Math.max(25, z - 10));
+  }, []);
+
+  const handlePreviewZoomReset = useCallback(() => {
+    setPreviewZoom(100);
+  }, []);
+
+  // ── Screenshot handler ──
+  // Uses File System Access API for "Save As" dialog (Chrome/Edge/Firefox 126+)
+  // Falls back to direct download for unsupported browsers
+  const [isCapturing, setIsCapturing] = useState(false);
+  const handleScreenshot = useCallback(async () => {
+    const iframe = previewIframeRef.current;
+    if (!iframe?.contentDocument?.body) {
+      toast.error("Impossibile accedere al contenuto dell'anteprima");
+      return;
+    }
+    setIsCapturing(true);
+    try {
+      toast.info("Generazione screenshot in corso...");
+      const canvas = await html2canvas(iframe.contentDocument.body, {
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        scale: 2,
+      });
+      // Convert canvas to Blob
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((b) => {
+          if (b) resolve(b);
+          else reject(new Error("Impossibile generare l'immagine"));
+        }, "image/png");
+      });
+      const fileName = `bootstrap-preview-${new Date().toISOString().slice(0, 19).replace(/[:.]/g, "-")}.png`;
+      // Try File System Access API ("Save As" dialog)
+      if (typeof window !== "undefined" && "showSaveFilePicker" in window) {
+        try {
+          const handle = await (window as unknown as { showSaveFilePicker: (opts: unknown) => Promise<FileSystemFileHandle> }).showSaveFilePicker({
+            suggestedName: fileName,
+            types: [{
+              description: "Immagine PNG",
+              accept: { "image/png": [".png"] },
+            }],
+          });
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          toast.success("Screenshot salvato!");
+        } catch (err) {
+          // User cancelled the dialog — do nothing
+          if ((err as DOMException).name === "AbortError") return;
+          // Other error — fallback to direct download
+          throw err;
+        }
+      } else {
+        // Fallback: direct download (saves to default Downloads folder)
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.download = fileName;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+        toast.success("Screenshot scaricato!");
+      }
+    } catch (err) {
+      console.error("Screenshot error:", err);
+      toast.error("Errore durante la generazione dello screenshot");
+    } finally {
+      setIsCapturing(false);
+    }
   }, []);
 
   const sensors = useSensors(
@@ -1042,6 +1128,52 @@ export function Editor() {
               </span>
             </DialogTitle>
             <div className="flex items-center gap-1">
+              {/* Screenshot */}
+              <button
+                onClick={handleScreenshot}
+                disabled={isCapturing}
+                className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
+                title="Salva screenshot come immagine (PNG) — Scegli dove salvare"
+              >
+                <Camera className={`w-3.5 h-3.5 ${isCapturing ? "animate-pulse" : ""}`} />
+              </button>
+              <div className="w-px h-4 bg-border mx-0.5" />
+              {/* Zoom controls */}
+              <button
+                onClick={handlePreviewZoomOut}
+                disabled={previewZoom <= 25}
+                className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30"
+                title="Riduci zoom"
+              >
+                <ZoomOut className="w-3.5 h-3.5" />
+              </button>
+              <select
+                value={previewZoom}
+                onChange={(e) => setPreviewZoom(Number(e.target.value))}
+                className="h-6 w-[56px] text-[11px] text-center bg-muted border-0 rounded px-0.5 text-muted-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary/30 appearance-none"
+              >
+                {[25, 50, 75, 100, 125, 150, 200].map((level) => (
+                  <option key={level} value={level}>{level}%</option>
+                ))}
+              </select>
+              <button
+                onClick={handlePreviewZoomIn}
+                disabled={previewZoom >= 200}
+                className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30"
+                title="Aumenta zoom"
+              >
+                <ZoomIn className="w-3.5 h-3.5" />
+              </button>
+              {previewZoom !== 100 && (
+                <button
+                  onClick={handlePreviewZoomReset}
+                  className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  title="Resetta zoom"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                </button>
+              )}
+              <div className="w-px h-4 bg-border mx-0.5" />
               {/* Viewport presets */}
               <button
                 onClick={() => applyPresetSize(375, 667)}
@@ -1064,7 +1196,7 @@ export function Editor() {
               >
                 <Monitor className="w-3.5 h-3.5" />
               </button>
-              <div className="w-px h-4 bg-border mx-1" />
+              <div className="w-px h-4 bg-border mx-0.5" />
               <button
                 onClick={() => setPreviewDialogOpen(false)}
                 className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
@@ -1075,13 +1207,35 @@ export function Editor() {
             </div>
           </div>
           {/* Iframe container */}
-          <div className="flex-1 min-h-0 min-w-0 relative">
-            <iframe
-              srcDoc={htmlCode}
-              style={{ width: "100%", height: "100%", border: "none", background: "white", display: "block" }}
-              title="Bootstrap Preview"
-              sandbox="allow-scripts"
-            />
+          <div className="flex-1 min-h-0 min-w-0 relative overflow-hidden">
+            {/* Scrollable wrapper for zoom */}
+            <div
+              className="absolute inset-0 overflow-auto"
+            >
+              <div
+                style={{
+                  transform: `scale(${previewZoom / 100})`,
+                  transformOrigin: "top left",
+                  transition: "transform 150ms ease-out",
+                  width: previewZoom !== 100 ? `${previewSize.w}px` : `${previewSize.w}px`,
+                  minHeight: previewZoom !== 100 ? `${(previewSize.h - 40) * 100 / previewZoom}px` : "100%",
+                }}
+              >
+                <iframe
+                  ref={previewIframeRef}
+                  srcDoc={htmlCode}
+                  style={{
+                    width: "100%",
+                    minHeight: `${previewSize.h - 40}px`,
+                    border: "none",
+                    background: "white",
+                    display: "block",
+                  }}
+                  title="Bootstrap Preview"
+                  sandbox="allow-scripts allow-same-origin"
+                />
+              </div>
+            </div>
           </div>
           {/* Resize handle */}
           <div
