@@ -52,8 +52,8 @@ const EDITABLE_TEXT_PROPS: Record<string, Array<{ key: string; multiline: boolea
   "code-block": [{ key: "code", multiline: true }],
   "button": [{ key: "text", multiline: false }],
   "button-group": [{ key: "buttons", multiline: false }],
-  "input": [{ key: "label", multiline: false }, { key: "placeholder", multiline: false }, { key: "helpText", multiline: false }],
-  "textarea": [{ key: "label", multiline: false }, { key: "placeholder", multiline: false }, { key: "helpText", multiline: false }],
+  "input": [{ key: "label", multiline: false }, { key: "text", multiline: false }, { key: "placeholder", multiline: false }, { key: "helpText", multiline: false }],
+  "textarea": [{ key: "label", multiline: false }, { key: "text", multiline: false }, { key: "placeholder", multiline: false }, { key: "helpText", multiline: false }],
   "select-input": [{ key: "label", multiline: false }],
   "checkbox": [{ key: "label", multiline: false }],
   "radio": [{ key: "label", multiline: false }],
@@ -349,18 +349,110 @@ function CanvasItem({
   );
 
   // ── Inline text editing on double-click ──
+  // Smart: detects which part of the component was clicked and edits the
+  // corresponding property. Falls back to the first editable prop.
   const editableProp = getFirstEditableProp(component.type);
+  const allEditableProps = EDITABLE_TEXT_PROPS[component.type];
   const isEditable = !!editableProp;
 
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (!editableProp) return;
-      const currentValue = String(component.props[editableProp.key] ?? "");
+      if (!editableProp || !allEditableProps || allEditableProps.length === 0) return;
+
+      // If only one editable prop, just edit it directly
+      if (allEditableProps.length === 1) {
+        const currentValue = String(component.props[editableProp.key] ?? "");
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        onStartInlineEdit(component.id, editableProp.key, rect, currentValue, editableProp.multiline);
+        return;
+      }
+
+      // Multiple editable props — detect which part was clicked
+      const target = e.target as HTMLElement;
+      const targetText = target.textContent?.trim().toLowerCase() || "";
+      const targetClasses = target.className?.toLowerCase() || "";
+      const targetTag = target.tagName?.toLowerCase() || "";
+      const targetDataSlot = target.getAttribute("data-slot") || "";
+
+      // Heuristic: match the clicked element to the right property
+      let bestProp = allEditableProps[0];
+      let bestScore = -1;
+
+      for (const prop of allEditableProps) {
+        let score = 0;
+        const propValue = String(component.props[prop.key] ?? "").trim().toLowerCase();
+        const propKey = prop.key.toLowerCase();
+
+        // Check data-slot attribute (for card/modal/offcanvas slots)
+        if (targetDataSlot && (
+          (targetDataSlot === "header" && propKey === "header") ||
+          (targetDataSlot === "body" && (propKey === "text" || propKey === "body")) ||
+          (targetDataSlot === "footer" && propKey === "footer")
+        )) {
+          score += 10;
+        }
+
+        // Check if the clicked element's text matches this prop's value
+        if (propValue && targetText && propValue.includes(targetText)) {
+          score += 5;
+        }
+        // Or if the target text matches exactly
+        if (propValue && targetText === propValue) {
+          score += 8;
+        }
+
+        // Check class/tag hints
+        if (propKey === "label" && (targetTag === "label" || targetClasses.includes("label") || targetClasses.includes("form-label"))) {
+          score += 6;
+        }
+        if (propKey === "placeholder" && targetClasses.includes("form-control")) {
+          score += 3;
+        }
+        if (propKey === "text" && (targetTag === "input" || targetTag === "textarea")) {
+          score += 8; // value of input/textarea — higher priority than placeholder
+        }
+        if (propKey === "title" && (targetClasses.includes("card-title") || targetClasses.includes("modal-title") || targetTag === "h5")) {
+          score += 6;
+        }
+        if (propKey === "header" && (targetClasses.includes("card-header") || targetClasses.includes("modal-header"))) {
+          score += 6;
+        }
+        if (propKey === "footer" && (targetClasses.includes("card-footer") || targetClasses.includes("modal-footer"))) {
+          score += 6;
+        }
+        if (propKey === "subtitle" && (targetClasses.includes("card-subtitle") || targetTag === "h6")) {
+          score += 6;
+        }
+        if (propKey === "heading" && (targetClasses.includes("alert-heading") || targetTag === "h4")) {
+          score += 6;
+        }
+        if (propKey === "closeButtonText" && (targetClasses.includes("btn-close") || targetClasses.includes("modal-footer"))) {
+          score += 6;
+        }
+        if (propKey === "attribution" && (targetClasses.includes("blockquote-footer"))) {
+          score += 6;
+        }
+        if (propKey === "helpText" && (targetClasses.includes("form-text") || targetClasses.includes("text-muted"))) {
+          score += 6;
+        }
+
+        // Fallback: if the clicked element or its close parent contains the prop value
+        if (propValue && target.closest(`[data-prop="${prop.key}"]`)) {
+          score += 7;
+        }
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestProp = prop;
+        }
+      }
+
+      const currentValue = String(component.props[bestProp.key] ?? "");
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      onStartInlineEdit(component.id, editableProp.key, rect, currentValue, editableProp.multiline);
+      onStartInlineEdit(component.id, bestProp.key, rect, currentValue, bestProp.multiline);
     },
-    [editableProp, component.props, component.id, onStartInlineEdit]
+    [editableProp, allEditableProps, component.props, component.id, onStartInlineEdit]
   );
 
   const mergedRef = useCallback(

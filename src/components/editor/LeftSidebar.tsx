@@ -1,16 +1,18 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CATEGORIES, COMPONENTS } from "@/lib/editor/bootstrap-components";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { useEditorStore, isAutoManaged } from "@/store/editor-store";
-import type { CanvasComponent } from "@/lib/editor/types";
+import { useEditorStore, isAutoManaged, isSlottedType } from "@/store/editor-store";
+import type { CanvasComponent, SavedSnippet } from "@/lib/editor/types";
 import {
   LayoutGrid, Type, FileInput, MousePointerClick, Navigation,
   Layers, Table, Image, Wrench, Search, List, Code, EyeOff,
   Bookmark, Trash2, Pencil, Check, X, Plus,
+  ChevronRight, ChevronDown as ChevronDownIcon, ArrowUp, ArrowDown,
+  FolderOpen, Download, Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -89,6 +91,25 @@ function DraggablePaletteItem({ type, label, icon }: { type: string; label: stri
   );
 }
 
+// ── Slot order for slotted components ──
+// Returns a numeric sort key so children appear in the same visual order as the canvas
+function getSlotSortKey(parentType: string, slot: string | undefined): number {
+  if (!slot) return 1; // no slot = body
+  if (parentType === "tab-content") {
+    const m = slot.match(/^tab-(\d+)$/);
+    return m ? parseInt(m[1]) : 0;
+  }
+  if (parentType === "accordion") {
+    const m = slot.match(/^acc-(\d+)$/);
+    return m ? parseInt(m[1]) : 0;
+  }
+  // card, modal, offcanvas, collapse
+  if (slot === "header") return 0;
+  if (slot === "body") return 1;
+  if (slot === "footer") return 2;
+  return 3;
+}
+
 // ── Recursive Layer Tree Item ──
 function LayerTreeItem({
   component,
@@ -96,41 +117,123 @@ function LayerTreeItem({
   selectedId,
   onSelect,
   isHidden,
+  expandedNodes,
+  toggleExpand,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
+  parentType,
 }: {
   component: CanvasComponent;
   depth: number;
   selectedId: string | null;
   onSelect: (id: string) => void;
   isHidden: boolean;
+  expandedNodes: Set<string>;
+  toggleExpand: (id: string) => void;
+  onMoveUp: (id: string) => void;
+  onMoveDown: (id: string) => void;
+  canMoveUp: (id: string) => boolean;
+  canMoveDown: (id: string) => boolean;
+  parentType?: string;
 }) {
   const autoManaged = isAutoManaged(component.type);
   const isSelected = selectedId === component.id;
   const layerIcon = getLayerIcon(component.type);
+  const hasChildren = component.children && component.children.length > 0;
+  const isExpanded = expandedNodes.has(component.id);
+
+  // Sort children by slot order for slotted components so the tree
+  // matches the visual order on the canvas (header → body → footer)
+  const sortedChildren = useMemo(() => {
+    if (!component.children || component.children.length === 0) return [];
+    if (isSlottedType(component.type)) {
+      return [...component.children].sort((a, b) =>
+        getSlotSortKey(component.type, a.slot) - getSlotSortKey(component.type, b.slot)
+      );
+    }
+    return component.children;
+  }, [component.children, component.type]);
 
   return (
     <div>
-      <button
-        onClick={() => onSelect(component.id)}
-        className={`w-full flex items-center gap-2 py-1.5 px-2 text-sm rounded-md transition-colors duration-100 cursor-pointer ${
+      <div
+        className={`group flex items-center gap-0.5 py-0.5 pr-1 rounded-md transition-colors duration-100 ${
           isSelected
-            ? "bg-primary/10 text-primary border-l-2 border-primary pl-1.5"
-            : "text-foreground/80 hover:bg-muted/50 border-l-2 border-transparent"
+            ? "bg-primary/10"
+            : "hover:bg-muted/50"
         } ${autoManaged ? "opacity-50" : ""} ${isHidden && !isSelected ? "opacity-40" : ""}`}
-        style={{ paddingLeft: `${depth * 16 + 8}px` }}
+        style={{ paddingLeft: `${depth * 16 + 4}px` }}
       >
-        <span className="shrink-0">
+        {/* Expand/collapse toggle */}
+        <button
+          onClick={(e) => { e.stopPropagation(); toggleExpand(component.id); }}
+          className={`shrink-0 w-5 h-5 flex items-center justify-center rounded transition-colors ${
+            hasChildren ? "hover:bg-muted cursor-pointer" : "cursor-default"
+          }`}
+        >
+          {hasChildren ? (
+            <ChevronRight
+              className={`w-3 h-3 text-muted-foreground transition-transform duration-150 ${
+                isExpanded ? "rotate-90" : ""
+              }`}
+            />
+          ) : (
+            <span className="w-3 h-3" />
+          )}
+        </button>
+
+        {/* Main clickable area */}
+        <button
+          onClick={() => onSelect(component.id)}
+          className={`flex-1 flex items-center gap-1.5 py-1 px-1 rounded text-sm transition-colors duration-100 cursor-pointer min-w-0 ${
+            isSelected
+              ? "text-primary"
+              : "text-foreground/80"
+          }`}
+        >
           {React.createElement(layerIcon, {
-            className: `w-3.5 h-3.5 ${isSelected ? "text-primary" : "text-muted-foreground"}`,
+            className: `w-3.5 h-3.5 shrink-0 ${isSelected ? "text-primary" : "text-muted-foreground"}`,
           })}
-        </span>
-        <span className="truncate text-xs">{component.label}</span>
-        {isHidden && (
-          <EyeOff className="w-3 h-3 text-muted-foreground/60 shrink-0 ml-auto" />
-        )}
-      </button>
-      {component.children && component.children.length > 0 && (
+          <span className="truncate text-xs">{component.label}</span>
+          {/* Slot badge for children inside slotted components */}
+          {parentType && isSlottedType(parentType) && component.slot && (
+            <span className="text-[9px] text-muted-foreground/60 bg-muted/60 rounded px-1 py-px shrink-0">
+              {component.slot}
+            </span>
+          )}
+          {isHidden && (
+            <EyeOff className="w-3 h-3 text-muted-foreground/60 shrink-0 ml-auto" />
+          )}
+        </button>
+
+        {/* Move up/down arrows — visible on hover */}
+        <div className={`shrink-0 flex items-center gap-0.5 transition-opacity duration-100 ${
+          isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+        }`}>
+          <button
+            onClick={(e) => { e.stopPropagation(); onMoveUp(component.id); }}
+            disabled={!canMoveUp(component.id)}
+            className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-default transition-colors"
+            title="Sposta su"
+          >
+            <ArrowUp className="w-3 h-3" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onMoveDown(component.id); }}
+            disabled={!canMoveDown(component.id)}
+            className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-default transition-colors"
+            title="Sposta giù"
+          >
+            <ArrowDown className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+      {/* Children — only rendered if expanded */}
+      {hasChildren && isExpanded && (
         <div>
-          {component.children.map((child) => (
+          {sortedChildren.map((child) => (
             <LayerTreeItem
               key={child.id}
               component={child}
@@ -138,6 +241,13 @@ function LayerTreeItem({
               selectedId={selectedId}
               onSelect={onSelect}
               isHidden={isHidden}
+              expandedNodes={expandedNodes}
+              toggleExpand={toggleExpand}
+              onMoveUp={onMoveUp}
+              onMoveDown={onMoveDown}
+              canMoveUp={canMoveUp}
+              canMoveDown={canMoveDown}
+              parentType={component.type}
             />
           ))}
         </div>
@@ -152,6 +262,49 @@ function LayersPanel() {
   const selectedId = useEditorStore((s) => s.selectedId);
   const selectComponent = useEditorStore((s) => s.selectComponent);
   const hiddenComponents = useEditorStore((s) => s.hiddenComponents);
+  const moveComponentInTree = useEditorStore((s) => s.moveComponentInTree);
+  const getParentInfo = useEditorStore((s) => s.getParentInfo);
+
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(() => {
+    // Auto-expand root-level items with children
+    const initial = new Set<string>();
+    const expandWithChildren = (comps: CanvasComponent[]) => {
+      for (const c of comps) {
+        if (c.children && c.children.length > 0) {
+          initial.add(c.id);
+          expandWithChildren(c.children);
+        }
+      }
+    };
+    expandWithChildren(components);
+    return initial;
+  });
+
+  // Update expanded nodes when components change (keep existing, add new root items)
+  React.useEffect(() => {
+    setExpandedNodes((prev) => {
+      const next = new Set(prev);
+      const addNew = (comps: CanvasComponent[]) => {
+        for (const c of comps) {
+          if (c.children && c.children.length > 0) {
+            if (!prev.has(c.id)) next.add(c.id); // Auto-expand new containers
+            addNew(c.children);
+          }
+        }
+      };
+      addNew(components);
+      return next;
+    });
+  }, [components]);
+
+  const toggleExpand = useCallback((id: string) => {
+    setExpandedNodes((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   const handleSelect = useCallback(
     (id: string) => {
@@ -159,6 +312,41 @@ function LayersPanel() {
     },
     [selectComponent]
   );
+
+  // ── Move up/down logic ──
+  const handleMoveUp = useCallback((id: string) => {
+    const info = getParentInfo(id);
+    if (!info) return;
+    const { parent, index } = info;
+    if (index <= 0) return;
+    const newParentId = parent ? parent.id : null;
+    moveComponentInTree(id, newParentId, index - 1);
+  }, [getParentInfo, moveComponentInTree]);
+
+  const handleMoveDown = useCallback((id: string) => {
+    const info = getParentInfo(id);
+    if (!info) return;
+    const { parent, index } = info;
+    const siblings = parent ? (parent.children || []) : useEditorStore.getState().components;
+    if (index >= siblings.length - 1) return;
+    const newParentId = parent ? parent.id : null;
+    // After removing from index i, insert at i+1 to place after the next sibling
+    moveComponentInTree(id, newParentId, index + 1);
+  }, [getParentInfo, moveComponentInTree]);
+
+  const checkCanMoveUp = useCallback((id: string): boolean => {
+    const info = getParentInfo(id);
+    if (!info) return false;
+    return info.index > 0;
+  }, [getParentInfo]);
+
+  const checkCanMoveDown = useCallback((id: string): boolean => {
+    const info = getParentInfo(id);
+    if (!info) return false;
+    const { parent, index } = info;
+    const siblings = parent ? (parent.children || []) : useEditorStore.getState().components;
+    return index < siblings.length - 1;
+  }, [getParentInfo]);
 
   // ── Count components by type ──
   const typeCounts = useMemo(() => {
@@ -202,8 +390,8 @@ function LayersPanel() {
           })}
         </div>
       </div>
-      <ScrollArea className="flex-1 min-h-0">
-        <div className="p-2 space-y-0.5">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" style={{ scrollbarGutter: "stable" }}>
+        <div className="p-2 space-y-0.5 pb-6">
           {components.map((comp) => (
             <LayerTreeItem
               key={comp.id}
@@ -212,10 +400,16 @@ function LayersPanel() {
               selectedId={selectedId}
               onSelect={handleSelect}
               isHidden={hiddenComponents.has(comp.id)}
+              expandedNodes={expandedNodes}
+              toggleExpand={toggleExpand}
+              onMoveUp={handleMoveUp}
+              onMoveDown={handleMoveDown}
+              canMoveUp={checkCanMoveUp}
+              canMoveDown={checkCanMoveDown}
             />
           ))}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
@@ -237,10 +431,17 @@ function TemplatesPanel() {
   const insertSnippet = useEditorStore((s) => s.insertSnippet);
   const deleteSnippet = useEditorStore((s) => s.deleteSnippet);
   const renameSnippet = useEditorStore((s) => s.renameSnippet);
+  const updateSnippetCategory = useEditorStore((s) => s.updateSnippetCategory);
+  const exportSnippets = useEditorStore((s) => s.exportSnippets);
+  const importSnippets = useEditorStore((s) => s.importSnippets);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [categoryValue, setCategoryValue] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [filterCategory, setFilterCategory] = useState<string | null>(null);
+  const snippetImportRef = useRef<HTMLInputElement>(null);
 
   const handleInsert = useCallback((snippetId: string) => {
     insertSnippet(snippetId, null);
@@ -271,14 +472,79 @@ function TemplatesPanel() {
     setEditingId(null);
   }, []);
 
+  const handleStartCategoryEdit = useCallback((snippetId: string, currentCat: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingCategory(snippetId);
+    setCategoryValue(currentCat);
+  }, []);
+
+  const handleConfirmCategory = useCallback(() => {
+    if (editingCategory && categoryValue.trim()) {
+      updateSnippetCategory(editingCategory, categoryValue.trim());
+      toast.success("Categoria aggiornata");
+    }
+    setEditingCategory(null);
+  }, [editingCategory, categoryValue, updateSnippetCategory]);
+
   const handleToggleExpand = useCallback((snippetId: string) => {
     setExpandedId(prev => prev === snippetId ? null : snippetId);
   }, []);
+
+  const handleExportAll = useCallback(() => {
+    const json = exportSnippets();
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "bootstrap-snippets.json";
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Template esportati!");
+  }, [exportSnippets]);
+
+  const handleImport = useCallback(() => {
+    snippetImportRef.current?.click();
+  }, []);
+
+  const handleImportFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const count = importSnippets(text);
+      if (count > 0) {
+        toast.success(`${count} template importat${count !== 1 ? "i" : "o"}!`);
+      } else {
+        toast.error("Nessun template valido trovato nel file");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }, [importSnippets]);
 
   const formatDate = (timestamp: number) => {
     const d = new Date(timestamp);
     return d.toLocaleDateString("it-IT", { day: "2-digit", month: "short" });
   };
+
+  // Get all categories
+  const categories = useMemo(() => {
+    const cats = new Set<string>();
+    for (const s of savedSnippets) {
+      cats.add(s.category || "Generale");
+    }
+    return Array.from(cats).sort();
+  }, [savedSnippets]);
+
+  // Filter and sort snippets
+  const filteredSnippets = useMemo(() => {
+    let sorted = [...savedSnippets].sort((a, b) => b.updatedAt - a.updatedAt);
+    if (filterCategory) {
+      sorted = sorted.filter(s => (s.category || "Generale") === filterCategory);
+    }
+    return sorted;
+  }, [savedSnippets, filterCategory]);
 
   if (!hydrated) {
     return (
@@ -305,142 +571,329 @@ function TemplatesPanel() {
         <p className="text-[11px] text-muted-foreground/60 text-center mt-1">
           Clicca col tasto destro su un componente e seleziona &quot;Salva come template&quot;.
         </p>
+        {/* Import button even when empty */}
+        <button
+          onClick={handleImport}
+          className="mt-4 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
+        >
+          <Upload className="w-3 h-3" />
+          Importa template
+        </button>
+        <input
+          ref={snippetImportRef}
+          type="file"
+          accept=".json,application/json"
+          className="hidden"
+          onChange={handleImportFile}
+        />
       </div>
     );
   }
 
-  // Sort by most recent first
-  const sorted = [...savedSnippets].sort((a, b) => b.updatedAt - a.updatedAt);
-
   return (
     <div className="flex flex-col h-full">
-      <div className="shrink-0 px-3 pt-2 pb-1.5 border-b border-border/50">
+      {/* Header with count and actions */}
+      <div className="shrink-0 px-3 pt-2 pb-1.5 border-b border-border/50 flex items-center justify-between">
         <span className="text-[10px] text-muted-foreground font-medium">
           {savedSnippets.length} template{savedSnippets.length !== 1 ? "s" : ""} salvat{savedSnippets.length !== 1 ? "i" : "o"}
         </span>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleExportAll}
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            title="Esporta tutti i template"
+          >
+            <Download className="w-3 h-3" />
+          </button>
+          <button
+            onClick={handleImport}
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            title="Importa template da file"
+          >
+            <Upload className="w-3 h-3" />
+          </button>
+          <input
+            ref={snippetImportRef}
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+        </div>
       </div>
-      <ScrollArea className="flex-1 min-h-0">
-        <div className="p-2 space-y-1.5">
-          {sorted.map((snippet) => {
-            const isEditing = editingId === snippet.id;
-            const isExpanded = expandedId === snippet.id;
-            const totalComps = countComponents(snippet.components);
-            const typeLabels = snippet.components.map(c => c.type);
 
-            return (
-              <div
-                key={snippet.id}
-                className="rounded-lg border border-border/50 bg-background/50 overflow-hidden transition-colors hover:border-primary/20"
-              >
-                {/* Header */}
-                <div className="flex items-start gap-2 px-2.5 py-2">
-                  <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Bookmark className="w-3.5 h-3.5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    {isEditing ? (
-                      <div className="flex items-center gap-1">
-                        <Input
-                          value={editingName}
-                          onChange={(e) => setEditingName(e.target.value)}
-                          className="h-6 text-xs px-1.5 py-0"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleConfirmRename();
-                            if (e.key === "Escape") handleCancelRename();
-                          }}
-                          autoFocus
-                        />
-                        <button
-                          onClick={handleConfirmRename}
-                          className="p-0.5 rounded hover:bg-primary/10 text-primary"
-                        >
-                          <Check className="w-3 h-3" />
-                        </button>
-                        <button
-                          onClick={handleCancelRename}
-                          className="p-0.5 rounded hover:bg-muted text-muted-foreground"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="text-xs font-medium text-foreground truncate">{snippet.name}</div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[10px] text-muted-foreground">
-                            {snippet.components.length} componente{snippet.components.length !== 1 ? "i" : ""}
-                            {totalComps !== snippet.components.length && ` (${totalComps} totali)`}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground/40">·</span>
-                          <span className="text-[10px] text-muted-foreground/60">
-                            {formatDate(snippet.updatedAt)}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
+      {/* Category filter */}
+      {categories.length > 1 && (
+        <div className="shrink-0 px-2 py-1.5 border-b border-border/50 flex gap-1 flex-wrap">
+          <button
+            onClick={() => setFilterCategory(null)}
+            className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+              !filterCategory
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted/60 text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            Tutti
+          </button>
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setFilterCategory(cat === filterCategory ? null : cat)}
+              className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+                filterCategory === cat
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted/60 text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      )}
 
-                {/* Actions */}
-                <div className="flex items-center gap-0.5 px-2.5 pb-2">
-                  <button
-                    onClick={() => handleInsert(snippet.id)}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
-                  >
-                    <Plus className="w-3 h-3" />
-                    Inserisci
-                  </button>
-                  <button
-                    onClick={(e) => handleToggleExpand(snippet.id)}
-                    className="px-1.5 py-1 rounded-md text-[11px] text-muted-foreground hover:bg-muted transition-colors"
-                    title="Dettagli"
-                  >
-                    <svg className={`w-3 h-3 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  <div className="flex-1" />
-                  {!isEditing && (
-                    <button
-                      onClick={(e) => handleStartRename(snippet.id, snippet.name, e)}
-                      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                      title="Rinomina"
-                    >
-                      <Pencil className="w-3 h-3" />
+      {/* Snippet list */}
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" style={{ scrollbarGutter: "stable" }}>
+        <div className="p-2 space-y-1.5 pb-6">
+          {filteredSnippets.map((snippet) => (
+            <SnippetCard
+              key={snippet.id}
+              snippet={snippet}
+              editingId={editingId}
+              editingName={editingName}
+              editingCategory={editingCategory}
+              categoryValue={categoryValue}
+              expandedId={expandedId}
+              setEditingId={setEditingId}
+              setEditingName={setEditingName}
+              setEditingCategory={setEditingCategory}
+              setCategoryValue={setCategoryValue}
+              setExpandedId={setExpandedId}
+              onInsert={handleInsert}
+              onDelete={handleDelete}
+              onStartRename={handleStartRename}
+              onConfirmRename={handleConfirmRename}
+              onCancelRename={handleCancelRename}
+              onStartCategoryEdit={handleStartCategoryEdit}
+              onConfirmCategory={handleConfirmCategory}
+              onToggleExpand={handleToggleExpand}
+              formatDate={formatDate}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Snippet Card (separate component so hooks work correctly) ──
+function SnippetCard({
+  snippet,
+  editingId,
+  editingName,
+  editingCategory,
+  categoryValue,
+  expandedId,
+  setEditingId,
+  setEditingName,
+  setEditingCategory,
+  setCategoryValue,
+  setExpandedId,
+  onInsert,
+  onDelete,
+  onStartRename,
+  onConfirmRename,
+  onCancelRename,
+  onStartCategoryEdit,
+  onConfirmCategory,
+  onToggleExpand,
+  formatDate,
+}: {
+  snippet: SavedSnippet;
+  editingId: string | null;
+  editingName: string;
+  editingCategory: string | null;
+  categoryValue: string;
+  expandedId: string | null;
+  setEditingId: (id: string | null) => void;
+  setEditingName: (name: string) => void;
+  setEditingCategory: (id: string | null) => void;
+  setCategoryValue: (val: string) => void;
+  setExpandedId: (id: string | null | ((prev: string | null) => string | null)) => void;
+  onInsert: (id: string) => void;
+  onDelete: (id: string, e: React.MouseEvent) => void;
+  onStartRename: (id: string, name: string, e: React.MouseEvent) => void;
+  onConfirmRename: () => void;
+  onCancelRename: () => void;
+  onStartCategoryEdit: (id: string, cat: string, e: React.MouseEvent) => void;
+  onConfirmCategory: () => void;
+  onToggleExpand: (id: string) => void;
+  formatDate: (ts: number) => string;
+}) {
+  const isEditing = editingId === snippet.id;
+  const isExpanded = expandedId === snippet.id;
+  const isEditingCat = editingCategory === snippet.id;
+  const snippetCat = snippet.category || "Generale";
+
+  // Build a mini preview of the component types
+  const allTypes = useMemo(() => {
+    const types: string[] = [];
+    const collect = (comps: CanvasComponent[]) => {
+      for (const c of comps) {
+        types.push(c.type);
+        if (c.children) collect(c.children);
+      }
+    };
+    collect(snippet.components);
+    return types;
+  }, [snippet.components]);
+
+  return (
+    <div className="rounded-lg border border-border/50 bg-background/50 overflow-hidden transition-colors hover:border-primary/20">
+      {/* Header */}
+      <div className="flex items-start gap-2 px-2.5 py-2">
+        {/* Mini visual preview */}
+        <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0 mt-0.5 relative">
+          {React.createElement(getLayerIcon(snippet.components[0]?.type || "container"), {
+            className: "w-3.5 h-3.5 text-primary",
+          })}
+          {snippet.components.length > 1 && (
+            <span className="absolute -top-1 -right-1 text-[8px] font-bold bg-primary text-primary-foreground rounded-full w-3.5 h-3.5 flex items-center justify-center">
+              {snippet.components.length}
+            </span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          {isEditing ? (
+            <div className="flex items-center gap-1">
+              <Input
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                className="h-6 text-xs px-1.5 py-0"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") onConfirmRename();
+                  if (e.key === "Escape") onCancelRename();
+                }}
+                autoFocus
+              />
+              <button onClick={onConfirmRename} className="p-0.5 rounded hover:bg-primary/10 text-primary">
+                <Check className="w-3 h-3" />
+              </button>
+              <button onClick={onCancelRename} className="p-0.5 rounded hover:bg-muted text-muted-foreground">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="text-xs font-medium text-foreground truncate">{snippet.name}</div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                {isEditingCat ? (
+                  <div className="flex items-center gap-1">
+                    <Input
+                      value={categoryValue}
+                      onChange={(e) => setCategoryValue(e.target.value)}
+                      className="h-5 text-[10px] px-1 py-0 w-24"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") onConfirmCategory();
+                        if (e.key === "Escape") setEditingCategory(null);
+                      }}
+                      autoFocus
+                    />
+                    <button onClick={onConfirmCategory} className="p-0.5 rounded hover:bg-primary/10 text-primary">
+                      <Check className="w-2.5 h-2.5" />
                     </button>
-                  )}
-                  <button
-                    onClick={(e) => handleDelete(snippet.id, e)}
-                    className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                    title="Elimina"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
-
-                {/* Expanded: show component types */}
-                {isExpanded && (
-                  <div className="px-2.5 pb-2 pt-0">
-                    <div className="rounded-md bg-muted/50 p-1.5 space-y-0.5">
-                      {snippet.components.map((comp, i) => (
-                        <div key={i} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                          {React.createElement(getLayerIcon(comp.type), { className: "w-3 h-3 shrink-0" })}
-                          <span className="truncate">{comp.label}</span>
-                          {comp.children && comp.children.length > 0 && (
-                            <span className="text-[9px] text-muted-foreground/50 ml-auto shrink-0">
-                              {countComponents(comp.children)} figli
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
                   </div>
+                ) : (
+                  <button
+                    onClick={(e) => onStartCategoryEdit(snippet.id, snippetCat, e)}
+                    className="text-[10px] text-primary/70 hover:text-primary transition-colors cursor-pointer"
+                    title="Clicca per modificare la categoria"
+                  >
+                    {snippetCat}
+                  </button>
+                )}
+                <span className="text-[10px] text-muted-foreground/40">·</span>
+                <span className="text-[10px] text-muted-foreground">
+                  {snippet.components.length} comp.
+                </span>
+                <span className="text-[10px] text-muted-foreground/40">·</span>
+                <span className="text-[10px] text-muted-foreground/60">
+                  {formatDate(snippet.updatedAt)}
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Mini type preview bar */}
+      <div className="px-2.5 pb-1">
+        <div className="flex gap-0.5 flex-wrap">
+          {allTypes.slice(0, 8).map((type, i) => (
+            <span key={i} className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-muted/40">
+              {React.createElement(getLayerIcon(type), { className: "w-2.5 h-2.5 text-muted-foreground" })}
+            </span>
+          ))}
+          {allTypes.length > 8 && (
+            <span className="text-[9px] text-muted-foreground/50 px-1">+{allTypes.length - 8}</span>
+          )}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-0.5 px-2.5 pb-2">
+        <button
+          onClick={() => onInsert(snippet.id)}
+          className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
+        >
+          <Plus className="w-3 h-3" />
+          Inserisci
+        </button>
+        <button
+          onClick={() => onToggleExpand(snippet.id)}
+          className="px-1.5 py-1 rounded-md text-[11px] text-muted-foreground hover:bg-muted transition-colors"
+          title="Dettagli"
+        >
+          <svg className={`w-3 h-3 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        <div className="flex-1" />
+        {!isEditing && (
+          <button
+            onClick={(e) => onStartRename(snippet.id, snippet.name, e)}
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            title="Rinomina"
+          >
+            <Pencil className="w-3 h-3" />
+          </button>
+        )}
+        <button
+          onClick={(e) => onDelete(snippet.id, e)}
+          className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+          title="Elimina"
+        >
+          <Trash2 className="w-3 h-3" />
+        </button>
+      </div>
+
+      {/* Expanded: show component tree */}
+      {isExpanded && (
+        <div className="px-2.5 pb-2 pt-0">
+          <div className="rounded-md bg-muted/50 p-1.5 space-y-0.5">
+            {snippet.components.map((comp, i) => (
+              <div key={i} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                {React.createElement(getLayerIcon(comp.type), { className: "w-3 h-3 shrink-0" })}
+                <span className="truncate">{comp.label}</span>
+                {comp.children && comp.children.length > 0 && (
+                  <span className="text-[9px] text-muted-foreground/50 ml-auto shrink-0">
+                    {countComponents(comp.children)} figli
+                  </span>
                 )}
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
-      </ScrollArea>
+      )}
     </div>
   );
 }

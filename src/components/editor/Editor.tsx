@@ -237,21 +237,45 @@ export function Editor() {
   } | null>(null);
   const [copied, setCopied] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
+  const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const templateRef = useRef<HTMLDivElement>(null);
+  const projectMenuRef = useRef<HTMLDivElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   // ── Sidebar resizing ──
   const leftSidebar = useSidebarResize("editor-left-width", 256, 180, 400);
   const rightSidebar = useSidebarResize("editor-right-width", 288, 200, 500, "right");
 
-  // ── Preview dialog resizing ──
-  // Default to the current device screen size
-  const getDefaultPreviewSize = useCallback(() => {
-    if (typeof window === "undefined") return { w: 1024, h: 680 };
-    return { w: window.innerWidth, h: window.innerHeight };
+  // ── Viewport preset detection ──
+  // Detect which device preset matches the current screen and use it as default
+  const VIEWPORT_PRESETS = {
+    mobile:  { w: 375, h: 667 },
+    tablet:  { w: 768, h: 1024 },
+    desktop: { w: 1280, h: 800 },
+  } as const;
+  type ViewportPreset = keyof typeof VIEWPORT_PRESETS;
+
+  const detectDevicePreset = useCallback((): ViewportPreset => {
+    if (typeof window === "undefined") return "desktop";
+    const w = window.innerWidth;
+    if (w <= 480) return "mobile";
+    if (w <= 1024) return "tablet";
+    return "desktop";
   }, []);
+
+  // ── Preview dialog resizing ──
+  // Default to the device-appropriate preset size
+  const getDefaultPreviewSize = useCallback(() => {
+    if (typeof window === "undefined") return VIEWPORT_PRESETS.desktop;
+    const preset = detectDevicePreset();
+    const { w, h } = VIEWPORT_PRESETS[preset];
+    const maxW = window.innerWidth - 48;
+    const maxH = window.innerHeight - 100;
+    return { w: Math.min(w, maxW), h: Math.min(h, maxH) };
+  }, [detectDevicePreset]);
   const previewSizeRef = useRef(getDefaultPreviewSize());
   const [previewSize, setPreviewSize] = useState(getDefaultPreviewSize);
+  const [activePreset, setActivePreset] = useState<ViewportPreset | "custom">(detectDevicePreset);
   const [isResizing, setIsResizing] = useState(false);
   const resizeStartRef = useRef({ x: 0, y: 0, w: 0, h: 0 });
 
@@ -276,6 +300,7 @@ export function Editor() {
     const newH = Math.max(300, Math.min(resizeStartRef.current.h + dy, window.innerHeight - 48));
     previewSizeRef.current = { w: newW, h: newH };
     setPreviewSize({ w: newW, h: newH });
+    setActivePreset("custom");
   }, [isResizing]);
 
   const handleResizeEnd = useCallback(() => {
@@ -283,13 +308,14 @@ export function Editor() {
   }, []);
 
   // Preset viewport sizes (clamped to viewport)
-  const applyPresetSize = useCallback((w: number, h: number) => {
+  const applyPresetSize = useCallback((w: number, h: number, preset?: ViewportPreset) => {
     const maxW = window.innerWidth - 48;
     const maxH = window.innerHeight - 100;
     const clampedW = Math.min(w, maxW);
     const clampedH = Math.min(h, maxH);
     previewSizeRef.current = { w: clampedW, h: clampedH };
     setPreviewSize({ w: clampedW, h: clampedH });
+    if (preset) setActivePreset(preset);
   }, []);
 
   // ── Preview zoom state ──
@@ -797,17 +823,20 @@ export function Editor() {
     importInputRef.current?.click();
   }, []);
 
-  // Close template dropdown on outside click
+  // Close template/project dropdown on outside click
   React.useEffect(() => {
-    if (!templateOpen) return;
+    if (!templateOpen && !projectMenuOpen) return;
     const handleClick = (e: MouseEvent) => {
-      if (templateRef.current && !templateRef.current.contains(e.target as Node)) {
+      if (templateOpen && templateRef.current && !templateRef.current.contains(e.target as Node)) {
         setTemplateOpen(false);
+      }
+      if (projectMenuOpen && projectMenuRef.current && !projectMenuRef.current.contains(e.target as Node)) {
+        setProjectMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [templateOpen]);
+  }, [templateOpen, projectMenuOpen]);
 
   const handleLoadTemplate = useCallback((templateId: string) => {
     const tpl = TEMPLATES.find((t) => t.id === templateId);
@@ -999,37 +1028,81 @@ export function Editor() {
 
             <div className="w-px h-5 bg-border mx-1" />
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSave}
-              disabled={components.length === 0}
-              className="h-8 px-2"
-              title="Salva progetto (localStorage)"
-            >
-              <Save className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLoad}
-              className="h-8 px-2"
-              title="Carica progetto (localStorage)"
-            >
-              <FolderOpen className="w-4 h-4" />
-            </Button>
+            {/* Project menu — Save / Load / Import / Export */}
+            <div className="relative" ref={projectMenuRef}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setProjectMenuOpen(!projectMenuOpen)}
+                className="h-8 px-2.5 gap-1.5"
+                title="Progetto"
+              >
+                <FolderOpen className="w-3.5 h-3.5" />
+                <span className="text-xs">Progetto</span>
+                <ChevronDown className={`w-3 h-3 transition-transform duration-150 ${projectMenuOpen ? "rotate-180" : ""}`} />
+              </Button>
+              {projectMenuOpen && (
+                <div className="absolute right-0 top-full mt-1 w-56 bg-popover border border-border rounded-lg shadow-lg z-50 py-1 overflow-hidden">
+                  <div className="px-3 py-1.5 border-b border-border">
+                    <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Progetto</span>
+                  </div>
+                  <button
+                    onClick={() => { handleSave(); setProjectMenuOpen(false); }}
+                    disabled={components.length === 0}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/80 transition-colors duration-100 cursor-pointer disabled:opacity-50 disabled:cursor-default"
+                  >
+                    <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                      <Save className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-foreground">Salva</div>
+                      <div className="text-[11px] text-muted-foreground leading-snug">Salva nel browser (localStorage)</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => { handleLoad(); setProjectMenuOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/80 transition-colors duration-100 cursor-pointer"
+                  >
+                    <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                      <FolderOpen className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-foreground">Carica</div>
+                      <div className="text-[11px] text-muted-foreground leading-snug">Carica dal browser (localStorage)</div>
+                    </div>
+                  </button>
+                  <div className="mx-3 my-1 border-t border-border" />
+                  <button
+                    onClick={() => { handleImport(); setProjectMenuOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/80 transition-colors duration-100 cursor-pointer"
+                  >
+                    <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                      <Upload className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-foreground">Importa</div>
+                      <div className="text-[11px] text-muted-foreground leading-snug">Importa da file JSON</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => { handleExport(); setProjectMenuOpen(false); }}
+                    disabled={components.length === 0}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/80 transition-colors duration-100 cursor-pointer disabled:opacity-50 disabled:cursor-default"
+                  >
+                    <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                      <Download className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-foreground">Esporta</div>
+                      <div className="text-[11px] text-muted-foreground leading-snug">Esporta come file JSON</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
 
             <div className="w-px h-5 bg-border mx-1" />
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleImport}
-              className="h-8 px-2"
-              title="Importa progetto da JSON"
-            >
-              <Upload className="w-4 h-4" />
-            </Button>
             <div className="relative" ref={templateRef}>
               <Button
                 variant="ghost"
@@ -1068,16 +1141,6 @@ export function Editor() {
                 </div>
               )}
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleExport}
-              disabled={components.length === 0}
-              className="h-8 px-2"
-              title="Esporta progetto come JSON"
-            >
-              <Download className="w-4 h-4" />
-            </Button>
             {/* Hidden file input for JSON import */}
             <input
               ref={importInputRef}
@@ -1191,12 +1254,21 @@ export function Editor() {
               </span>
             </DialogTitle>
             <div className="flex items-center gap-1">
-              {/* Screenshot */}
+              {/* Screenshot — with text label for desktop */}
               <button
                 onClick={handleScreenshot}
                 disabled={isCapturing}
-                className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
                 title="Salva screenshot come immagine (PNG) — Scegli dove salvare"
+              >
+                <Camera className={`w-3.5 h-3.5 ${isCapturing ? "animate-pulse" : ""}`} />
+                <span className="text-xs">Screenshot</span>
+              </button>
+              <button
+                onClick={handleScreenshot}
+                disabled={isCapturing}
+                className="sm:hidden p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
+                title="Salva screenshot come immagine (PNG)"
               >
                 <Camera className={`w-3.5 h-3.5 ${isCapturing ? "animate-pulse" : ""}`} />
               </button>
@@ -1237,24 +1309,36 @@ export function Editor() {
                 </button>
               )}
               <div className="w-px h-4 bg-border mx-0.5" />
-              {/* Viewport presets */}
+              {/* Viewport presets — highlight active */}
               <button
-                onClick={() => applyPresetSize(375, 667)}
-                className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                onClick={() => applyPresetSize(375, 667, "mobile")}
+                className={`p-1.5 rounded transition-colors ${
+                  activePreset === "mobile"
+                    ? "bg-primary/15 text-primary"
+                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                }`}
                 title="Cellulare (375×667)"
               >
                 <Smartphone className="w-3.5 h-3.5" />
               </button>
               <button
-                onClick={() => applyPresetSize(768, 1024)}
-                className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                onClick={() => applyPresetSize(768, 1024, "tablet")}
+                className={`p-1.5 rounded transition-colors ${
+                  activePreset === "tablet"
+                    ? "bg-primary/15 text-primary"
+                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                }`}
                 title="Tablet (768×1024)"
               >
                 <Tablet className="w-3.5 h-3.5" />
               </button>
               <button
-                onClick={() => applyPresetSize(1280, 800)}
-                className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                onClick={() => applyPresetSize(1280, 800, "desktop")}
+                className={`p-1.5 rounded transition-colors ${
+                  activePreset === "desktop"
+                    ? "bg-primary/15 text-primary"
+                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                }`}
                 title="Desktop (1280×800)"
               >
                 <Monitor className="w-3.5 h-3.5" />

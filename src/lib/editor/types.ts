@@ -66,6 +66,7 @@ export interface PropertyDefinition {
 export interface SavedSnippet {
   id: string;
   name: string;
+  category: string; // User-defined category for organizing snippets
   components: CanvasComponent[];  // Can be 1 or more components
   createdAt: number;
   updatedAt: number;

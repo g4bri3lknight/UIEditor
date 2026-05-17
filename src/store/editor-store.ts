@@ -242,10 +242,13 @@ interface EditorState {
   // ── Saved Snippets (reusable templates) ──
   savedSnippets: SavedSnippet[];
   _hydrated: boolean;
-  saveSnippet: (name: string, componentIds: string[]) => void;
+  saveSnippet: (name: string, componentIds: string[], category?: string) => void;
   deleteSnippet: (id: string) => void;
   renameSnippet: (id: string, newName: string) => void;
+  updateSnippetCategory: (id: string, newCategory: string) => void;
   insertSnippet: (snippetId: string, parentId?: string | null, index?: number, slot?: string) => void;
+  exportSnippets: (snippetIds?: string[]) => string;
+  importSnippets: (jsonString: string) => number;
 }
 
 // ── History size limit ──
@@ -537,7 +540,9 @@ export const useEditorStore = create<EditorState>()(
     const parentId = info.parent?.id ?? null;
     const siblings = info.parent ? info.parent.children! : get().components;
     if (info.index >= siblings.length - 1) return;
-    get().moveComponentInTree(id, parentId, info.index + 2);
+    // After removing from index i, the next sibling shifts to index i.
+    // To place after it, insert at index i+1 in the post-removal array.
+    get().moveComponentInTree(id, parentId, info.index + 1);
   },
 
   toggleComponentVisibility: (id) => {
@@ -553,7 +558,7 @@ export const useEditorStore = create<EditorState>()(
   },
 
   // ── Saved Snippets ──
-  saveSnippet: (name, componentIds) => {
+  saveSnippet: (name, componentIds, category) => {
     const { components, savedSnippets } = get();
     // Extract the specified components from the canvas tree (deep clone with new IDs)
     const snippetComponents = componentIds
@@ -569,6 +574,7 @@ export const useEditorStore = create<EditorState>()(
     const snippet: SavedSnippet = {
       id: `snippet-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       name: snippetName,
+      category: category || "Generale",
       components: snippetComponents,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -588,6 +594,39 @@ export const useEditorStore = create<EditorState>()(
       s.id === id ? { ...s, name: newName, updatedAt: Date.now() } : s
     );
     set({ savedSnippets: newSnippets });
+  },
+
+  updateSnippetCategory: (id, newCategory) => {
+    const newSnippets = get().savedSnippets.map(s =>
+      s.id === id ? { ...s, category: newCategory, updatedAt: Date.now() } : s
+    );
+    set({ savedSnippets: newSnippets });
+  },
+
+  exportSnippets: (snippetIds) => {
+    const snippets = snippetIds
+      ? get().savedSnippets.filter(s => snippetIds.includes(s.id))
+      : get().savedSnippets;
+    return JSON.stringify(snippets, null, 2);
+  },
+
+  importSnippets: (jsonString) => {
+    try {
+      const parsed = JSON.parse(jsonString);
+      if (!Array.isArray(parsed)) return 0;
+      const valid = parsed.filter((s: any) => s.id && s.name && Array.isArray(s.components));
+      if (valid.length === 0) return 0;
+      // Ensure each snippet has a category
+      const withCategory = valid.map((s: any) => ({
+        ...s,
+        category: s.category || "Importati",
+        id: `snippet-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, // Generate fresh IDs to avoid conflicts
+      }));
+      set({ savedSnippets: [...get().savedSnippets, ...withCategory] });
+      return withCategory.length;
+    } catch {
+      return 0;
+    }
   },
 
   insertSnippet: (snippetId, parentId, index, slot) => {
