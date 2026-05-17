@@ -171,7 +171,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
       const isDisplay = !!p.displayClass;
       return (
         <Wrapper customClass={customClass} style={{ padding: "8px 4px" }}>
-          <div style={{
+          <div data-prop="text" style={{
             fontSize: isDisplay ? (displaySizes[String(p.displayClass)] || "2rem") : (sizes[level] || "2rem"),
             fontWeight: isDisplay ? 300 : 700,
             lineHeight: 1.2,
@@ -192,7 +192,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
       const isDarkBg = ["primary", "secondary", "success", "danger", "info", "dark"].includes(String(p.bgColor));
       return (
         <Wrapper customClass={customClass} style={{ padding: "4px" }}>
-          <p style={{
+          <p data-prop="text" style={{
             fontSize: p.textSize === "fs-6" ? "1rem" : p.textSize === "fs-4" ? "1.5rem" : p.textSize === "fs-2" ? "2rem" : "1rem",
             fontWeight: p.lead ? 300 : 400,
             lineHeight: p.lead ? 1.7 : 1.6,
@@ -219,9 +219,9 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
             color: BS.muted,
             textAlign: String(p.alignment) as any,
           }}>
-            <p style={{ fontSize: "1.25rem", fontStyle: "italic", margin: 0 }}>{p.text || "Quote text"}</p>
+            <p data-prop="text" style={{ fontSize: "1.25rem", fontStyle: "italic", margin: 0 }}>{p.text || "Quote text"}</p>
             {p.attribution && (
-              <footer style={{ marginTop: "8px", fontSize: "0.875rem", color: BS.muted }}>
+              <footer data-prop="attribution" style={{ marginTop: "8px", fontSize: "0.875rem", color: BS.muted }}>
                 — {p.attribution}
               </footer>
             )}
@@ -235,7 +235,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
       const Tag = p.listType === "ordered" ? "ol" : "ul";
       return (
         <Wrapper customClass={customClass} style={{ padding: "4px 4px 4px 20px" }}>
-          <Tag style={{
+          <Tag data-prop="items" style={{
             color: BS_TEXT[String(p.textColor)] || BS.body,
             margin: 0,
             listStyle: p.listType === "unstyled" ? "none" : undefined,
@@ -251,11 +251,11 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
       return (
         <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           {p.inline ? (
-            <code style={{ background: "#e9ecef", padding: "2px 6px", borderRadius: "4px", fontSize: "0.875em", fontFamily: "monospace" }}>
+            <code data-prop="code" style={{ background: "#e9ecef", padding: "2px 6px", borderRadius: "4px", fontSize: "0.875em", fontFamily: "monospace" }}>
               {p.code}
             </code>
           ) : (
-            <pre style={{
+            <pre data-prop="code" style={{
               background: BS.dark, color: BS.light, padding: "16px", borderRadius: "8px", fontSize: "0.875rem",
               fontFamily: "monospace", overflow: "auto", margin: 0, border: `1px solid ${BS.borderColor}`,
             }}>
@@ -290,6 +290,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
           <Wrapper customClass={customClass} style={{ padding: "4px" }}>
             <div style={{ position: "relative" }}>
               <input
+                data-prop="text"
                 key={inputKey}
                 type={String(p.type || "text")}
                 placeholder={String(p.placeholder || "")}
@@ -303,14 +304,14 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
                   opacity: p.disabled ? 0.65 : 1,
                 }}
               />
-              <label style={{
+              <label data-prop="label" style={{
                 position: "absolute", top: "6px", left: "12px", fontSize: "0.75rem",
                 color: BS.muted, pointerEvents: "none",
               }}>
                 {p.label}
               </label>
             </div>
-            {p.helpText && <div style={{ fontSize: "0.875rem", color: BS.muted, marginTop: "4px" }}>{p.helpText}</div>}
+            {p.helpText && <div data-prop="helpText" style={{ fontSize: "0.875rem", color: BS.muted, marginTop: "4px" }}>{p.helpText}</div>}
             {p.validation && p.validation !== "none" && (
               <div style={{ fontSize: "0.875rem", marginTop: "4px", color: p.validation === "valid" ? BS.success : BS.danger }}>
                 {p.feedbackMessage || (p.validation === "valid" ? "Looks good!" : "Please correct this field.")}
@@ -322,8 +323,9 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
 
       return (
         <Wrapper customClass={customClass} style={{ padding: "4px" }}>
-          {p.label && <label style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem", color: BS.body }}>{p.label}{p.required && <span style={{ color: BS.danger, marginLeft: "2px" }}>*</span>}</label>}
+          {p.label && <label data-prop="label" style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem", color: BS.body }}>{p.label}{p.required && <span style={{ color: BS.danger, marginLeft: "2px" }}>*</span>}</label>}
           <input
+            data-prop="text"
             key={inputKey}
             type={isCurrency ? "text" : String(p.type || "text")}
             placeholder={String(p.placeholder || "")}
@@ -338,7 +340,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
               opacity: p.disabled ? 0.65 : 1, outline: "none",
             }}
           />
-          {p.helpText && <div style={{ fontSize: "0.875rem", color: BS.muted, marginTop: "4px" }}>{p.helpText}</div>}
+          {p.helpText && <div data-prop="helpText" style={{ fontSize: "0.875rem", color: BS.muted, marginTop: "4px" }}>{p.helpText}</div>}
           {p.validation && p.validation !== "none" && (
             <div style={{ fontSize: "0.875rem", marginTop: "4px", color: p.validation === "valid" ? BS.success : BS.danger }}>
               {p.feedbackMessage || (p.validation === "valid" ? "Looks good!" : "Please correct this field.")}
@@ -353,8 +355,9 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
       const taKey = component.id + "-" + String(p.text || "");
       return (
         <Wrapper customClass={customClass} style={{ padding: "4px" }}>
-          {p.label && <label style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem" }}>{p.label}</label>}
+          {p.label && <label data-prop="label" style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem" }}>{p.label}</label>}
           <textarea
+            data-prop="text"
             key={taKey}
             placeholder={String(p.placeholder || "")}
             value={String(p.text || "")}
@@ -367,7 +370,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
               boxSizing: "border-box", resize: "vertical", opacity: p.disabled ? 0.65 : 1, outline: "none",
             }}
           />
-          {p.helpText && <div style={{ fontSize: "0.875rem", color: BS.muted, marginTop: "4px" }}>{p.helpText}</div>}
+          {p.helpText && <div data-prop="helpText" style={{ fontSize: "0.875rem", color: BS.muted, marginTop: "4px" }}>{p.helpText}</div>}
           {p.validation && p.validation !== "none" && (
             <div style={{ fontSize: "0.875rem", marginTop: "4px", color: p.validation === "valid" ? BS.success : BS.danger }}>
               {p.feedbackMessage || (p.validation === "valid" ? "Looks good!" : "Please correct this field.")}
@@ -383,7 +386,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
       const isLarge = selectSize === "lg";
       return (
         <Wrapper customClass={customClass} style={{ padding: "4px" }}>
-          {p.label && <label style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem" }}>{p.label}</label>}
+          {p.label && <label data-prop="label" style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem" }}>{p.label}</label>}
           <select disabled={!!p.disabled} multiple={!!p.multiple} defaultValue={String(p.options || "").split("\n").filter(Boolean)[0] || ""} style={{
             width: "100%", padding: isSmall ? "4px 8px" : isLarge ? "10px 14px" : "8px 12px", border: `1px solid ${p.validation === "valid" ? BS.success : p.validation === "invalid" ? BS.danger : BS.borderColor}`,
             borderRadius: "6px", background: BS.white, fontSize: isSmall ? "0.875rem" : isLarge ? "1.25rem" : "1rem", boxSizing: "border-box",
@@ -409,7 +412,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
           <label style={{ display: !!p.inline ? "inline-flex" : "flex", alignItems: "center", gap: "8px", cursor: p.disabled ? "not-allowed" : "pointer", opacity: p.disabled ? 0.65 : 1, flexDirection: p.reverse ? "row-reverse" : "row" }}>
             <input type="checkbox" defaultChecked={!!p.checked} disabled={!!p.disabled}
               style={{ width: "18px", height: "18px", accentColor: BS.primary, cursor: "inherit" }} />
-            <span style={{ fontSize: "1rem", color: BS.body }}>{p.label}</span>
+            <span data-prop="label" style={{ fontSize: "1rem", color: BS.body }}>{p.label}</span>
           </label>
         </Wrapper>
       );
@@ -421,7 +424,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
           <label style={{ display: !!p.inline ? "inline-flex" : "flex", alignItems: "center", gap: "8px", cursor: p.disabled ? "not-allowed" : "pointer", opacity: p.disabled ? 0.65 : 1 }}>
             <input type="radio" name={String(p.name)} defaultChecked={!!p.checked} disabled={!!p.disabled}
               style={{ width: "18px", height: "18px", accentColor: BS.primary, cursor: "inherit" }} />
-            <span style={{ fontSize: "1rem", color: BS.body }}>{p.label}</span>
+            <span data-prop="label" style={{ fontSize: "1rem", color: BS.body }}>{p.label}</span>
           </label>
         </Wrapper>
       );
@@ -430,7 +433,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
     case "range": {
       return (
         <Wrapper customClass={customClass} style={{ padding: "4px" }}>
-          {p.label && <label style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem" }}>{p.label}</label>}
+          {p.label && <label data-prop="label" style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem" }}>{p.label}</label>}
           <input
             type="range" min={Number(p.min)} max={Number(p.max)} step={Number(p.step)}
             defaultValue={Number(p.defaultValue)} disabled={!!p.disabled}
@@ -456,7 +459,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
                 boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
               }} />
             </div>
-            <span style={{ fontSize: "1rem", color: BS.body }}>{p.label}</span>
+            <span data-prop="label" style={{ fontSize: "1rem", color: BS.body }}>{p.label}</span>
           </label>
         </Wrapper>
       );
@@ -466,10 +469,10 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
       const fSize = String(p.size || "");
       return (
         <Wrapper customClass={customClass} style={{ padding: "4px" }}>
-          {p.label && <label style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem" }}>{p.label}</label>}
+          {p.label && <label data-prop="label" style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "0.9rem" }}>{p.label}</label>}
           <input type="file" disabled={!!p.disabled}
             style={{ fontSize: fSize === "sm" ? "0.8rem" : fSize === "lg" ? "1.05rem" : "0.875rem", color: BS.body }} />
-          {p.helpText && <div style={{ fontSize: "0.875rem", color: BS.muted, marginTop: "4px" }}>{p.helpText}</div>}
+          {p.helpText && <div data-prop="helpText" style={{ fontSize: "0.875rem", color: BS.muted, marginTop: "4px" }}>{p.helpText}</div>}
         </Wrapper>
       );
     }
@@ -482,7 +485,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
         <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           <div style={{ display: "flex", alignItems: "stretch" }}>
             {p.prepend && (
-              <span style={{ display: "flex", alignItems: "center", padding: igPad, background: BS.light, borderWidth: "1px", borderStyle: "solid", borderColor: BS.borderColor, borderRightStyle: "none", borderRadius: "6px 0 0 6px", fontSize: igFontSize, color: BS.body, minWidth: "40px", justifyContent: "center" }}>
+              <span data-prop="prepend" style={{ display: "flex", alignItems: "center", padding: igPad, background: BS.light, borderWidth: "1px", borderStyle: "solid", borderColor: BS.borderColor, borderRightStyle: "none", borderRadius: "6px 0 0 6px", fontSize: igFontSize, color: BS.body, minWidth: "40px", justifyContent: "center" }}>
                 {p.prepend}
               </span>
             )}
@@ -497,7 +500,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
               }}
             />
             {p.append && (
-              <span style={{ display: "flex", alignItems: "center", padding: igPad, background: BS.light, borderWidth: "1px", borderStyle: "solid", borderColor: BS.borderColor, borderLeftStyle: "none", borderRadius: "0 6px 6px 0", fontSize: igFontSize, color: BS.body, minWidth: "40px", justifyContent: "center" }}>
+              <span data-prop="append" style={{ display: "flex", alignItems: "center", padding: igPad, background: BS.light, borderWidth: "1px", borderStyle: "solid", borderColor: BS.borderColor, borderLeftStyle: "none", borderRadius: "0 6px 6px 0", fontSize: igFontSize, color: BS.body, minWidth: "40px", justifyContent: "center" }}>
                 {p.append}
               </span>
             )}
@@ -514,7 +517,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
       const sz = String(p.size || "");
       return (
         <Wrapper customClass={customClass} style={{ padding: "4px", display: "inline-block" }}>
-          <button disabled={!!p.disabled} style={{
+          <button data-prop="text" disabled={!!p.disabled} style={{
             ...btnStyle,
             padding: sz === "sm" ? "4px 12px" : sz === "lg" ? "10px 24px" : "6px 16px",
             fontSize: sz === "sm" ? "0.875rem" : sz === "lg" ? "1.25rem" : "1rem",
@@ -544,7 +547,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
 
       return (
         <Wrapper customClass={customClass} style={{ padding: "4px" }}>
-          <div style={{ display: "flex", flexDirection: vertical ? "column" : "row" }}>
+          <div data-prop="buttons" style={{ display: "flex", flexDirection: vertical ? "column" : "row" }}>
             {buttons.map((btn, i) => (
               <button key={i} style={{
                 ...btnStyle,
@@ -574,7 +577,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
             borderBottom: `1px solid ${BS.borderColor}`,
             flexWrap: "wrap", gap: "12px",
           }}>
-            <a style={{ fontWeight: 700, fontSize: "1.25rem", color: p.bgColor === "dark" || p.bgColor === "primary" ? BS.white : BS.body, textDecoration: "none" }}>
+            <a data-prop="brand" style={{ fontWeight: 700, fontSize: "1.25rem", color: p.bgColor === "dark" || p.bgColor === "primary" ? BS.white : BS.body, textDecoration: "none" }}>
               {p.brand || "Navbar"}
             </a>
             <div style={{ display: "flex", gap: "4px", marginLeft: "auto", flexWrap: "wrap" }}>
@@ -738,7 +741,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
             )}
             {/* Header */}
             {showHeader && (
-              <div style={{
+              <div data-prop="header" style={{
                 padding: "12px 20px",
                 borderBottom: `1px solid ${isDarkHeader ? "rgba(255,255,255,0.15)" : BS.borderColor}`,
                 fontSize: headerFontSize, fontWeight: 600, minHeight: "20px",
@@ -761,9 +764,9 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
                 renderChildren ?? (hasSlotChildren ? slotChildren.body : null)
               ) : (
                 <>
-                  {p.title && <h5 style={{ fontWeight: 600, marginBottom: "8px", fontSize: "1.25rem" }}>{p.title}</h5>}
-                  {p.subtitle && <h6 style={{ fontSize: "0.875rem", color: BS.muted, marginBottom: "12px", fontWeight: 400 }}>{p.subtitle}</h6>}
-                  {p.text && <p style={{ fontSize: "0.9375rem", lineHeight: 1.6, margin: 0 }}>{String(p.text).replace(/\\n/g, "\n")}</p>}
+                  {p.title && <h5 data-prop="title" style={{ fontWeight: 600, marginBottom: "8px", fontSize: "1.25rem" }}>{p.title}</h5>}
+                  {p.subtitle && <h6 data-prop="subtitle" style={{ fontSize: "0.875rem", color: BS.muted, marginBottom: "12px", fontWeight: 400 }}>{p.subtitle}</h6>}
+                  {p.text && <p data-prop="text" style={{ fontSize: "0.9375rem", lineHeight: 1.6, margin: 0 }}>{String(p.text).replace(/\\n/g, "\n")}</p>}
                   {p.showButton && (
                     <button style={{
                       marginTop: "16px", padding: "6px 16px", borderRadius: "6px",
@@ -779,7 +782,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
             </div>
             {/* Footer */}
             {(p.footer || hasFooterChildren || dragging) && (
-              <div style={{
+              <div data-prop="footer" style={{
                 padding: "12px 20px", borderTop: `1px solid ${BS.borderColor}`,
                 fontSize: "0.875rem", color: BS.muted, minHeight: "20px",
               }}>
@@ -816,8 +819,8 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
             padding: "16px 20px", borderRadius: "8px", background: c.bg,
             border: `1px solid ${c.border}`, color: c.text, position: "relative",
           }}>
-            {p.heading && <h4 style={{ fontWeight: 600, fontSize: "1.1rem", marginBottom: "8px" }}>{p.heading}</h4>}
-            <div style={{ fontSize: "0.9375rem" }}>{p.text}</div>
+            {p.heading && <h4 data-prop="heading" style={{ fontWeight: 600, fontSize: "1.1rem", marginBottom: "8px" }}>{p.heading}</h4>}
+            <div data-prop="text" style={{ fontSize: "0.9375rem" }}>{p.text}</div>
             {p.dismissible && (
               <button style={{
                 position: "absolute", top: "8px", right: "12px", background: "none",
@@ -833,7 +836,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
       const badgeColor = BS[String(p.variant)] || BS.primary;
       return (
         <Wrapper customClass={customClass} style={{ padding: "4px", display: "inline-block" }}>
-          <span style={{
+          <span data-prop="text" style={{
             display: "inline-block", padding: "4px 10px", background: badgeColor,
             color: BS.white, borderRadius: p.pill ? "20px" : "4px",
             fontSize: "0.75rem", fontWeight: 600, lineHeight: 1.4,
@@ -889,7 +892,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
 
       return (
         <Wrapper customClass={customClass} style={{ padding: "0" }}>
-          <div style={{ borderRadius: isFlush ? "0" : "8px", overflow: "hidden", border: isFlush ? "none" : `1px solid ${BS.borderColor}` }}>
+          <div data-prop="items" style={{ borderRadius: isFlush ? "0" : "8px", overflow: "hidden", border: isFlush ? "none" : `1px solid ${BS.borderColor}` }}>
             {items.map((item, i) => {
               const accSlotKey = `acc-${i}`;
               const slotContent = slotChildren?.[accSlotKey];
@@ -955,7 +958,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
 
       return (
         <Wrapper customClass={customClass} style={{ padding: "0" }}>
-          <div style={{ borderRadius: flush ? 0 : "8px", overflow: "hidden", border: flush ? "none" : `1px solid ${BS.borderColor}` }}>
+          <div data-prop="items" style={{ borderRadius: flush ? 0 : "8px", overflow: "hidden", border: flush ? "none" : `1px solid ${BS.borderColor}` }}>
             {items.map((item, i) => (
               <div key={i} style={{
                 padding: "12px 20px", background: i === Number(p.activeItem) ? BS.primary : BS.white,
@@ -986,10 +989,10 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
               padding: "12px 16px", background: headerColor, color: BS.white,
               display: "flex", justifyContent: "space-between", alignItems: "center",
             }}>
-              <strong style={{ fontSize: "0.9375rem" }}>{p.title}</strong>
+              <strong data-prop="title" style={{ fontSize: "0.9375rem" }}>{p.title}</strong>
               <span style={{ fontSize: "0.75rem", opacity: 0.85 }}>{p.time}</span>
             </div>
-            <div style={{ padding: "12px 16px", fontSize: "0.9375rem", color: BS.body }}>
+            <div data-prop="text" style={{ padding: "12px 16px", fontSize: "0.9375rem", color: BS.body }}>
               {p.text}
             </div>
           </div>
@@ -1007,8 +1010,8 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
             padding: "48px 32px", borderRadius: "12px", background: bg,
             textAlign: String(p.textAlign) as any, color: isDark ? BS.white : BS.body,
           }}>
-            <h1 style={{ fontWeight: 600, fontSize: "2.75rem", marginBottom: "12px" }}>{p.title}</h1>
-            <p style={{ fontSize: "1.2rem", fontWeight: 300, lineHeight: 1.6, opacity: isDark ? 0.85 : 1, margin: 0 }}>
+            <h1 data-prop="title" style={{ fontWeight: 600, fontSize: "2.75rem", marginBottom: "12px" }}>{p.title}</h1>
+            <p data-prop="lead" style={{ fontSize: "1.2rem", fontWeight: 300, lineHeight: 1.6, opacity: isDark ? 0.85 : 1, margin: 0 }}>
               {String(p.lead).replace(/\\n/g, "\n")}
             </p>
             <hr style={{ margin: "24px 0", borderColor: isDark ? "rgba(255,255,255,0.2)" : BS.borderColor }} />
@@ -1043,7 +1046,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
       const slides = String(p.slides || "").split("\n").filter(Boolean);
       return (
         <Wrapper customClass={customClass} style={{ padding: "0" }}>
-          <div style={{ borderRadius: "12px", overflow: "hidden", border: `1px solid ${BS.borderColor}` }}>
+          <div data-prop="slides" style={{ borderRadius: "12px", overflow: "hidden", border: `1px solid ${BS.borderColor}` }}>
             {p.indicators && (
               <div style={{ display: "flex", gap: "6px", justifyContent: "center", padding: "8px 0", background: BS.light }}>
                 {slides.map((_, i) => (
@@ -1102,7 +1105,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
                   slotChildren?.header
                 ) : (
                   <>
-                    <h5 style={{ fontWeight: 600, fontSize: "1.1rem", margin: 0 }}>{p.title || "Modal"}</h5>
+                    <h5 data-prop="title" style={{ fontWeight: 600, fontSize: "1.1rem", margin: 0 }}>{p.title || "Modal"}</h5>
                     {slotChildren?.header}
                   </>
                 )}
@@ -1121,13 +1124,13 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
             </div>
             {/* Footer */}
             {(p.showCloseButton || p.showPrimaryButton || hasFooterChildren || dragging) && (
-            <div style={{ padding: "12px 20px", borderTop: `1px solid ${BS.borderColor}`, display: hasFooterChildren ? "block" : "flex", justifyContent: hasFooterChildren ? undefined : "flex-end", gap: hasFooterChildren ? undefined : "8px", flexWrap: hasFooterChildren ? undefined : "wrap" }}>
+            <div data-prop="footer" style={{ padding: "12px 20px", borderTop: `1px solid ${BS.borderColor}`, display: hasFooterChildren ? "block" : "flex", justifyContent: hasFooterChildren ? undefined : "flex-end", gap: hasFooterChildren ? undefined : "8px", flexWrap: hasFooterChildren ? undefined : "wrap" }}>
               {hasFooterChildren ? (
                 slotChildren?.footer
               ) : (
                 <>
                   {p.showCloseButton && (
-                    <button style={{
+                    <button data-prop="closeButtonText" style={{
                       ...getButtonStyle(String(p.closeButtonStyle || "secondary"), String(p.closeButtonStyle || "").startsWith("outline-")),
                       padding: "6px 16px", borderRadius: "6px", cursor: "pointer", fontSize: "0.875rem", fontWeight: 400, lineHeight: 1.5,
                     }}>{p.closeButtonText || "Close"}</button>
@@ -1364,7 +1367,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
                   slotChildren?.header
                 ) : (
                   <>
-                    <h5 style={{ fontWeight: 600, fontSize: "1.1rem", margin: 0 }}>{p.title || "Offcanvas"}</h5>
+                    <h5 data-prop="title" style={{ fontWeight: 600, fontSize: "1.1rem", margin: 0 }}>{p.title || "Offcanvas"}</h5>
                     {slotChildren?.header}
                   </>
                 )}
@@ -1395,6 +1398,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
       return (
         <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           <a
+            data-prop="text"
             href="#"
             style={{
               color: linkColor,
@@ -1431,7 +1435,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
             borderRadius: "8px",
             overflow: "hidden",
           }}>
-            <button style={{
+            <button data-prop="title" style={{
               width: "100%", padding: "12px 16px", border: "none",
               background: btnBg, color: isDarkBtn ? BS.white : BS.white,
               fontSize: "1rem", fontWeight: 500, cursor: "pointer",
@@ -1444,7 +1448,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
                 transform: isShown ? "rotate(180deg)" : "rotate(0deg)",
               }}>▾</span>
             </button>
-            <div style={{
+            <div data-prop="body" style={{
               padding: isShown ? "16px" : "0 16px",
               maxHeight: isShown ? "500px" : "0",
               overflow: "hidden",
@@ -1476,7 +1480,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
       return (
         <Wrapper customClass={customClass} style={{ padding: "4px" }}>
           {/* Tab navigation */}
-          <div style={{
+          <div data-prop="items" style={{
             display: "flex",
             borderBottom: style === "tabs" ? `2px solid ${BS.borderColor}` : "none",
             gap: "2px",
@@ -1597,7 +1601,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
       // If cell has no children and has text, show the text directly
       const cellText = String(p.text || "");
       const hasCellChildren = component.children && component.children.length > 0;
-      return <>{hasCellChildren ? (renderChildren ?? null) : cellText}</>;
+      return <>{hasCellChildren ? (renderChildren ?? null) : <span data-prop="text">{cellText}</span>}</>;
     }
 
     // ── IMAGES ──
@@ -1717,7 +1721,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
         <Wrapper customClass={customClass} style={{ padding: "8px 4px" }}>
           <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "8px", position: "relative" }}>
             {/* Tooltip indicator */}
-            <div style={{
+            <div data-prop="tooltipText" style={{
               padding: "4px 10px",
               borderRadius: "4px",
               background: isDark ? BS.dark : BS.white,
@@ -1733,7 +1737,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
               💬 {p.tooltipText || "Tooltip text"}
             </div>
             {/* Trigger button */}
-            <button style={{
+            <button data-prop="text" style={{
               padding: "6px 16px",
               borderRadius: "6px",
               border: `1px solid ${BS.borderColor}`,
@@ -1776,7 +1780,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
               overflow: "hidden",
             }}>
               {p.title && (
-                <div style={{
+                <div data-prop="title" style={{
                   padding: "10px 14px",
                   borderBottom: `1px solid ${BS.borderColor}`,
                   background: BS.light,
@@ -1787,7 +1791,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
                   {p.title}
                 </div>
               )}
-              <div style={{
+              <div data-prop="body" style={{
                 padding: "10px 14px",
                 fontSize: "0.875rem",
                 color: BS.muted,
@@ -1796,7 +1800,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
               </div>
             </div>
             {/* Trigger button */}
-            <button style={{
+            <button data-prop="text" style={{
               padding: "8px 20px",
               borderRadius: "6px",
               border: "none",

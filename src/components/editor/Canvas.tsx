@@ -43,40 +43,41 @@ import { COMPONENTS, CATEGORIES } from "@/lib/editor/bootstrap-components";
 import { toast } from "sonner";
 
 // ── Editable text props per component type ──
-// Maps component types to their editable text prop keys and whether they need a textarea (multiline)
-const EDITABLE_TEXT_PROPS: Record<string, Array<{ key: string; multiline: boolean }>> = {
-  "heading": [{ key: "text", multiline: false }],
-  "paragraph": [{ key: "text", multiline: true }],
-  "blockquote": [{ key: "text", multiline: true }, { key: "attribution", multiline: false }],
-  "list": [{ key: "items", multiline: true }],
-  "code-block": [{ key: "code", multiline: true }],
-  "button": [{ key: "text", multiline: false }],
-  "button-group": [{ key: "buttons", multiline: false }],
-  "input": [{ key: "label", multiline: false }, { key: "text", multiline: false }, { key: "placeholder", multiline: false }, { key: "helpText", multiline: false }],
-  "textarea": [{ key: "label", multiline: false }, { key: "text", multiline: false }, { key: "placeholder", multiline: false }, { key: "helpText", multiline: false }],
-  "select-input": [{ key: "label", multiline: false }],
-  "checkbox": [{ key: "label", multiline: false }],
-  "radio": [{ key: "label", multiline: false }],
-  "switch": [{ key: "label", multiline: false }],
-  "range": [{ key: "label", multiline: false }],
-  "file-input": [{ key: "label", multiline: false }],
-  "input-group": [{ key: "label", multiline: false }, { key: "prepend", multiline: false }, { key: "append", multiline: false }],
-  "card": [{ key: "header", multiline: false }, { key: "title", multiline: false }, { key: "subtitle", multiline: false }, { key: "text", multiline: true }, { key: "footer", multiline: false }],
-  "alert": [{ key: "text", multiline: false }, { key: "heading", multiline: false }],
-  "badge": [{ key: "text", multiline: false }],
-  "accordion": [{ key: "items", multiline: true }],
-  "list-group": [{ key: "items", multiline: true }],
-  "toast": [{ key: "title", multiline: false }, { key: "text", multiline: false }],
-  "jumbotron": [{ key: "title", multiline: false }, { key: "lead", multiline: false }],
-  "carousel": [{ key: "slides", multiline: true }],
-  "modal": [{ key: "title", multiline: false }, { key: "closeButtonText", multiline: false }, { key: "footer", multiline: false }],
-  "offcanvas": [{ key: "title", multiline: false }],
-  "link": [{ key: "text", multiline: false }],
-  "collapse": [{ key: "title", multiline: false }, { key: "body", multiline: true }],
-  "tab-content": [{ key: "items", multiline: true }],
-  "tooltip": [{ key: "text", multiline: false }, { key: "tooltipText", multiline: false }],
-  "popover": [{ key: "text", multiline: false }, { key: "title", multiline: false }, { key: "body", multiline: true }],
-  "table-cell": [{ key: "text", multiline: false }],
+// Maps component types to their editable text prop keys, labels, and whether they need a textarea (multiline)
+// The FIRST entry is the default property edited on double-click for single-prop components
+const EDITABLE_TEXT_PROPS: Record<string, Array<{ key: string; label: string; multiline: boolean }>> = {
+  "heading": [{ key: "text", label: "Testo", multiline: false }],
+  "paragraph": [{ key: "text", label: "Testo", multiline: true }],
+  "blockquote": [{ key: "text", label: "Citazione", multiline: true }, { key: "attribution", label: "Attribuzione", multiline: false }],
+  "list": [{ key: "items", label: "Elementi", multiline: true }],
+  "code-block": [{ key: "code", label: "Codice", multiline: true }],
+  "button": [{ key: "text", label: "Testo", multiline: false }],
+  "button-group": [{ key: "buttons", label: "Pulsanti", multiline: false }],
+  "input": [{ key: "text", label: "Valore", multiline: false }, { key: "label", label: "Etichetta", multiline: false }, { key: "placeholder", label: "Placeholder", multiline: false }, { key: "helpText", label: "Testo aiuto", multiline: false }],
+  "textarea": [{ key: "text", label: "Valore", multiline: false }, { key: "label", label: "Etichetta", multiline: false }, { key: "placeholder", label: "Placeholder", multiline: false }, { key: "helpText", label: "Testo aiuto", multiline: false }],
+  "select-input": [{ key: "label", label: "Etichetta", multiline: false }],
+  "checkbox": [{ key: "label", label: "Etichetta", multiline: false }],
+  "radio": [{ key: "label", label: "Etichetta", multiline: false }],
+  "switch": [{ key: "label", label: "Etichetta", multiline: false }],
+  "range": [{ key: "label", label: "Etichetta", multiline: false }],
+  "file-input": [{ key: "label", label: "Etichetta", multiline: false }],
+  "input-group": [{ key: "label", label: "Placeholder", multiline: false }, { key: "prepend", label: "Prefisso", multiline: false }, { key: "append", label: "Suffisso", multiline: false }],
+  "card": [{ key: "title", label: "Titolo", multiline: false }, { key: "text", label: "Testo", multiline: true }, { key: "header", label: "Header", multiline: false }, { key: "subtitle", label: "Sottotitolo", multiline: false }, { key: "footer", label: "Footer", multiline: false }],
+  "alert": [{ key: "text", label: "Testo", multiline: false }, { key: "heading", label: "Titolo", multiline: false }],
+  "badge": [{ key: "text", label: "Testo", multiline: false }],
+  "accordion": [{ key: "items", label: "Elementi", multiline: true }],
+  "list-group": [{ key: "items", label: "Elementi", multiline: true }],
+  "toast": [{ key: "title", label: "Titolo", multiline: false }, { key: "text", label: "Testo", multiline: false }],
+  "jumbotron": [{ key: "title", label: "Titolo", multiline: false }, { key: "lead", label: "Sottotitolo", multiline: false }],
+  "carousel": [{ key: "slides", label: "Slide", multiline: true }],
+  "modal": [{ key: "title", label: "Titolo", multiline: false }, { key: "closeButtonText", label: "Testo chiusura", multiline: false }, { key: "footer", label: "Footer", multiline: false }],
+  "offcanvas": [{ key: "title", label: "Titolo", multiline: false }],
+  "link": [{ key: "text", label: "Testo", multiline: false }],
+  "collapse": [{ key: "title", label: "Titolo", multiline: false }, { key: "body", label: "Contenuto", multiline: true }],
+  "tab-content": [{ key: "items", label: "Tab", multiline: true }],
+  "tooltip": [{ key: "text", label: "Testo trigger", multiline: false }, { key: "tooltipText", label: "Testo tooltip", multiline: false }],
+  "popover": [{ key: "text", label: "Testo trigger", multiline: false }, { key: "title", label: "Titolo", multiline: false }, { key: "body", label: "Contenuto", multiline: true }],
+  "table-cell": [{ key: "text", label: "Testo", multiline: false }],
 };
 
 function getFirstEditableProp(type: string): { key: string; multiline: boolean } | null {
@@ -177,6 +178,7 @@ function CanvasItem({
   isDragging,
   depth = 0,
   onStartInlineEdit,
+  onShowPropPicker,
 }: {
   component: CanvasComponent;
   index: number;
@@ -185,6 +187,7 @@ function CanvasItem({
   isDragging: boolean;
   depth?: number;
   onStartInlineEdit: (id: string, propKey: string, rect: DOMRect, currentValue: string, multiline: boolean) => void;
+  onShowPropPicker: (id: string, props: Array<{ key: string; label: string; multiline: boolean }>, rect: DOMRect) => void;
 }) {
   const {
     selectedId,
@@ -349,8 +352,7 @@ function CanvasItem({
   );
 
   // ── Inline text editing on double-click ──
-  // Smart: detects which part of the component was clicked and edits the
-  // corresponding property. Falls back to the first editable prop.
+  // Single editable prop → edit directly. Multiple → show property picker popup.
   const editableProp = getFirstEditableProp(component.type);
   const allEditableProps = EDITABLE_TEXT_PROPS[component.type];
   const isEditable = !!editableProp;
@@ -358,101 +360,21 @@ function CanvasItem({
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (!editableProp || !allEditableProps || allEditableProps.length === 0) return;
+      if (!allEditableProps || allEditableProps.length === 0) return;
 
-      // If only one editable prop, just edit it directly
-      if (allEditableProps.length === 1) {
-        const currentValue = String(component.props[editableProp.key] ?? "");
-        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        onStartInlineEdit(component.id, editableProp.key, rect, currentValue, editableProp.multiline);
-        return;
-      }
-
-      // Multiple editable props — detect which part was clicked
-      const target = e.target as HTMLElement;
-      const targetText = target.textContent?.trim().toLowerCase() || "";
-      const targetClasses = target.className?.toLowerCase() || "";
-      const targetTag = target.tagName?.toLowerCase() || "";
-      const targetDataSlot = target.getAttribute("data-slot") || "";
-
-      // Heuristic: match the clicked element to the right property
-      let bestProp = allEditableProps[0];
-      let bestScore = -1;
-
-      for (const prop of allEditableProps) {
-        let score = 0;
-        const propValue = String(component.props[prop.key] ?? "").trim().toLowerCase();
-        const propKey = prop.key.toLowerCase();
-
-        // Check data-slot attribute (for card/modal/offcanvas slots)
-        if (targetDataSlot && (
-          (targetDataSlot === "header" && propKey === "header") ||
-          (targetDataSlot === "body" && (propKey === "text" || propKey === "body")) ||
-          (targetDataSlot === "footer" && propKey === "footer")
-        )) {
-          score += 10;
-        }
-
-        // Check if the clicked element's text matches this prop's value
-        if (propValue && targetText && propValue.includes(targetText)) {
-          score += 5;
-        }
-        // Or if the target text matches exactly
-        if (propValue && targetText === propValue) {
-          score += 8;
-        }
-
-        // Check class/tag hints
-        if (propKey === "label" && (targetTag === "label" || targetClasses.includes("label") || targetClasses.includes("form-label"))) {
-          score += 6;
-        }
-        if (propKey === "placeholder" && targetClasses.includes("form-control")) {
-          score += 3;
-        }
-        if (propKey === "text" && (targetTag === "input" || targetTag === "textarea")) {
-          score += 8; // value of input/textarea — higher priority than placeholder
-        }
-        if (propKey === "title" && (targetClasses.includes("card-title") || targetClasses.includes("modal-title") || targetTag === "h5")) {
-          score += 6;
-        }
-        if (propKey === "header" && (targetClasses.includes("card-header") || targetClasses.includes("modal-header"))) {
-          score += 6;
-        }
-        if (propKey === "footer" && (targetClasses.includes("card-footer") || targetClasses.includes("modal-footer"))) {
-          score += 6;
-        }
-        if (propKey === "subtitle" && (targetClasses.includes("card-subtitle") || targetTag === "h6")) {
-          score += 6;
-        }
-        if (propKey === "heading" && (targetClasses.includes("alert-heading") || targetTag === "h4")) {
-          score += 6;
-        }
-        if (propKey === "closeButtonText" && (targetClasses.includes("btn-close") || targetClasses.includes("modal-footer"))) {
-          score += 6;
-        }
-        if (propKey === "attribution" && (targetClasses.includes("blockquote-footer"))) {
-          score += 6;
-        }
-        if (propKey === "helpText" && (targetClasses.includes("form-text") || targetClasses.includes("text-muted"))) {
-          score += 6;
-        }
-
-        // Fallback: if the clicked element or its close parent contains the prop value
-        if (propValue && target.closest(`[data-prop="${prop.key}"]`)) {
-          score += 7;
-        }
-
-        if (score > bestScore) {
-          bestScore = score;
-          bestProp = prop;
-        }
-      }
-
-      const currentValue = String(component.props[bestProp.key] ?? "");
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      onStartInlineEdit(component.id, bestProp.key, rect, currentValue, bestProp.multiline);
+
+      if (allEditableProps.length === 1) {
+        // Single prop → edit directly
+        const prop = allEditableProps[0];
+        const currentValue = String(component.props[prop.key] ?? "");
+        onStartInlineEdit(component.id, prop.key, rect, currentValue, prop.multiline);
+      } else {
+        // Multiple props → show picker popup
+        onShowPropPicker(component.id, allEditableProps, rect);
+      }
     },
-    [editableProp, allEditableProps, component.props, component.id, onStartInlineEdit]
+    [allEditableProps, component.id, component.props, onStartInlineEdit, onShowPropPicker]
   );
 
   const mergedRef = useCallback(
@@ -527,6 +449,7 @@ function CanvasItem({
               isDragging={isDragging}
               depth={depth + 1}
               onStartInlineEdit={onStartInlineEdit}
+              onShowPropPicker={onShowPropPicker}
             />
             <DropIndicator
               id={`after::${child.id}::${component.id}`}
@@ -542,7 +465,7 @@ function CanvasItem({
         )}
       </>
     );
-  }, [component.id, isDragging, depth, onStartInlineEdit]);
+  }, [component.id, isDragging, depth, onStartInlineEdit, onShowPropPicker]);
 
   // For slotted types: split children into slot groups
   let slotChildrenMap: Record<string, React.ReactNode> | undefined;
@@ -650,6 +573,7 @@ function CanvasItem({
               isDragging={isDragging}
               depth={depth + 1}
               onStartInlineEdit={onStartInlineEdit}
+              onShowPropPicker={onShowPropPicker}
             />
             {!skipDropIndicators && (
               <DropIndicator
@@ -764,7 +688,9 @@ function CanvasItem({
               <div className="absolute top-1.5 right-1.5 opacity-0 group-hover/canvas-item:opacity-100 transition-opacity duration-150 z-20 pointer-events-none">
                 <div className="flex items-center gap-1 bg-background/90 backdrop-blur-sm border border-border rounded px-1.5 py-0.5 shadow-sm">
                   <Pencil className="w-2.5 h-2.5 text-muted-foreground" />
-                  <span className="text-[9px] text-muted-foreground font-medium">Doppio click</span>
+                  <span className="text-[9px] text-muted-foreground font-medium">
+                    {allEditableProps && allEditableProps.length > 1 ? "2× click → modifica" : "2× click"}
+                  </span>
                 </div>
               </div>
             )}
@@ -995,16 +921,41 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
   const committedRef = useRef(false);
   const cancelRef = useRef(false);
 
+  // ── Property picker state (for components with multiple editable props) ──
+  const [propPicker, setPropPicker] = useState<{
+    id: string;
+    props: Array<{ key: string; label: string; multiline: boolean }>;
+    rect: DOMRect;
+  } | null>(null);
+
   const { setNodeRef, isOver } = useDroppable({ id: "canvas-root" });
 
   const handleStartInlineEdit = useCallback(
     (id: string, propKey: string, rect: DOMRect, currentValue: string, multiline: boolean) => {
       committedRef.current = false;
       cancelRef.current = false;
+      setPropPicker(null); // Close picker if open
       setInlineEdit({ id, propKey, rect, multiline });
       setEditValue(currentValue);
     },
     []
+  );
+
+  const handleShowPropPicker = useCallback(
+    (id: string, props: Array<{ key: string; label: string; multiline: boolean }>, rect: DOMRect) => {
+      setPropPicker({ id, props, rect });
+    },
+    []
+  );
+
+  const handlePickProp = useCallback(
+    (propKey: string, multiline: boolean) => {
+      if (!propPicker) return;
+      const comp = useEditorStore.getState().findComponent(propPicker.id);
+      const currentValue = comp ? String(comp.props[propKey] ?? "") : "";
+      handleStartInlineEdit(propPicker.id, propKey, propPicker.rect, currentValue, multiline);
+    },
+    [propPicker, handleStartInlineEdit]
   );
 
   const commitEdit = useCallback(() => {
@@ -1029,13 +980,29 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
     }
   }, [inlineEdit, editValue]);
 
-  // Close inline editor when clicking on canvas background
+  // Close prop picker when clicking outside
+  useEffect(() => {
+    if (!propPicker) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Don't close if clicking inside the picker popup
+      if (target.closest("[data-prop-picker]")) return;
+      setPropPicker(null);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [propPicker]);
+
+  // Close inline editor / prop picker when clicking on canvas background
   const handleCanvasClick = useCallback(() => {
     if (inlineEdit) {
       commitEdit();
     }
+    if (propPicker) {
+      setPropPicker(null);
+    }
     selectComponent(null);
-  }, [inlineEdit, commitEdit, selectComponent]);
+  }, [inlineEdit, commitEdit, propPicker, selectComponent]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-muted/30 overflow-hidden">
@@ -1141,6 +1108,7 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
                   isDragging={isDragging}
                   depth={0}
                   onStartInlineEdit={handleStartInlineEdit}
+                  onShowPropPicker={handleShowPropPicker}
                 />
               ))}
 
@@ -1241,6 +1209,51 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
                 {inlineEdit.multiline ? "Ctrl+Enter per salvare" : "Enter per salvare"}
               </span>
               <span className="text-[10px] text-muted-foreground">Esc per annullare</span>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* Property picker popup (for components with multiple editable props) */}
+      {propPicker &&
+        createPortal(
+          <div
+            data-prop-picker
+            style={{
+              position: "fixed",
+              left: propPicker.rect.left,
+              top: propPicker.rect.bottom + 4,
+              zIndex: 10000,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="bg-popover border border-border rounded-lg shadow-lg py-1 min-w-[160px] animate-in fade-in-0 zoom-in-95 duration-100"
+              onMouseDown={(e) => e.preventDefault()}
+            >
+              <div className="px-2.5 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50 mb-0.5">
+                Modifica proprietà
+              </div>
+              {propPicker.props.map((prop) => {
+                const currentValue = useEditorStore.getState().findComponent(propPicker.id);
+                const value = currentValue ? String(currentValue.props[prop.key] ?? "") : "";
+                const hasValue = value.length > 0;
+                return (
+                  <button
+                    key={prop.key}
+                    onClick={() => handlePickProp(prop.key, prop.multiline)}
+                    className="w-full flex items-center justify-between gap-3 px-2.5 py-1.5 text-left hover:bg-accent transition-colors rounded-sm mx-0.5"
+                    style={{ width: "calc(100% - 4px)" }}
+                  >
+                    <span className="text-xs font-medium text-foreground">{prop.label}</span>
+                    {hasValue && (
+                      <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">
+                        {value.slice(0, 20)}{value.length > 20 ? "…" : ""}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>,
           document.body
