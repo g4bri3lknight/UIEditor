@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useEditorStore, isAutoManaged } from "@/store/editor-store";
 import { getComponentByType } from "@/lib/editor/bootstrap-components";
 import { PropertyDefinition } from "@/lib/editor/types";
@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { X, Trash2, Copy, Info, ArrowUp, ArrowDown, Eye, EyeOff, Tag, Hash } from "lucide-react";
+import { X, Trash2, Copy, Info, ArrowUp, ArrowDown, Eye, EyeOff, Tag, Hash, Paintbrush } from "lucide-react";
+import { IconPicker } from "./IconPicker";
 
 function PropertyField({
   prop,
@@ -151,7 +152,13 @@ export function RightSidebar({ width }: RightSidebarProps) {
     moveDown,
     hiddenComponents,
     toggleComponentVisibility,
+    customCSS,
+    setCustomCSS,
   } = useEditorStore();
+
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
+  const [iconPickerPropKey, setIconPickerPropKey] = useState<string>("");
+  const [iconPickerValue, setIconPickerValue] = useState<string>("");
 
   const selectedComponent = selectedId ? findComponent(selectedId) ?? undefined : undefined;
 
@@ -298,16 +305,42 @@ export function RightSidebar({ width }: RightSidebarProps) {
               )}
               <div className="space-y-2.5">
                 {props.map((prop) => (
-                  <PropertyField
-                    key={prop.key}
-                    prop={prop}
-                    value={selectedComponent.props[prop.key] ?? prop.defaultValue}
-                    onChange={(val) =>
-                      updateComponentProps(selectedComponent.id, {
-                        [prop.key]: val,
-                      })
-                    }
-                  />
+                  prop.key === "iconLeft" ? (
+                    <div key={prop.key} className="space-y-1.5">
+                      <Label className="text-xs font-normal text-muted-foreground">
+                        {prop.label}
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIconPickerPropKey(prop.key);
+                          setIconPickerValue(String(selectedComponent.props[prop.key] ?? ""));
+                          setIconPickerOpen(true);
+                        }}
+                        className="w-full flex items-center gap-2 h-8 px-3 rounded-md border border-input bg-background text-xs text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+                      >
+                        {selectedComponent.props[prop.key] ? (
+                          <>
+                            <i className={`bi ${String(selectedComponent.props[prop.key])}`} style={{ fontSize: "14px" }} />
+                            <span className="flex-1 text-left font-mono truncate">{String(selectedComponent.props[prop.key])}</span>
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">Clicca per selezionare...</span>
+                        )}
+                      </button>
+                    </div>
+                  ) : (
+                    <PropertyField
+                      key={prop.key}
+                      prop={prop}
+                      value={selectedComponent.props[prop.key] ?? prop.defaultValue}
+                      onChange={(val) =>
+                        updateComponentProps(selectedComponent.id, {
+                          [prop.key]: val,
+                        })
+                      }
+                    />
+                  )
                 ))}
               </div>
             </div>
@@ -357,6 +390,38 @@ export function RightSidebar({ width }: RightSidebarProps) {
           </div>
         </div>
       </ScrollArea>
+      {/* CSS Personalizzato */}
+      <div className="border-t border-border px-3 py-3 shrink-0">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Paintbrush className="w-3 h-3 text-muted-foreground" />
+              <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                CSS Personalizzato
+              </p>
+            </div>
+            <textarea
+              value={customCSS}
+              onChange={(e) => setCustomCSS(e.target.value)}
+              placeholder={".mio-componente {\n  color: red;\n  font-size: 18px;\n}"}
+              rows={4}
+              className="w-full px-3 py-2 rounded-md border border-input bg-background text-xs text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y font-mono leading-relaxed"
+            />
+            <p className="text-[10px] text-muted-foreground/60 mt-1">Regole CSS personalizzate per l'anteprima e l'esportazione</p>
+          </div>
+
+      {/* Icon Picker Dialog */}
+      <IconPicker
+        open={iconPickerOpen}
+        onClose={() => setIconPickerOpen(false)}
+        currentValue={iconPickerValue}
+        onSelect={(iconName) => {
+          if (selectedComponent && iconPickerPropKey) {
+            updateComponentProps(selectedComponent.id, {
+              [iconPickerPropKey]: iconName,
+            });
+          }
+          setIconPickerOpen(false);
+        }}
+      />
     </div>
   );
 }

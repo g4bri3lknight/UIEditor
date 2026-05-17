@@ -215,6 +215,8 @@ interface EditorState {
   historyIndex: number;
   clipboard: CanvasComponent | null;
   hiddenComponents: Set<string>;
+  customCSS: string;
+  setCustomCSS: (css: string) => void;
 
   addComponent: (type: string, parentId?: string | null, index?: number, slot?: string) => void;
   removeComponent: (id: string) => void;
@@ -264,6 +266,8 @@ export const useEditorStore = create<EditorState>()(
   historyIndex: 0,
   clipboard: null,
   hiddenComponents: new Set<string>(),
+  customCSS: "",
+  setCustomCSS: (css) => set({ customCSS: css }),
   savedSnippets: [],
   _hydrated: false,
 

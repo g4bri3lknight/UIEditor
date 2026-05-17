@@ -135,6 +135,11 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       const colSize = String(p.size || "12");
       if (colSize !== "12" && colSize !== "auto") cls += `-${colSize}`;
       if (colSize === "auto") cls += "-auto";
+      // Responsive breakpoints
+      if (p.colSm) cls += ` col-sm-${p.colSm}`;
+      if (p.colMd) cls += ` col-md-${p.colMd}`;
+      if (p.colLg) cls += ` col-lg-${p.colLg}`;
+      if (p.colXl) cls += ` col-xl-${p.colXl}`;
       if (p.bgColor && p.bgColor !== "transparent") cls += ` bg-${p.bgColor}`;
       if (p.textColor && p.textColor !== "dark") cls += ` text-${p.textColor}`;
       if (p.padding && p.padding !== "0") cls += ` p-${p.padding}`;
@@ -406,7 +411,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       const extras: Record<string, string> = { ...wrapExtraAttrs };
       if (p.disabled) extras["aria-disabled"] = "true";
 
-      const icon = p.iconLeft ? `<i class="bi ${p.iconLeft} me-1"></i>` : "";
+      const icon = p.iconLeft ? `<i class="bi-${String(p.iconLeft).replace(/^bi-?/, '')} me-1"></i>` : "";
       return indent(wrap("button", cls, `${icon}${p.text}`.trim(), extras, true, customClass, isHidden), indentLevel);
     }
 
@@ -1253,11 +1258,11 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
     }
 
     case "icon": {
-      const iconName = String(p.name || "bi-house");
+      const iconName = String(p.name || "house").replace(/^bi-?/, '');
       const iconSize = Number(p.size) || 16;
       const iconColor = String(p.color || "");
 
-      let cls = iconName;
+      let cls = `bi-${iconName}`;
       if (iconColor && BS_TEXT_COLORS[iconColor]) cls += ` text-${iconColor}`;
       if (customClass) cls += ` ${customClass}`;
       cls = cls.trim();
@@ -1391,12 +1396,14 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
   }
 }
 
-export function generateFullHTML(components: CanvasComponent[], hiddenComponents?: Set<string>): string {
+export function generateFullHTML(components: CanvasComponent[], hiddenComponents?: Set<string>, customCSS?: string): string {
   if (components.length === 0) return "";
 
   const body = components
     .map((comp) => generateComponentHTML(comp, 1, hiddenComponents))
     .join("\n\n");
+
+  const customStyleTag = customCSS ? `\n    <style>${customCSS}</style>` : "";
 
   return `<!doctype html>
 <html lang="en" style="height:100%">
@@ -1405,7 +1412,7 @@ export function generateFullHTML(components: CanvasComponent[], hiddenComponents
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Bootstrap Page</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">${customStyleTag}
     <style>html,body{height:100%;margin:0}</style>
   </head>
   <body style="display:flex;flex-direction:column;min-height:100%">

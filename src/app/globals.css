@@ -112,6 +112,22 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Ensure Bootstrap Icons pseudo-elements work with Tailwind v4 */
+.bi::before,
+[class*=" bi-"]::before,
+[class^="bi-"]::before {
+  display: inline-block !important;
+  font-family: bootstrap-icons !important;
+  font-style: normal !important;
+  font-weight: 400 !important;
+  font-variant: normal !important;
+  text-transform: none !important;
+  line-height: 1 !important;
+  vertical-align: -0.125em !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

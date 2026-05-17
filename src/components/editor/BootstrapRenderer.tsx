@@ -139,6 +139,15 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
       const hasChildren = component.children && component.children.length > 0;
       const colSize = String(p.size || "auto");
       const grow = colSize === "auto" ? 1 : Math.max(0, Number(colSize));
+      // Build CSS for responsive breakpoints (visual hint only — actual responsive classes in generated HTML)
+      const responsiveClasses: string[] = [];
+      if (p.colSm) responsiveClasses.push(`sm:${p.colSm}`);
+      if (p.colMd) responsiveClasses.push(`md:${p.colMd}`);
+      if (p.colLg) responsiveClasses.push(`lg:${p.colLg}`);
+      if (p.colXl) responsiveClasses.push(`xl:${p.colXl}`);
+      const responsiveLabel = responsiveClasses.length > 0
+        ? `\n      <span style="position:absolute;top:2px;right:4px;font-size:9px;color:#0d6efd;opacity:0.6;pointer-events:none">${responsiveClasses.join(' ')}</span>`
+        : "";
       return (
         <Wrapper customClass={customClass} style={{
           background: BS_BG[String(p.bgColor)] || BS.light,
@@ -149,7 +158,9 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
           boxSizing: "border-box",
           flex: `${grow} 0 0%`,
           textAlign: String(p.textAlign) as any,
+          position: "relative",
         }}>
+          {responsiveLabel && <div style={{ position: "absolute", top: 2, right: 4, fontSize: "9px", color: "#0d6efd", opacity: 0.6, pointerEvents: "none" }}>{responsiveClasses.join(", ")}</div>}
           {renderChildren ?? (hasChildren ? (
             component.children!.map((child) => (
               <BootstrapRenderer key={child.id} component={child} />
@@ -527,7 +538,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
             display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px",
             fontWeight: 400,
           }}>
-            {p.iconLeft && <i className={String(p.iconLeft)} style={{ fontSize: "inherit" }} />}
+            {p.iconLeft && <i className={`bi-${String(p.iconLeft).replace(/^bi-?/, '')}`} style={{ fontSize: "inherit" }} />}
             {p.text || "Button"}
           </button>
         </Wrapper>
@@ -1643,13 +1654,13 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
     }
 
     case "icon": {
-      const iconName = String(p.name || "bi-house");
+      const iconName = String(p.name || "house").replace(/^bi-?/, '');
       const iconSize = Number(p.size) || 16;
       const iconColor = BS_TEXT[String(p.color)] || BS.body;
       return (
         <Wrapper customClass={customClass} style={{ padding: "4px", display: "inline-block" }}>
           <i
-            className={`bi ${iconName}`}
+            className={`bi-${iconName}`}
             style={{
               fontSize: `${iconSize}px`,
               color: iconColor,

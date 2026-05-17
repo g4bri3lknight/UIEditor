@@ -35,6 +35,9 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
+  Smartphone,
+  Tablet,
+  Monitor,
 } from "lucide-react";
 import { useEditorStore, isContainer, isAutoManaged, isSlottedType, getTabSlots, getAccordionSlots } from "@/store/editor-store";
 import { BootstrapRenderer } from "./BootstrapRenderer";
@@ -878,12 +881,24 @@ const MAX_ZOOM = 200;
 const ZOOM_STEP = 10;
 const ZOOM_LEVELS = [25, 50, 75, 100, 125, 150, 200];
 
+// ── Viewport breakpoints ──
+const VIEWPORT_BREAKPOINTS = [
+  { key: "xl", label: "XL", width: 1200, icon: Monitor },
+  { key: "lg", label: "LG", width: 992, icon: Monitor },
+  { key: "md", label: "MD", width: 768, icon: Tablet },
+  { key: "sm", label: "SM", width: 576, icon: Smartphone },
+  { key: "xs", label: "XS", width: 375, icon: Smartphone },
+] as const;
+
+type ViewportKey = typeof VIEWPORT_BREAKPOINTS[number]["key"];
+
 export function Canvas({ activeDragId }: { activeDragId: string | null }) {
   const { components, selectComponent, updateComponentProps } = useEditorStore();
   const isDragging = !!activeDragId;
 
   // ── Zoom state ──
   const [zoom, setZoom] = useState(100);
+  const [viewport, setViewport] = useState<ViewportKey>("xl");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const handleZoomIn = useCallback(() => {
@@ -1022,6 +1037,29 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
           </span>
         </div>
         <div className="flex items-center gap-3">
+          {/* Viewport breakpoint toggle */}
+          <div className="flex items-center gap-0.5 bg-muted/50 rounded-md p-0.5">
+            {VIEWPORT_BREAKPOINTS.map((bp) => {
+              const IconComp = bp.icon;
+              const isActive = viewport === bp.key;
+              return (
+                <button
+                  key={bp.key}
+                  onClick={() => setViewport(bp.key)}
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-all duration-150 ${
+                    isActive
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title={`${bp.label} — ${bp.width}px`}
+                >
+                  <IconComp className="w-3 h-3" />
+                  <span className="hidden sm:inline">{bp.label}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="w-px h-4 bg-border" />
           {/* Zoom controls */}
           <div className="flex items-center gap-1">
             <button
@@ -1087,6 +1125,16 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
           className="w-[95%] mx-auto p-6 origin-top"
           style={{ transform: `scale(${zoom / 100})`, transition: 'transform 150ms ease-out' }}
         >
+          <div
+            style={{
+              maxWidth: viewport === "xl" ? "100%" : `${VIEWPORT_BREAKPOINTS.find(bp => bp.key === viewport)?.width || "100%"}px`,
+              margin: "0 auto",
+              transition: "max-width 200ms ease-out",
+              border: viewport !== "xl" ? "1px solid #e5e7eb" : "none",
+              borderRadius: viewport !== "xl" ? "8px" : "0",
+              overflow: "hidden",
+            }}
+          >
           {components.length === 0 ? (
             <EmptyCanvas isOver={isOver && isDragging} />
           ) : (
@@ -1122,6 +1170,7 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
               {isDragging && <div className="h-4" />}
             </div>
           )}
+          </div>
         </div>
       </div>
 

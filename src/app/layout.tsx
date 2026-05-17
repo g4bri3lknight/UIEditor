@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "bootstrap-icons/font/bootstrap-icons.min.css";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -17,6 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="it" suppressHydrationWarning>
+      <head></head>
       <body className="antialiased bg-background text-foreground">
         {children}
         <Toaster />

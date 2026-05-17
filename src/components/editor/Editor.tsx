@@ -224,6 +224,7 @@ export function Editor() {
     clipboard,
     importProject,
     hiddenComponents,
+    customCSS,
   } = useEditorStore();
 
   const [codeDialogOpen, setCodeDialogOpen] = useState(false);
@@ -335,7 +336,7 @@ export function Editor() {
   }, []);
 
   // ── Generated HTML code (must be before handleScreenshot) ──
-  const htmlCode = useMemo(() => generateFullHTML(components, hiddenComponents), [components, hiddenComponents]);
+  const htmlCode = useMemo(() => generateFullHTML(components, hiddenComponents, customCSS), [components, hiddenComponents, customCSS]);
 
   // ── Screenshot handler ──
   // Uses modern-screenshot (SVG foreignObject approach) instead of html2canvas
