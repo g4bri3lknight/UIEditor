@@ -616,8 +616,9 @@ function CanvasItem({
         />
       )}
 
-      {/* Table structure: render <tr>/<td> directly — no ContextMenu wrapper (ContextMenu with asChild
-          may not work correctly inside <tbody> since only <tr> elements are valid children) */}
+      {/* Table structure: render <tr>/<td> directly with ContextMenu support.
+          ContextMenuTrigger uses asChild so it doesn't create wrapper divs inside <tbody>.
+          ContextMenuContent renders via portal (outside the DOM tree), so no HTML nesting issues. */}
       {isTableStructure ? (
         isTableRow ? (
           <tr
@@ -640,27 +641,94 @@ function CanvasItem({
             />
           </tr>
         ) : (
-          <td
-            ref={mergedRef}
-            style={{
-              ...tableBaseStyle,
-              ...(isHidden && !isDragging && !(isContainerOver && isDragging) && !isSelected ? { opacity: 0.3 } : {}),
-              ...(isSelected ? { outline: "2px solid hsl(var(--primary) / 0.6)", outlineOffset: "-2px" } : {}),
-              ...(isContainerOver && isDragging ? { outline: "2px solid hsl(var(--primary) / 0.4)", outlineOffset: "-2px" } : {}),
-            }}
-            className="group/canvas-item transition-all duration-150 hover:bg-muted/30"
-            onClick={handleSelect}
-            onDoubleClick={handleDoubleClick}
-            {...attributes}
-            {...listeners}
-          >
-            <BootstrapRenderer
-              component={component}
-              renderChildren={childrenContent}
-              slotChildren={slotChildrenMap}
-              isDragging={isDragging}
-            />
-          </td>
+          /* table-cell: wrap in ContextMenu for insert/paste/delete support */
+          <ContextMenu>
+            <ContextMenuTrigger asChild>
+              <td
+                ref={mergedRef}
+                style={{
+                  ...tableBaseStyle,
+                  ...(isHidden && !isDragging && !(isContainerOver && isDragging) && !isSelected ? { opacity: 0.3 } : {}),
+                  ...(isSelected ? { outline: "2px solid hsl(var(--primary) / 0.6)", outlineOffset: "-2px" } : {}),
+                  ...(isContainerOver && isDragging ? { outline: "2px solid hsl(var(--primary) / 0.4)", outlineOffset: "-2px" } : {}),
+                }}
+                className="group/canvas-item transition-all duration-150 hover:bg-muted/30"
+                onClick={handleSelect}
+                onDoubleClick={handleDoubleClick}
+                {...attributes}
+                {...listeners}
+              >
+                <BootstrapRenderer
+                  component={component}
+                  renderChildren={childrenContent}
+                  slotChildren={slotChildrenMap}
+                  isDragging={isDragging}
+                />
+              </td>
+            </ContextMenuTrigger>
+            <ContextMenuContent>
+              {/* Insert submenu for table cells */}
+              <ContextMenuSub>
+                <ContextMenuSubTrigger>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Inserisci
+                </ContextMenuSubTrigger>
+                <ContextMenuSubContent className="max-h-[300px] overflow-y-auto">
+                  {CATEGORIES.map((cat) => {
+                    const catComponents = COMPONENTS.filter(
+                      (c) => c.category === cat.id && !c.hidden
+                    );
+                    if (catComponents.length === 0) return null;
+                    return (
+                      <ContextMenuSub key={cat.id}>
+                        <ContextMenuSubTrigger>
+                          {cat.label}
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent className="max-h-[250px] overflow-y-auto">
+                          {catComponents.map((comp) => (
+                            <ContextMenuItem
+                              key={comp.type}
+                              onClick={() => handleQuickInsert(comp.type)}
+                            >
+                              {comp.label}
+                            </ContextMenuItem>
+                          ))}
+                        </ContextMenuSubContent>
+                      </ContextMenuSub>
+                    );
+                  })}
+                </ContextMenuSubContent>
+              </ContextMenuSub>
+              <ContextMenuSeparator />
+              <ContextMenuItem
+                disabled={clipboard === null}
+                onClick={handlePaste}
+              >
+                <ClipboardPaste className="mr-2 h-4 w-4" />
+                Incolla
+                <span className="ml-auto text-xs text-muted-foreground">Ctrl+V</span>
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem onClick={handleCopy}>
+                <Copy className="mr-2 h-4 w-4" />
+                Copia
+                <span className="ml-auto text-xs text-muted-foreground">Ctrl+C</span>
+              </ContextMenuItem>
+              <ContextMenuItem onClick={handleDuplicate}>
+                <ClipboardCopy className="mr-2 h-4 w-4" />
+                Duplica
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem
+                disabled={clipboard === null}
+                onClick={handleRemove}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Elimina
+              </ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenu>
         )
       ) : (
       <ContextMenu>
@@ -1109,7 +1177,7 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
         </div>
       </div>
 
-      {/* Drop Zone */}
+      {/* Drop Zone — always light theme so Bootstrap components stay readable */}
       <div
         ref={(node) => {
           setNodeRef(node);
@@ -1120,6 +1188,7 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
         className={`flex-1 overflow-auto transition-colors duration-200 ${
           isOver && isDragging ? "bg-primary/5" : ""
         }`}
+        style={{ backgroundColor: "#f8f9fa", colorScheme: "light" }}
       >
         <div
           className="w-[95%] mx-auto p-6 origin-top"
@@ -1133,6 +1202,7 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
               border: viewport !== "xl" ? "1px solid #e5e7eb" : "none",
               borderRadius: viewport !== "xl" ? "8px" : "0",
               overflow: "hidden",
+              colorScheme: "light",
             }}
           >
           {components.length === 0 ? (

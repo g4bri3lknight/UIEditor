@@ -2,6 +2,26 @@
 
 import { BootstrapComponentDefinition, CategoryInfo } from "./types";
 
+// ── Shared padding options for individual padding fields ──
+const PADDING_OPTIONS = [
+  { label: "Predefinito", value: "" },
+  { label: "0", value: "0" },
+  { label: "1", value: "1" },
+  { label: "2", value: "2" },
+  { label: "3", value: "3" },
+  { label: "4", value: "4" },
+  { label: "5", value: "5" },
+];
+
+function individualPaddingProps() {
+  return [
+    { key: "paddingTop", label: "Padding Top", type: "select" as const, defaultValue: "", options: PADDING_OPTIONS },
+    { key: "paddingBottom", label: "Padding Bottom", type: "select" as const, defaultValue: "", options: PADDING_OPTIONS },
+    { key: "paddingLeft", label: "Padding Left", type: "select" as const, defaultValue: "", options: PADDING_OPTIONS },
+    { key: "paddingRight", label: "Padding Right", type: "select" as const, defaultValue: "", options: PADDING_OPTIONS },
+  ];
+}
+
 export const CATEGORIES: CategoryInfo[] = [
   { id: "layout", label: "Layout", icon: "LayoutGrid" },
   { id: "typography", label: "Tipografia", icon: "Type" },
@@ -58,7 +78,7 @@ export const COMPONENTS: BootstrapComponentDefinition[] = [
       },
       {
         key: "padding",
-        label: "Padding",
+        label: "Padding (tutti i lati)",
         type: "select",
         defaultValue: "3",
         options: [
@@ -70,6 +90,7 @@ export const COMPONENTS: BootstrapComponentDefinition[] = [
           { label: "5", value: "5" },
         ],
       },
+      ...individualPaddingProps(),
       {
         key: "textColor",
         label: "Text Color",
@@ -213,7 +234,7 @@ export const COMPONENTS: BootstrapComponentDefinition[] = [
       },
       {
         key: "padding",
-        label: "Padding",
+        label: "Padding (tutti i lati)",
         type: "select",
         defaultValue: "3",
         options: [
@@ -225,6 +246,7 @@ export const COMPONENTS: BootstrapComponentDefinition[] = [
           { label: "5", value: "5" },
         ],
       },
+      ...individualPaddingProps(),
       {
         key: "textAlign",
         label: "Allineamento",
@@ -478,6 +500,7 @@ export const COMPONENTS: BootstrapComponentDefinition[] = [
           { label: "Molto grande", value: "4" },
         ],
       },
+      ...individualPaddingProps(),
       {
         key: "borderRadius",
         label: "Bordi arrotondati",

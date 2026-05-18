@@ -42,7 +42,41 @@ export function getAccordionSlots(itemsProp: unknown): string[] {
   return lines.map((_, i) => `acc-${i}`);
 }
 
+// ── Theme Configuration ──
+export interface BootstrapTheme {
+  primaryColor: string;
+  secondaryColor: string;
+  successColor: string;
+  dangerColor: string;
+  warningColor: string;
+  infoColor: string;
+  fontFamily: string;
+  borderRadius: string;
+  bodyBg: string;
+  bodyColor: string;
+}
 
+export const DEFAULT_THEME: BootstrapTheme = {
+  primaryColor: "#0d6efd",
+  secondaryColor: "#6c757d",
+  successColor: "#198754",
+  dangerColor: "#dc3545",
+  warningColor: "#ffc107",
+  infoColor: "#0dcaf0",
+  fontFamily: "system-ui, -apple-system, sans-serif",
+  borderRadius: "0.375rem",
+  bodyBg: "#ffffff",
+  bodyColor: "#212529",
+};
+
+// ── Multi-page Support ──
+export interface EditorPage {
+  id: string;
+  name: string;
+  components: CanvasComponent[];
+  history: CanvasComponent[][];
+  historyIndex: number;
+}
 
 // ── ID generation ──
 let idCounter = 0;
@@ -209,6 +243,7 @@ function syncTableStructure(comp: CanvasComponent): CanvasComponent {
 
 // ── Store interface ──
 interface EditorState {
+  // Active page working state (top-level for backward compatibility)
   components: CanvasComponent[];
   selectedId: string | null;
   history: CanvasComponent[][];
@@ -241,6 +276,21 @@ interface EditorState {
   moveDown: (id: string) => void;
   toggleComponentVisibility: (id: string) => void;
 
+  // ── Custom Theme ──
+  bootstrapTheme: BootstrapTheme;
+  updateTheme: (theme: Partial<BootstrapTheme>) => void;
+  resetTheme: () => void;
+
+  // ── Multi-page Support ──
+  pages: EditorPage[];
+  activePageId: string;
+  addPage: (name?: string) => void;
+  deletePage: (id: string) => void;
+  renamePage: (id: string, newName: string) => void;
+  switchPage: (id: string) => void;
+  reorderPages: (fromIndex: number, toIndex: number) => void;
+  _syncCurrentPage: () => void;
+
   // ── Saved Snippets (reusable templates) ──
   savedSnippets: SavedSnippet[];
   _hydrated: boolean;
@@ -268,6 +318,115 @@ export const useEditorStore = create<EditorState>()(
   hiddenComponents: new Set<string>(),
   customCSS: "",
   setCustomCSS: (css) => set({ customCSS: css }),
+
+  // ── Custom Theme ──
+  bootstrapTheme: { ...DEFAULT_THEME },
+  updateTheme: (partial) => {
+    set(s => ({
+      bootstrapTheme: { ...s.bootstrapTheme, ...partial },
+    }));
+  },
+  resetTheme: () => {
+    set({ bootstrapTheme: { ...DEFAULT_THEME } });
+  },
+
+  // ── Multi-page Support ──
+  pages: [] as EditorPage[],
+  activePageId: "",
+
+  _syncCurrentPage: () => {
+    const state = get();
+    if (!state.activePageId) return;
+    set(s => ({
+      pages: s.pages.map(p =>
+        p.id === s.activePageId
+          ? { ...p, components: s.components, history: s.history, historyIndex: s.historyIndex }
+          : p
+      ),
+    }));
+  },
+
+  switchPage: (id) => {
+    const state = get();
+    if (id === state.activePageId) return;
+    // Save current page first
+    if (state.activePageId) {
+      state._syncCurrentPage();
+    }
+    // Load new page
+    const page = get().pages.find(p => p.id === id);
+    if (page) {
+      set({
+        activePageId: id,
+        components: page.components,
+        history: page.history,
+        historyIndex: page.historyIndex,
+        selectedId: null,
+      });
+    }
+  },
+
+  addPage: (name) => {
+    const state = get();
+    // Sync current page first
+    if (state.activePageId) {
+      state._syncCurrentPage();
+    }
+    const newPage: EditorPage = {
+      id: `page-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      name: name || `Pagina ${state.pages.length + 1}`,
+      components: [],
+      history: [[]],
+      historyIndex: 0,
+    };
+    set(s => ({
+      pages: [...s.pages, newPage],
+      activePageId: newPage.id,
+      components: newPage.components,
+      history: newPage.history,
+      historyIndex: newPage.historyIndex,
+      selectedId: null,
+    }));
+  },
+
+  deletePage: (id) => {
+    const state = get();
+    if (state.pages.length <= 1) return;
+    const idx = state.pages.findIndex(p => p.id === id);
+    if (idx === -1) return;
+    const newPages = state.pages.filter(p => p.id !== id);
+    if (id === state.activePageId) {
+      const switchIdx = Math.min(idx, newPages.length - 1);
+      const page = newPages[switchIdx];
+      set({
+        pages: newPages,
+        activePageId: page.id,
+        components: page.components,
+        history: page.history,
+        historyIndex: page.historyIndex,
+        selectedId: null,
+      });
+    } else {
+      set({ pages: newPages });
+    }
+  },
+
+  renamePage: (id, newName) => {
+    set(s => ({
+      pages: s.pages.map(p => p.id === id ? { ...p, name: newName } : p),
+    }));
+  },
+
+  reorderPages: (fromIndex, toIndex) => {
+    set(s => {
+      const arr = [...s.pages];
+      const [moved] = arr.splice(fromIndex, 1);
+      arr.splice(toIndex, 0, moved);
+      return { pages: arr };
+    });
+  },
+
+  // ── Saved Snippets ──
   savedSnippets: [],
   _hydrated: false,
 
@@ -658,11 +817,49 @@ export const useEditorStore = create<EditorState>()(
     {
       name: "bootstrap-editor-saved-snippets",
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ savedSnippets: state.savedSnippets }),
+      partialize: (state) => ({
+        savedSnippets: state.savedSnippets,
+        bootstrapTheme: state.bootstrapTheme,
+        pages: state.pages,
+        activePageId: state.activePageId,
+        components: state.components,
+        history: state.history,
+        historyIndex: state.historyIndex,
+      }),
       onRehydrateStorage: () => (state) => {
-        if (state) {
-          state._hydrated = true;
-          useEditorStore.setState({ _hydrated: true });
+        try {
+          if (state) {
+            // If pages exist from persistence, load the active page's data
+            if (state.pages?.length > 0 && state.activePageId) {
+              const activePage = state.pages.find(p => p.id === state.activePageId);
+              if (activePage) {
+                // Direct mutation — useEditorStore is not yet assigned during
+                // synchronous rehydration (Turbopack). The persist middleware
+                // will merge these changes into the store after the callback.
+                state.components = activePage.components;
+                state.history = activePage.history;
+                state.historyIndex = activePage.historyIndex;
+              }
+            } else {
+              // First-time hydration: create a default "Home" page from current components
+              const defaultPage: EditorPage = {
+                id: `page-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+                name: "Home",
+                components: state.components,
+                history: state.history,
+                historyIndex: state.historyIndex,
+              };
+              state.pages = [defaultPage];
+              state.activePageId = defaultPage.id;
+            }
+          }
+        } catch (err) {
+          console.error("[editor-store] Rehydration error:", err);
+        } finally {
+          // Always mark as hydrated so the UI doesn't get stuck on "Caricamento..."
+          if (state) {
+            state._hydrated = true;
+          }
         }
       },
     }

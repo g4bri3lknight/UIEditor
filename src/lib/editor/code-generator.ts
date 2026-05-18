@@ -1,5 +1,6 @@
 // Bootstrap GUI Editor - HTML Code Generator
 import { CanvasComponent } from "./types";
+import type { BootstrapTheme } from "@/store/editor-store";
 
 // Bootstrap color map for CSS preview
 export const BS_COLORS: Record<string, string> = {
@@ -113,7 +114,16 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       else if (fluid !== "fixed") cls = `container-${fluid}`;
 
       if (p.bgColor && p.bgColor !== "transparent") cls += ` bg-${p.bgColor}`;
-      if (p.padding && p.padding !== "0") cls += ` p-${p.padding}`;
+      // Padding: individual overrides take precedence over uniform
+      const hasIndPad = p.paddingTop || p.paddingBottom || p.paddingLeft || p.paddingRight;
+      if (hasIndPad) {
+        if (p.paddingTop && p.paddingTop !== "0") cls += ` pt-${p.paddingTop}`;
+        if (p.paddingBottom && p.paddingBottom !== "0") cls += ` pb-${p.paddingBottom}`;
+        if (p.paddingLeft && p.paddingLeft !== "0") cls += ` ps-${p.paddingLeft}`;
+        if (p.paddingRight && p.paddingRight !== "0") cls += ` pe-${p.paddingRight}`;
+      } else if (p.padding && p.padding !== "0") {
+        cls += ` p-${p.padding}`;
+      }
       if (p.textColor && p.textColor !== "dark") cls += ` text-${p.textColor}`;
       if (p.textAlign && p.textAlign !== "start") cls += ` text-${p.textAlign}`;
 
@@ -142,7 +152,15 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.colXl) cls += ` col-xl-${p.colXl}`;
       if (p.bgColor && p.bgColor !== "transparent") cls += ` bg-${p.bgColor}`;
       if (p.textColor && p.textColor !== "dark") cls += ` text-${p.textColor}`;
-      if (p.padding && p.padding !== "0") cls += ` p-${p.padding}`;
+      const hasIndPadCol = p.paddingTop || p.paddingBottom || p.paddingLeft || p.paddingRight;
+      if (hasIndPadCol) {
+        if (p.paddingTop && p.paddingTop !== "0") cls += ` pt-${p.paddingTop}`;
+        if (p.paddingBottom && p.paddingBottom !== "0") cls += ` pb-${p.paddingBottom}`;
+        if (p.paddingLeft && p.paddingLeft !== "0") cls += ` ps-${p.paddingLeft}`;
+        if (p.paddingRight && p.paddingRight !== "0") cls += ` pe-${p.paddingRight}`;
+      } else if (p.padding && p.padding !== "0") {
+        cls += ` p-${p.padding}`;
+      }
       if (p.textAlign && p.textAlign !== "start") cls += ` text-${p.textAlign}`;
       const content = generateChildrenHTML(component, indentLevel + 1, hiddenComponents) || "";
       return indent(wrap("div", cls, content, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
@@ -169,7 +187,15 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.textSize && p.textSize !== "lead") cls += ` ${p.textSize}`;
       if (p.bgColor && p.bgColor !== "transparent") cls += ` bg-${p.bgColor}`;
       const pPad = String(p.padding || "0");
-      if (pPad !== "0") cls += ` p-${pPad}`;
+      const hasIndPadP = p.paddingTop || p.paddingBottom || p.paddingLeft || p.paddingRight;
+      if (hasIndPadP) {
+        if (p.paddingTop && p.paddingTop !== "0") cls += ` pt-${p.paddingTop}`;
+        if (p.paddingBottom && p.paddingBottom !== "0") cls += ` pb-${p.paddingBottom}`;
+        if (p.paddingLeft && p.paddingLeft !== "0") cls += ` ps-${p.paddingLeft}`;
+        if (p.paddingRight && p.paddingRight !== "0") cls += ` pe-${p.paddingRight}`;
+      } else if (pPad !== "0") {
+        cls += ` p-${pPad}`;
+      }
       const pRadius = String(p.borderRadius || "0");
       if (pRadius === "4px") cls += " rounded";
       else if (pRadius === "8px") cls += " rounded-3";
@@ -1396,13 +1422,34 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
   }
 }
 
-export function generateFullHTML(components: CanvasComponent[], hiddenComponents?: Set<string>, customCSS?: string): string {
+function generateThemeCSS(theme: BootstrapTheme): string {
+  return `
+    :root {
+      --bs-primary: ${theme.primaryColor};
+      --bs-secondary: ${theme.secondaryColor};
+      --bs-success: ${theme.successColor};
+      --bs-danger: ${theme.dangerColor};
+      --bs-warning: ${theme.warningColor};
+      --bs-info: ${theme.infoColor};
+      --bs-body-bg: ${theme.bodyBg};
+      --bs-body-color: ${theme.bodyColor};
+      --bs-font-family: ${theme.fontFamily};
+      --bs-border-radius: ${theme.borderRadius};
+      --bs-border-radius-sm: ${theme.borderRadius};
+      --bs-border-radius-lg: ${theme.borderRadius};
+      --bs-border-radius-pill: calc(${theme.borderRadius} * 10);
+    }
+  `;
+}
+
+export function generateFullHTML(components: CanvasComponent[], hiddenComponents?: Set<string>, customCSS?: string, theme?: BootstrapTheme): string {
   if (components.length === 0) return "";
 
   const body = components
     .map((comp) => generateComponentHTML(comp, 1, hiddenComponents))
     .join("\n\n");
 
+  const themeStyleTag = theme ? `\n    <style>${generateThemeCSS(theme)}</style>` : "";
   const customStyleTag = customCSS ? `\n    <style>${customCSS}</style>` : "";
 
   return `<!doctype html>
@@ -1412,7 +1459,7 @@ export function generateFullHTML(components: CanvasComponent[], hiddenComponents
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Bootstrap Page</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">${customStyleTag}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">${themeStyleTag}${customStyleTag}
     <style>html,body{height:100%;margin:0}</style>
   </head>
   <body style="display:flex;flex-direction:column;min-height:100%">

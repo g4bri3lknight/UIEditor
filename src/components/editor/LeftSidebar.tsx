@@ -7,12 +7,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { useEditorStore, isAutoManaged, isSlottedType } from "@/store/editor-store";
 import type { CanvasComponent, SavedSnippet } from "@/lib/editor/types";
+import { TEMPLATES } from "@/lib/editor/templates";
 import {
   LayoutGrid, Type, FileInput, MousePointerClick, Navigation,
   Layers, Table, Image, Wrench, Search, List, Code, EyeOff,
   Bookmark, Trash2, Pencil, Check, X, Plus,
   ChevronRight, ChevronDown as ChevronDownIcon, ArrowUp, ArrowDown,
-  FolderOpen, Download, Upload,
+  FolderOpen, Download, Upload, LayoutTemplate,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -428,6 +429,7 @@ function countComponents(comps: CanvasComponent[]): number {
 function TemplatesPanel() {
   const savedSnippets = useEditorStore((s) => s.savedSnippets);
   const hydrated = useEditorStore((s) => s._hydrated);
+  const loadTemplate = useEditorStore((s) => s.loadTemplate);
   const insertSnippet = useEditorStore((s) => s.insertSnippet);
   const deleteSnippet = useEditorStore((s) => s.deleteSnippet);
   const renameSnippet = useEditorStore((s) => s.renameSnippet);
@@ -441,12 +443,30 @@ function TemplatesPanel() {
   const [categoryValue, setCategoryValue] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
+  const [expandedSection, setExpandedSection] = useState<"predefiniti" | "custom">("predefiniti");
   const snippetImportRef = useRef<HTMLInputElement>(null);
+
+  // Safety net: if onRehydrateStorage never fires, force _hydrated after 1s
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!useEditorStore.getState()._hydrated) {
+        useEditorStore.setState({ _hydrated: true });
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleInsert = useCallback((snippetId: string) => {
     insertSnippet(snippetId, null);
     toast.success("Template inserito!");
   }, [insertSnippet]);
+
+  const handleLoadBuiltinTemplate = useCallback((templateId: string) => {
+    const tpl = TEMPLATES.find((t) => t.id === templateId);
+    if (!tpl) return;
+    loadTemplate(tpl.components);
+    toast.success(`Template "${tpl.label}" caricato!`);
+  }, [loadTemplate]);
 
   const handleDelete = useCallback((snippetId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -546,11 +566,15 @@ function TemplatesPanel() {
     return sorted;
   }, [savedSnippets, filterCategory]);
 
+  const toggleSection = (section: "predefiniti" | "custom") => {
+    setExpandedSection(prev => prev === section ? (prev === "predefiniti" ? "custom" : "predefiniti") : section);
+  };
+
   if (!hydrated) {
     return (
       <div className="flex flex-col items-center justify-center h-full px-6 py-12">
         <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-3">
-          <Bookmark className="w-5 h-5 text-muted-foreground/50" />
+          <LayoutTemplate className="w-5 h-5 text-muted-foreground/50" />
         </div>
         <p className="text-xs text-muted-foreground text-center leading-relaxed">
           Caricamento...
@@ -559,126 +583,181 @@ function TemplatesPanel() {
     );
   }
 
-  if (savedSnippets.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full px-6 py-12">
-        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-3">
-          <Bookmark className="w-5 h-5 text-muted-foreground/50" />
-        </div>
-        <p className="text-xs text-muted-foreground text-center leading-relaxed">
-          Nessun template salvato.
-        </p>
-        <p className="text-[11px] text-muted-foreground/60 text-center mt-1">
-          Clicca col tasto destro su un componente e seleziona &quot;Salva come template&quot;.
-        </p>
-        {/* Import button even when empty */}
-        <button
-          onClick={handleImport}
-          className="mt-4 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
-        >
-          <Upload className="w-3 h-3" />
-          Importa template
-        </button>
-        <input
-          ref={snippetImportRef}
-          type="file"
-          accept=".json,application/json"
-          className="hidden"
-          onChange={handleImportFile}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col h-full">
-      {/* Header with count and actions */}
-      <div className="shrink-0 px-3 pt-2 pb-1.5 border-b border-border/50 flex items-center justify-between">
-        <span className="text-[10px] text-muted-foreground font-medium">
-          {savedSnippets.length} template{savedSnippets.length !== 1 ? "s" : ""} salvat{savedSnippets.length !== 1 ? "i" : "o"}
-        </span>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={handleExportAll}
-            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            title="Esporta tutti i template"
-          >
-            <Download className="w-3 h-3" />
-          </button>
-          <button
-            onClick={handleImport}
-            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            title="Importa template da file"
-          >
-            <Upload className="w-3 h-3" />
-          </button>
-          <input
-            ref={snippetImportRef}
-            type="file"
-            accept=".json,application/json"
-            className="hidden"
-            onChange={handleImportFile}
-          />
-        </div>
-      </div>
-
-      {/* Category filter */}
-      {categories.length > 1 && (
-        <div className="shrink-0 px-2 py-1.5 border-b border-border/50 flex gap-1 flex-wrap">
-          <button
-            onClick={() => setFilterCategory(null)}
-            className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
-              !filterCategory
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted/60 text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            Tutti
-          </button>
-          {categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setFilterCategory(cat === filterCategory ? null : cat)}
-              className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
-                filterCategory === cat
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted/60 text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Snippet list */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" style={{ scrollbarGutter: "stable" }}>
-        <div className="p-2 space-y-1.5 pb-6">
-          {filteredSnippets.map((snippet) => (
-            <SnippetCard
-              key={snippet.id}
-              snippet={snippet}
-              editingId={editingId}
-              editingName={editingName}
-              editingCategory={editingCategory}
-              categoryValue={categoryValue}
-              expandedId={expandedId}
-              setEditingId={setEditingId}
-              setEditingName={setEditingName}
-              setEditingCategory={setEditingCategory}
-              setCategoryValue={setCategoryValue}
-              setExpandedId={setExpandedId}
-              onInsert={handleInsert}
-              onDelete={handleDelete}
-              onStartRename={handleStartRename}
-              onConfirmRename={handleConfirmRename}
-              onCancelRename={handleCancelRename}
-              onStartCategoryEdit={handleStartCategoryEdit}
-              onConfirmCategory={handleConfirmCategory}
-              onToggleExpand={handleToggleExpand}
-              formatDate={formatDate}
-            />
-          ))}
+        <div className="p-2 space-y-2 pb-6">
+          {/* ── Template Predefiniti ── */}
+          <div className="rounded-lg border border-border/50 bg-background/50 overflow-hidden">
+            <button
+              onClick={() => toggleSection("predefiniti")}
+              className="flex items-center gap-2 w-full px-3 py-2.5 hover:bg-muted/50 transition-colors text-left"
+            >
+              <svg
+                className={`w-3 h-3 text-muted-foreground/60 transition-transform duration-200 ${expandedSection === "predefiniti" ? "rotate-90" : ""}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              <LayoutTemplate className="w-3.5 h-3.5 text-primary/70" />
+              <span className="text-xs font-semibold text-foreground flex-1">Template Predefiniti</span>
+              <span className="text-[10px] rounded-full px-1.5 py-0.5 font-medium bg-muted text-muted-foreground">
+                {TEMPLATES.length}
+              </span>
+            </button>
+            {expandedSection === "predefiniti" && (
+              <div className="px-2 pb-2 space-y-1">
+                {TEMPLATES.map((tpl) => {
+                  const IconComp = tpl.icon;
+                  return (
+                    <button
+                      key={tpl.id}
+                      onClick={() => handleLoadBuiltinTemplate(tpl.id)}
+                      className="w-full flex items-start gap-2 px-2.5 py-2 rounded-md hover:bg-muted/60 transition-colors cursor-pointer text-left"
+                    >
+                      <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                        <IconComp className="w-3.5 h-3.5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-medium text-foreground truncate">{tpl.label}</div>
+                        <div className="text-[11px] text-muted-foreground leading-snug">{tpl.description}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* ── Template Custom ── */}
+          <div className="rounded-lg border border-border/50 bg-background/50 overflow-hidden">
+            <button
+              onClick={() => toggleSection("custom")}
+              className="flex items-center gap-2 w-full px-3 py-2.5 hover:bg-muted/50 transition-colors text-left"
+            >
+              <svg
+                className={`w-3 h-3 text-muted-foreground/60 transition-transform duration-200 ${expandedSection === "custom" ? "rotate-90" : ""}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              <Bookmark className="w-3.5 h-3.5 text-primary/70" />
+              <span className="text-xs font-semibold text-foreground flex-1">Template Custom</span>
+              <span className="text-[10px] rounded-full px-1.5 py-0.5 font-medium bg-muted text-muted-foreground">
+                {savedSnippets.length}
+              </span>
+            </button>
+
+            {expandedSection === "custom" && (
+              <div className="pb-2">
+                {/* Category filter */}
+                {categories.length > 1 && (
+                  <div className="px-2 py-1.5 flex gap-1 flex-wrap">
+                    <button
+                      onClick={() => setFilterCategory(null)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+                        !filterCategory
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted/60 text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Tutti
+                    </button>
+                    {categories.map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => setFilterCategory(cat === filterCategory ? null : cat)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+                          filterCategory === cat
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted/60 text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {savedSnippets.length === 0 ? (
+                  <div className="px-3 py-6 text-center">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Nessun template salvato.
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/60 mt-1">
+                      Clicca col tasto destro su un componente e seleziona &quot;Salva come template&quot;.
+                    </p>
+                    <button
+                      onClick={handleImport}
+                      className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
+                    >
+                      <Upload className="w-3 h-3" />
+                      Importa template
+                    </button>
+                  </div>
+                ) : (
+                  <div className="px-2 space-y-1.5">
+                    {filteredSnippets.map((snippet) => (
+                      <SnippetCard
+                        key={snippet.id}
+                        snippet={snippet}
+                        editingId={editingId}
+                        editingName={editingName}
+                        editingCategory={editingCategory}
+                        categoryValue={categoryValue}
+                        expandedId={expandedId}
+                        setEditingId={setEditingId}
+                        setEditingName={setEditingName}
+                        setEditingCategory={setEditingCategory}
+                        setCategoryValue={setCategoryValue}
+                        setExpandedId={setExpandedId}
+                        onInsert={handleInsert}
+                        onDelete={handleDelete}
+                        onStartRename={handleStartRename}
+                        onConfirmRename={handleConfirmRename}
+                        onCancelRename={handleCancelRename}
+                        onStartCategoryEdit={handleStartCategoryEdit}
+                        onConfirmCategory={handleConfirmCategory}
+                        onToggleExpand={handleToggleExpand}
+                        formatDate={formatDate}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Export/Import actions */}
+                <div className="px-3 pt-2 border-t border-border/50 flex items-center justify-between">
+                  <span className="text-[10px] text-muted-foreground">
+                    {savedSnippets.length} template{savedSnippets.length !== 1 ? "s" : ""}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={handleExportAll}
+                      disabled={savedSnippets.length === 0}
+                      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30"
+                      title="Esporta tutti i template"
+                    >
+                      <Download className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={handleImport}
+                      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                      title="Importa template da file"
+                    >
+                      <Upload className="w-3 h-3" />
+                    </button>
+                    <input
+                      ref={snippetImportRef}
+                      type="file"
+                      accept=".json,application/json"
+                      className="hidden"
+                      onChange={handleImportFile}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

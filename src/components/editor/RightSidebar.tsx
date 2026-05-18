@@ -321,7 +321,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
                       >
                         {selectedComponent.props[prop.key] ? (
                           <>
-                            <i className={`bi ${String(selectedComponent.props[prop.key])}`} style={{ fontSize: "14px" }} />
+                            <i className={`bi-${String(selectedComponent.props[prop.key]).replace(/^bi-?/, '')}`} style={{ fontSize: "14px" }} />
                             <span className="flex-1 text-left font-mono truncate">{String(selectedComponent.props[prop.key])}</span>
                           </>
                         ) : (

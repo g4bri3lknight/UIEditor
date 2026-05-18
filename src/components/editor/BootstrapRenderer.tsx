@@ -54,6 +54,33 @@ const spacing = (v: string | number): string => {
   return map[String(v)] || `${v}rem`;
 };
 
+// ── Build padding style from uniform + individual overrides ──
+// If any individual padding is set (non-empty string), it overrides the uniform value for that side.
+// Returns a CSS padding string (e.g. "1rem 0.5rem" or "1rem 0.5rem 0 0.5rem").
+function buildPaddingStyle(p: Record<string, unknown>, defaultVal: string): string {
+  const uniform = spacing(String(p.padding || defaultVal));
+  const pt = p.paddingTop !== undefined && p.paddingTop !== "" ? spacing(String(p.paddingTop)) : null;
+  const pb = p.paddingBottom !== undefined && p.paddingBottom !== "" ? spacing(String(p.paddingBottom)) : null;
+  const pl = p.paddingLeft !== undefined && p.paddingLeft !== "" ? spacing(String(p.paddingLeft)) : null;
+  const pr = p.paddingRight !== undefined && p.paddingRight !== "" ? spacing(String(p.paddingRight)) : null;
+
+  // If no individual overrides, return simple uniform padding
+  if (!pt && !pb && !pl && !pr) return uniform;
+
+  // CSS shorthand: top right bottom left
+  const top = pt ?? uniform;
+  const right = pr ?? uniform;
+  const bottom = pb ?? uniform;
+  const left = pl ?? uniform;
+
+  // Use shorthand when possible
+  if (top === bottom && left === right) {
+    if (top === left) return top; // all sides same
+    return `${top} ${left}`; // vertical horizontal
+  }
+  return `${top} ${right} ${bottom} ${left}`;
+}
+
 interface RendererProps {
   component: CanvasComponent;
   isSelected?: boolean;
@@ -99,7 +126,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
           width: "100%",
           maxWidth,
           margin: "0 auto",
-          padding: spacing(String(p.padding || "3")),
+          padding: buildPaddingStyle(p, "3"),
           background: BS_BG[String(p.bgColor)] || "transparent",
           color: BS_TEXT[String(p.textColor)] || BS.body,
           minHeight: "60px",
@@ -152,7 +179,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
         <Wrapper customClass={customClass} style={{
           background: BS_BG[String(p.bgColor)] || BS.light,
           color: BS_TEXT[String(p.textColor)] || BS.body,
-          padding: spacing(String(p.padding || "3")),
+          padding: buildPaddingStyle(p, "3"),
           borderRadius: "4px",
           minHeight: "50px",
           boxSizing: "border-box",
@@ -211,7 +238,7 @@ export function BootstrapRenderer({ component, renderChildren, slotChildren, isD
             textAlign: String(p.textAlign) as any,
             margin: 0,
             background: pBg || "transparent",
-            padding: spacing(String(p.padding || "2")),
+            padding: buildPaddingStyle(p, "2"),
             borderRadius: String(p.borderRadius || "0"),
           }}>
             {p.text || "Paragraph text"}

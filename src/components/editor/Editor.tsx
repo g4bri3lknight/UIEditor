@@ -17,9 +17,12 @@ import { LeftSidebar } from "./LeftSidebar";
 import { Canvas } from "./Canvas";
 import { RightSidebar } from "./RightSidebar";
 import { useEditorStore, isSlottedType } from "@/store/editor-store";
+import type { BootstrapTheme } from "@/store/editor-store";
+import { useTheme } from "next-themes";
 import { getComponentByType } from "@/lib/editor/bootstrap-components";
 import { generateFullHTML } from "@/lib/editor/code-generator";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -54,15 +57,21 @@ import {
   Smartphone,
   Tablet,
   Monitor,
-  LayoutTemplate,
   ChevronDown,
   ZoomIn,
   ZoomOut,
   RotateCcw,
   Camera,
+  CircleHelp,
+  Moon,
+  Sun,
+  Palette,
+  Plus,
+  X,
+  FileText,
+  GripVertical,
 } from "lucide-react";
 import { toast } from "sonner";
-import { TEMPLATES } from "@/lib/editor/templates";
 import { domToPng } from "modern-screenshot";
 
 // ── Custom collision detection ──
@@ -225,11 +234,26 @@ export function Editor() {
     importProject,
     hiddenComponents,
     customCSS,
+    bootstrapTheme,
+    updateTheme,
+    resetTheme,
+    pages,
+    activePageId,
+    addPage,
+    deletePage,
+    renamePage,
+    switchPage,
   } = useEditorStore();
+
+  const { theme, setTheme } = useTheme();
 
   const [codeDialogOpen, setCodeDialogOpen] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false);
+  const [themeDialogOpen, setThemeDialogOpen] = useState(false);
+  const [renamingPageId, setRenamingPageId] = useState<string | null>(null);
+  const [renamingPageName, setRenamingPageName] = useState("");
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [activeDragData, setActiveDragData] = useState<{
     fromPalette: boolean;
@@ -237,9 +261,8 @@ export function Editor() {
     label?: string;
   } | null>(null);
   const [copied, setCopied] = useState(false);
-  const [templateOpen, setTemplateOpen] = useState(false);
+
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
-  const templateRef = useRef<HTMLDivElement>(null);
   const projectMenuRef = useRef<HTMLDivElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -336,7 +359,7 @@ export function Editor() {
   }, []);
 
   // ── Generated HTML code (must be before handleScreenshot) ──
-  const htmlCode = useMemo(() => generateFullHTML(components, hiddenComponents, customCSS), [components, hiddenComponents, customCSS]);
+  const htmlCode = useMemo(() => generateFullHTML(components, hiddenComponents, customCSS, bootstrapTheme), [components, hiddenComponents, customCSS, bootstrapTheme]);
 
   // ── Screenshot handler ──
   // Uses modern-screenshot (SVG foreignObject approach) instead of html2canvas
@@ -785,8 +808,19 @@ export function Editor() {
 
   // ── Save / Load / Export ──
   const handleSave = useCallback(() => {
-    const { components } = useEditorStore.getState();
-    localStorage.setItem("bootstrap-editor-project", JSON.stringify(components));
+    // Sync current page into pages array before saving
+    useEditorStore.getState()._syncCurrentPage();
+    const { components, bootstrapTheme, pages, activePageId, customCSS } = useEditorStore.getState();
+    const project = {
+      version: 2,
+      savedAt: new Date().toISOString(),
+      components,
+      bootstrapTheme,
+      pages,
+      activePageId,
+      customCSS,
+    };
+    localStorage.setItem("bootstrap-editor-project", JSON.stringify(project));
     toast.success("Progetto salvato!");
   }, []);
 
@@ -798,19 +832,64 @@ export function Editor() {
     }
     try {
       const parsed = JSON.parse(saved);
+      // Support both old format (array) and new format (object with version)
       if (Array.isArray(parsed)) {
         useEditorStore.setState({ components: parsed, selectedId: null });
         useEditorStore.getState().pushHistory();
-        toast.success("Progetto caricato!");
+      } else if (parsed && parsed.version >= 2 && parsed.components) {
+        const stateUpdate: Record<string, unknown> = {
+          components: parsed.components,
+          selectedId: null,
+        };
+        if (parsed.bootstrapTheme) stateUpdate.bootstrapTheme = parsed.bootstrapTheme;
+        if (parsed.customCSS !== undefined) stateUpdate.customCSS = parsed.customCSS;
+        if (parsed.pages && parsed.activePageId) {
+          stateUpdate.pages = parsed.pages;
+          stateUpdate.activePageId = parsed.activePageId;
+          // Load the active page's components
+          const activePage = parsed.pages.find((p: { id: string }) => p.id === parsed.activePageId);
+          if (activePage) {
+            stateUpdate.components = activePage.components;
+            stateUpdate.history = activePage.history || [[]];
+            stateUpdate.historyIndex = activePage.historyIndex ?? 0;
+          }
+        }
+        useEditorStore.setState(stateUpdate);
+        useEditorStore.getState().pushHistory();
+      } else if (parsed && parsed.components && Array.isArray(parsed.components)) {
+        // version 1 format (object with components but no version)
+        const stateUpdate: Record<string, unknown> = {
+          components: parsed.components,
+          selectedId: null,
+        };
+        if (parsed.bootstrapTheme) stateUpdate.bootstrapTheme = parsed.bootstrapTheme;
+        if (parsed.customCSS !== undefined) stateUpdate.customCSS = parsed.customCSS;
+        useEditorStore.setState(stateUpdate);
+        useEditorStore.getState().pushHistory();
+      } else {
+        toast.error("Formato progetto non riconosciuto");
+        return;
       }
+      toast.success("Progetto caricato!");
     } catch {
       toast.error("Errore nel caricamento del progetto");
     }
   }, []);
 
   const handleExport = useCallback(() => {
-    const { components } = useEditorStore.getState();
-    const blob = new Blob([JSON.stringify(components, null, 2)], { type: "application/json" });
+    // Sync current page into pages array before exporting
+    useEditorStore.getState()._syncCurrentPage();
+    const { components, bootstrapTheme, pages, activePageId, customCSS } = useEditorStore.getState();
+    const project = {
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      components,
+      bootstrapTheme,
+      pages,
+      activePageId,
+      customCSS,
+    };
+    const blob = new Blob([JSON.stringify(project, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -824,28 +903,17 @@ export function Editor() {
     importInputRef.current?.click();
   }, []);
 
-  // Close template/project dropdown on outside click
+  // Close project dropdown on outside click
   React.useEffect(() => {
-    if (!templateOpen && !projectMenuOpen) return;
+    if (!projectMenuOpen) return;
     const handleClick = (e: MouseEvent) => {
-      if (templateOpen && templateRef.current && !templateRef.current.contains(e.target as Node)) {
-        setTemplateOpen(false);
-      }
       if (projectMenuOpen && projectMenuRef.current && !projectMenuRef.current.contains(e.target as Node)) {
         setProjectMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [templateOpen, projectMenuOpen]);
-
-  const handleLoadTemplate = useCallback((templateId: string) => {
-    const tpl = TEMPLATES.find((t) => t.id === templateId);
-    if (!tpl) return;
-    useEditorStore.getState().loadTemplate(tpl.components);
-    setTemplateOpen(false);
-    toast.success(`Template "${tpl.label}" caricato!`);
-  }, []);
+  }, [projectMenuOpen]);
 
   const handleImportFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -854,12 +922,87 @@ export function Editor() {
     reader.onload = (ev) => {
       try {
         const parsed = JSON.parse(ev.target?.result as string);
-        const success = useEditorStore.getState().importProject(parsed);
-        if (success) {
-          toast.success("Progetto importato!");
-        } else {
-          toast.error("File JSON non valido: formato non riconosciuto");
+        const store = useEditorStore.getState();
+
+        // Support both old format (array of components) and new format (object)
+        if (Array.isArray(parsed)) {
+          // Old format: just components array
+          const success = store.importProject(parsed);
+          if (success) {
+            toast.success("Progetto importato!");
+          } else {
+            toast.error("File JSON non valido: formato non riconosciuto");
+          }
+          return;
         }
+
+        // New format: object with version
+        if (!parsed.components || !Array.isArray(parsed.components)) {
+          toast.error("File JSON non valido: componenti non trovati");
+          return;
+        }
+
+        // Validate components array
+        const isValid = parsed.components.every(
+          (item: Record<string, unknown>) =>
+            typeof item === "object" &&
+            item !== null &&
+            typeof item.id === "string" &&
+            typeof item.type === "string" &&
+            typeof item.props === "object"
+        );
+        if (!isValid) {
+          toast.error("File JSON non valido: componenti corrotti");
+          return;
+        }
+
+        const stateUpdate: Record<string, unknown> = {
+          components: parsed.components,
+          selectedId: null,
+        };
+
+        // Apply theme if present
+        if (parsed.bootstrapTheme) {
+          stateUpdate.bootstrapTheme = parsed.bootstrapTheme;
+        }
+
+        // Apply custom CSS if present
+        if (parsed.customCSS !== undefined) {
+          stateUpdate.customCSS = parsed.customCSS;
+        }
+
+        // Apply pages if present
+        if (parsed.pages && parsed.activePageId) {
+          stateUpdate.pages = parsed.pages;
+          stateUpdate.activePageId = parsed.activePageId;
+          const activePage = parsed.pages.find((p: { id: string }) => p.id === parsed.activePageId);
+          if (activePage) {
+            stateUpdate.components = activePage.components;
+            stateUpdate.history = activePage.history || [[]];
+            stateUpdate.historyIndex = activePage.historyIndex ?? 0;
+          } else {
+            // Fallback: if activePageId doesn't match any page, use root components
+            // and update the first page to match
+            stateUpdate.history = [[]];
+            stateUpdate.historyIndex = 0;
+          }
+        } else {
+          // No pages in import: create a single page from root components
+          const importedComps = parsed.components;
+          const singlePage = {
+            id: `page-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            name: "Home",
+            components: importedComps,
+            history: [[]],
+            historyIndex: 0,
+          };
+          stateUpdate.pages = [singlePage];
+          stateUpdate.activePageId = singlePage.id;
+        }
+
+        useEditorStore.setState(stateUpdate);
+        useEditorStore.getState().pushHistory();
+        toast.success("Progetto importato!");
       } catch {
         toast.error("Errore nella lettura del file JSON");
       }
@@ -899,6 +1042,20 @@ export function Editor() {
       }
       if (e.key === "Escape") {
         useEditorStore.getState().selectComponent(null);
+        setShortcutsDialogOpen(false);
+        setCodeDialogOpen(false);
+        setPreviewDialogOpen(false);
+      }
+      // ?: Open shortcuts dialog
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
+        const target = e.target as HTMLElement;
+        if (
+          target.tagName !== "INPUT" &&
+          target.tagName !== "TEXTAREA" &&
+          target.tagName !== "SELECT"
+        ) {
+          setShortcutsDialogOpen(true);
+        }
       }
       // Ctrl+C: Copy component
       if (e.key === "c" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
@@ -932,6 +1089,11 @@ export function Editor() {
           }
         }
       }
+      // Ctrl+S: Save project
+      if (e.key === "s" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        e.preventDefault();
+        handleSave();
+      }
       // Ctrl+D: Duplicate component
       if (e.key === "d" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
         const { selectedId } = useEditorStore.getState();
@@ -945,6 +1107,27 @@ export function Editor() {
             e.preventDefault();
             useEditorStore.getState().duplicateComponent(selectedId);
             toast.success("Componente duplicato");
+          }
+        }
+      }
+      // Arrow Up/Down with Alt: Move component in tree
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        const { selectedId } = useEditorStore.getState();
+        if (selectedId) {
+          const target = e.target as HTMLElement;
+          if (
+            target.tagName !== "INPUT" &&
+            target.tagName !== "TEXTAREA" &&
+            target.tagName !== "SELECT"
+          ) {
+            if (e.key === "ArrowUp") {
+              e.preventDefault();
+              useEditorStore.getState().moveUp(selectedId);
+            }
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              useEditorStore.getState().moveDown(selectedId);
+            }
           }
         }
       }
@@ -1098,47 +1281,55 @@ export function Editor() {
                       <div className="text-[11px] text-muted-foreground leading-snug">Esporta come file JSON</div>
                     </div>
                   </button>
-                </div>
-              )}
-            </div>
-
-            <div className="w-px h-5 bg-border mx-1" />
-
-            <div className="relative" ref={templateRef}>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setTemplateOpen(!templateOpen)}
-                className="h-8 px-2.5 gap-1.5"
-                title="Template predefiniti"
-              >
-                <LayoutTemplate className="w-3.5 h-3.5" />
-                <span className="text-xs">Template</span>
-                <ChevronDown className={`w-3 h-3 transition-transform duration-150 ${templateOpen ? "rotate-180" : ""}`} />
-              </Button>
-              {templateOpen && (
-                <div className="absolute right-0 top-full mt-1 w-64 bg-popover border border-border rounded-lg shadow-lg z-50 py-1 overflow-hidden">
-                  <div className="px-3 py-1.5 border-b border-border">
-                    <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Template predefiniti</span>
+                  <div className="mx-3 my-1 border-t border-border" />
+                  <div className="px-3 py-1.5">
+                    <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Tema</span>
                   </div>
-                  {TEMPLATES.map((tpl) => {
-                    const IconComp = tpl.icon;
-                    return (
-                      <button
-                        key={tpl.id}
-                        onClick={() => handleLoadTemplate(tpl.id)}
-                        className="w-full flex items-start gap-2.5 px-3 py-2.5 text-left hover:bg-muted/80 transition-colors duration-100 cursor-pointer"
-                      >
-                        <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <IconComp className="w-4 h-4 text-primary" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium text-foreground truncate">{tpl.label}</div>
-                          <div className="text-[11px] text-muted-foreground leading-snug">{tpl.description}</div>
-                        </div>
-                      </button>
-                    );
-                  })}
+                  <button
+                    onClick={() => { setThemeDialogOpen(true); setProjectMenuOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/80 transition-colors duration-100 cursor-pointer"
+                  >
+                    <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                      <Palette className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-foreground">Theme Builder</div>
+                      <div className="text-[11px] text-muted-foreground leading-snug">Personalizza tema Bootstrap</div>
+                    </div>
+                  </button>
+                  <div className="mx-3 my-1 border-t border-border" />
+                  <div className="px-3 py-1.5">
+                    <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Pagine</span>
+                  </div>
+                  <button
+                    onClick={() => { addPage(); setProjectMenuOpen(false); toast.success("Nuova pagina creata"); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/80 transition-colors duration-100 cursor-pointer"
+                  >
+                    <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                      <Plus className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-foreground">Nuova pagina</div>
+                      <div className="text-[11px] text-muted-foreground leading-snug">Aggiungi una pagina al progetto</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (pages.length <= 1) return;
+                      deletePage(activePageId);
+                      setProjectMenuOpen(false);
+                    }}
+                    disabled={pages.length <= 1}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/80 transition-colors duration-100 cursor-pointer disabled:opacity-50 disabled:cursor-default"
+                  >
+                    <div className="w-7 h-7 rounded-md bg-destructive/10 flex items-center justify-center shrink-0">
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-foreground">Elimina pagina</div>
+                      <div className="text-[11px] text-muted-foreground leading-snug">Elimina la pagina corrente</div>
+                    </div>
+                  </button>
                 </div>
               )}
             </div>
@@ -1163,8 +1354,109 @@ export function Editor() {
             >
               <Trash2 className="w-4 h-4" />
             </Button>
+
+            <div className="w-px h-5 bg-border mx-1" />
+
+            {/* Dark Mode Toggle */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="h-8 w-8 p-0"
+              title={theme === "dark" ? "Modalità chiara" : "Modalità scura"}
+            >
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
+
+            {/* Shortcuts */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShortcutsDialogOpen(true)}
+              className="h-8 w-8 p-0"
+              title="Scorciatoie da tastiera"
+            >
+              <CircleHelp className="w-4 h-4" />
+            </Button>
           </div>
         </header>
+
+        {/* Page Tabs */}
+        <div className="border-b border-border bg-card flex items-center gap-0 px-2 h-9 shrink-0 overflow-x-auto">
+          {pages.map((page) => (
+            <div
+              key={page.id}
+              className={`group flex items-center gap-1 px-3 h-full text-xs font-medium cursor-pointer border-b-2 transition-colors shrink-0 ${
+                page.id === activePageId
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+              }`}
+              onClick={() => switchPage(page.id)}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                setRenamingPageId(page.id);
+                setRenamingPageName(page.name);
+              }}
+            >
+              {renamingPageId === page.id ? (
+                <input
+                  autoFocus
+                  value={renamingPageName}
+                  onChange={(e) => setRenamingPageName(e.target.value)}
+                  onBlur={() => {
+                    if (renamingPageName.trim()) {
+                      renamePage(page.id, renamingPageName.trim());
+                    }
+                    setRenamingPageId(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      if (renamingPageName.trim()) {
+                        renamePage(page.id, renamingPageName.trim());
+                      }
+                      setRenamingPageId(null);
+                    }
+                    if (e.key === "Escape") {
+                      setRenamingPageId(null);
+                    }
+                  }}
+                  className="w-20 h-5 text-xs bg-transparent border border-primary rounded px-1 outline-none"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <>
+                  <FileText className="w-3 h-3 shrink-0" />
+                  <span className="max-w-[120px] truncate">{page.name}</span>
+                </>
+              )}
+              {pages.length > 1 && renamingPageId !== page.id && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (pages.length <= 1) return;
+                    deletePage(page.id);
+                    toast.success(`Pagina "${page.name}" eliminata`);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-muted transition-all"
+                  title="Elimina pagina"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            onClick={() => {
+              addPage();
+              toast.success("Nuova pagina creata");
+            }}
+            className="flex items-center gap-1 px-2 h-full text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            title="Aggiungi pagina"
+          >
+            <Plus className="w-3 h-3" />
+            <span className="hidden sm:inline">Nuova</span>
+          </button>
+        </div>
 
         {/* Main Content — Resizable Sidebars */}
         <div className="flex-1 flex overflow-hidden">
@@ -1426,6 +1718,216 @@ export function Editor() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Keyboard Shortcuts Dialog */}
+      <Dialog open={shortcutsDialogOpen} onOpenChange={setShortcutsDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CircleHelp className="w-5 h-5" />
+              Scorciatoie da tastiera
+            </DialogTitle>
+            <DialogDescription>
+              Tutte le scorciatoie disponibili per velocizzare il tuo flusso di lavoro.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            {/* Modifica */}
+            <div>
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Modifica</p>
+              <div className="space-y-1.5">
+                {[
+                  { keys: "Ctrl + Z", desc: "Annulla" },
+                  { keys: "Ctrl + Y", desc: "Ripristina" },
+                  { keys: "Ctrl + Shift + Z", desc: "Ripristina (alternativo)" },
+                  { keys: "Ctrl + C", desc: "Copia componente selezionato" },
+                  { keys: "Ctrl + V", desc: "Incolla componente" },
+                  { keys: "Ctrl + D", desc: "Duplica componente selezionato" },
+                  { keys: "Delete / Backspace", desc: "Elimina componente selezionato" },
+                ].map((s) => (
+                  <div key={s.keys} className="flex items-center justify-between py-1 px-2 rounded hover:bg-muted/50">
+                    <span className="text-sm text-foreground">{s.desc}</span>
+                    <div className="flex items-center gap-1">
+                      {s.keys.split(" + ").map((k, i) => (
+                        <React.Fragment key={i}>
+                          {i > 0 && <span className="text-xs text-muted-foreground">+</span>}
+                          <kbd className="inline-flex items-center justify-center h-6 min-w-[28px] px-1.5 rounded bg-muted border border-border text-[11px] font-mono font-medium text-muted-foreground">
+                            {k.trim()}
+                          </kbd>
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Navigazione */}
+            <div>
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Navigazione</p>
+              <div className="space-y-1.5">
+                {[
+                  { keys: "Alt + ↑", desc: "Sposta componente su" },
+                  { keys: "Alt + ↓", desc: "Sposta componente giù" },
+                  { keys: "Escape", desc: "Deseleziona componente / Chiudi dialog" },
+                  { keys: "?", desc: "Apri scorciatoie da tastiera" },
+                ].map((s) => (
+                  <div key={s.keys} className="flex items-center justify-between py-1 px-2 rounded hover:bg-muted/50">
+                    <span className="text-sm text-foreground">{s.desc}</span>
+                    <div className="flex items-center gap-1">
+                      {s.keys.split(" + ").map((k, i) => (
+                        <React.Fragment key={i}>
+                          {i > 0 && <span className="text-xs text-muted-foreground">+</span>}
+                          <kbd className="inline-flex items-center justify-center h-6 min-w-[28px] px-1.5 rounded bg-muted border border-border text-[11px] font-mono font-medium text-muted-foreground">
+                            {k.trim()}
+                          </kbd>
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Progetto */}
+            <div>
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Progetto</p>
+              <div className="space-y-1.5">
+                {[
+                  { keys: "Ctrl + S", desc: "Salva progetto" },
+                ].map((s) => (
+                  <div key={s.keys} className="flex items-center justify-between py-1 px-2 rounded hover:bg-muted/50">
+                    <span className="text-sm text-foreground">{s.desc}</span>
+                    <div className="flex items-center gap-1">
+                      {s.keys.split(" + ").map((k, i) => (
+                        <React.Fragment key={i}>
+                          {i > 0 && <span className="text-xs text-muted-foreground">+</span>}
+                          <kbd className="inline-flex items-center justify-center h-6 min-w-[28px] px-1.5 rounded bg-muted border border-border text-[11px] font-mono font-medium text-muted-foreground">
+                            {k.trim()}
+                          </kbd>
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Theme Builder Dialog */}
+      <ThemeBuilderDialog
+        open={themeDialogOpen}
+        onOpenChange={setThemeDialogOpen}
+        theme={bootstrapTheme}
+        onUpdateTheme={updateTheme}
+        onResetTheme={resetTheme}
+      />
     </DndContext>
+  );
+}
+
+// ── Theme Builder Dialog Component ──
+function ThemeBuilderDialog({
+  open,
+  onOpenChange,
+  theme,
+  onUpdateTheme,
+  onResetTheme,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  theme: BootstrapTheme;
+  onUpdateTheme: (partial: Partial<BootstrapTheme>) => void;
+  onResetTheme: () => void;
+}) {
+  const colorFields: { key: keyof BootstrapTheme; label: string; desc: string }[] = [
+    { key: "primaryColor", label: "Primario", desc: "Pulsanti, link, active states" },
+    { key: "secondaryColor", label: "Secondario", desc: "Elementi secondari" },
+    { key: "successColor", label: "Successo", desc: "Messaggi di conferma" },
+    { key: "dangerColor", label: "Pericolo", desc: "Errori, eliminazioni" },
+    { key: "warningColor", label: "Avviso", desc: "Notifiche di attenzione" },
+    { key: "infoColor", label: "Info", desc: "Messaggi informativi" },
+    { key: "bodyBg", label: "Sfondo pagina", desc: "Colore di sfondo principale" },
+    { key: "bodyColor", label: "Testo", desc: "Colore del testo principale" },
+  ];
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Palette className="w-5 h-5" />
+            Personalizza Tema Bootstrap
+          </DialogTitle>
+          <DialogDescription>
+            Modifica i colori e lo stile del tema Bootstrap. Le modifiche si applicano in anteprima ed esportazione.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+          {/* Colors */}
+          <div>
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Colori</p>
+            <div className="space-y-2.5">
+              {colorFields.map((f) => (
+                <div key={f.key} className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={String(theme[f.key])}
+                    onChange={(e) => onUpdateTheme({ [f.key]: e.target.value })}
+                    className="w-8 h-8 rounded border border-input cursor-pointer shrink-0"
+                    tabIndex={-1}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-foreground">{f.label}</div>
+                    <div className="text-[10px] text-muted-foreground">{f.desc}</div>
+                  </div>
+                  <Input
+                    value={String(theme[f.key])}
+                    onChange={(e) => onUpdateTheme({ [f.key]: e.target.value })}
+                    className="h-7 w-24 text-[11px] font-mono text-center"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Typography & Style */}
+          <div>
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tipografia & Stile</p>
+            <div className="space-y-2.5">
+              <div className="space-y-1.5">
+                <div className="text-xs font-medium text-foreground">Font Family</div>
+                <Input
+                  value={theme.fontFamily}
+                  onChange={(e) => onUpdateTheme({ fontFamily: e.target.value })}
+                  className="h-8 text-xs font-mono"
+                  placeholder="system-ui, sans-serif"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <div className="text-xs font-medium text-foreground">Border Radius</div>
+                <Input
+                  value={theme.borderRadius}
+                  onChange={(e) => onUpdateTheme({ borderRadius: e.target.value })}
+                  className="h-8 text-xs font-mono w-32"
+                  placeholder="0.375rem"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end pt-2 border-t border-border">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onResetTheme}
+            className="gap-1.5"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Ripristina predefiniti
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
