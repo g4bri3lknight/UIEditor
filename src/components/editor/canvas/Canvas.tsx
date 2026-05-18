@@ -85,7 +85,8 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
   // ── Property picker state (for components with multiple editable props) ──
   const [propPicker, setPropPicker] = useState<PropPickerState | null>(null);
 
-  const { setNodeRef, isOver } = useDroppable({ id: "canvas-root" });
+  // PERF-2: Disable canvas root droppable when not dragging
+  const { setNodeRef, isOver } = useDroppable({ id: "canvas-root", disabled: !isDragging });
 
   const handleStartInlineEdit = useCallback(
     (id: string, propKey: string, rect: DOMRect, currentValue: string, multiline: boolean) => {
@@ -190,12 +191,16 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
             <EmptyCanvas isOver={isOver && isDragging} />
           ) : (
             <div className="space-y-0">
-              <DropIndicator
-                id="top-drop"
-                isActive={false}
-                isDragging={isDragging}
-                dropHint="Rilascia all'inizio"
-              />
+              {/* PERF-2: Only render top/bottom DropIndicators when dragging */}
+              {isDragging && (
+                <DropIndicator
+                  id="top-drop"
+                  isActive={false}
+                  isDragging={isDragging}
+                  dropHint="Rilascia all'inizio"
+                  disabled={!isDragging}
+                />
+              )}
 
               {components.map((comp, index) => (
                 <CanvasItem
@@ -211,12 +216,16 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
                 />
               ))}
 
-              <DropIndicator
-                id="bottom-drop"
-                isActive={false}
-                isDragging={isDragging}
-                dropHint="Rilascia alla fine"
-              />
+              {/* PERF-2: Only render bottom DropIndicator when dragging */}
+              {isDragging && (
+                <DropIndicator
+                  id="bottom-drop"
+                  isActive={false}
+                  isDragging={isDragging}
+                  dropHint="Rilascia alla fine"
+                  disabled={!isDragging}
+                />
+              )}
               {/* Extra spacer at bottom to ensure the drop zone has room */}
               {isDragging && <div className="h-4" />}
             </div>

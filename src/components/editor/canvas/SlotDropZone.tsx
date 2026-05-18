@@ -14,9 +14,11 @@ export function SlotDropZone({
   children: React.ReactNode;
   label: string;
 }) {
+  // PERF-2: Disable droppable when not dragging to reduce collision detection overhead
   const { setNodeRef, isOver } = useDroppable({
     id: slotId,
     data: { type: "slot-drop", slotId },
+    disabled: !isDragging,
   });
 
   const showHint = isOver && isDragging;

@@ -7,15 +7,20 @@ export function DropIndicator({
   isActive,
   isDragging = false,
   dropHint,
+  disabled = false,
 }: {
   id: string;
   isActive: boolean;
   isDragging?: boolean;
   dropHint?: string;
+  /** PERF-2: When true, the droppable is not registered with @dnd-kit.
+   *  This significantly reduces collision detection overhead during idle state. */
+  disabled?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id,
     data: { type: "drop-indicator" },
+    disabled,
   });
 
   const active = isOver || isActive;

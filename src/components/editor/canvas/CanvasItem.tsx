@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, memo } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import {
   ContextMenu,
@@ -52,32 +52,68 @@ interface CanvasItemProps {
   onShowPropPicker: (id: string, props: Array<{ key: string; label: string; multiline: boolean }>, rect: DOMRect) => void;
 }
 
-export function CanvasItem({
+/**
+ * PERF-3: Custom comparison for React.memo.
+ * Compares props by value where references may change on immutable tree updates.
+ * - component: compare by id + shallow props (references change on ancestor updates)
+ * - siblings: not used in rendering, skip comparison
+ * - other props: reference equality
+ */
+function areCanvasItemPropsEqual(prev: CanvasItemProps, next: CanvasItemProps): boolean {
+  // Quick checks for primitive props
+  if (
+    prev.index !== next.index ||
+    prev.parentId !== next.parentId ||
+    prev.isDragging !== next.isDragging ||
+    prev.depth !== next.depth ||
+    prev.onStartInlineEdit !== next.onStartInlineEdit ||
+    prev.onShowPropPicker !== next.onShowPropPicker
+  ) {
+    return false;
+  }
+
+  // Component comparison — references change on ancestor updates even if data is the same
+  const pc = prev.component;
+  const nc = next.component;
+  if (pc === nc) return true; // Same reference → definitely equal
+  if (pc.id !== nc.id || pc.type !== nc.type || pc.label !== nc.label || pc.slot !== nc.slot) return false;
+
+  // Shallow compare props object
+  const pp = pc.props;
+  const np = nc.props;
+  if (pp === np) return true;
+  const prevKeys = Object.keys(pp);
+  const nextKeys = Object.keys(np);
+  if (prevKeys.length !== nextKeys.length) return false;
+  for (const key of prevKeys) {
+    if (pp[key] !== np[key]) return false;
+  }
+
+  // Compare children reference — if children changed, parent must re-render to pass new data
+  if (pc.children !== nc.children) return false;
+
+  return true;
+}
+
+function CanvasItemInner({
   component,
   index,
-  siblings,
   parentId,
   isDragging,
   depth = 0,
   onStartInlineEdit,
   onShowPropPicker,
 }: CanvasItemProps) {
-  const {
-    selectedId,
-    selectComponent,
-    addComponent,
-    duplicateComponent,
-    copyComponent,
-    pasteComponent,
-    moveUp,
-    moveDown,
-    removeComponent,
-    clipboard,
-    hiddenComponents,
-  } = useEditorStore();
+  // ── PERF-3: Targeted store selectors ──
+  // Instead of subscribing to the entire store (which causes ALL CanvasItems to re-render
+  // on ANY store change), only subscribe to values that affect THIS specific component.
+  // - isSelected: only changes when this component's selection state changes
+  // - isHidden: only changes when this component's visibility changes
+  // - hasClipboard: changes when clipboard is set/cleared (infrequent, all items share this)
+  const isSelected = useEditorStore(s => s.selectedId === component.id);
+  const isHidden = useEditorStore(s => s.hiddenComponents.includes(component.id));
+  const hasClipboard = useEditorStore(s => s.clipboard !== null);
 
-  const isSelected = selectedId === component.id;
-  const isHidden = hiddenComponents.includes(component.id);
   const canContain = isContainer(component.type);
   const isSlotted = isSlottedType(component.type);
   const allChildren = component.children || [];
@@ -107,15 +143,14 @@ export function CanvasItem({
     disabled: managed,
   });
 
-  // ── Droppable (for container types) ──
-  // Disable for table and table-row so drops go directly to table-cell
+  // ── PERF-2: Droppable — disable when not dragging to reduce collision detection overhead ──
   const {
     setNodeRef: setDropRef,
     isOver: isContainerOver,
   } = useDroppable({
     id: `container-${component.id}`,
     data: { type: "container-drop", componentId: component.id },
-    disabled: !canContain || component.type === "table" || component.type === "table-row",
+    disabled: !canContain || component.type === "table" || component.type === "table-row" || !isDragging,
   });
 
   const dragStyle: React.CSSProperties = {
@@ -214,12 +249,15 @@ export function CanvasItem({
     }
   }
 
+  // ── PERF-3: Use store.getState() for actions in callbacks ──
+  // Actions are stable references in Zustand, but using getState() avoids
+  // subscribing to the store just for action references.
   const handleSelect = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      selectComponent(component.id);
+      useEditorStore.getState().selectComponent(component.id);
     },
-    [selectComponent, component.id]
+    [component.id]
   );
 
   // ── Inline text editing on double-click ──
@@ -257,29 +295,28 @@ export function CanvasItem({
   );
 
   const handleDuplicate = useCallback(() => {
-    duplicateComponent(component.id);
+    useEditorStore.getState().duplicateComponent(component.id);
     toast.success("Componente duplicato");
-  }, [duplicateComponent, component.id]);
+  }, [component.id]);
 
   const handleCopy = useCallback(() => {
-    copyComponent(component.id);
+    useEditorStore.getState().copyComponent(component.id);
     toast.success("Componente copiato");
-  }, [copyComponent, component.id]);
+  }, [component.id]);
 
   const handlePaste = useCallback(() => {
-    pasteComponent();
+    useEditorStore.getState().pasteComponent();
     toast.success("Componente incollato");
-  }, [pasteComponent]);
+  }, []);
 
   const handleRemove = useCallback(() => {
-    removeComponent(component.id);
+    useEditorStore.getState().removeComponent(component.id);
     toast.success("Componente eliminato");
-  }, [removeComponent, component.id]);
+  }, [component.id]);
 
   // Save as template
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [snippetName, setSnippetName] = useState("");
-  const { saveSnippet } = useEditorStore();
 
   const handleSaveAsTemplate = () => {
     setSnippetName(component.label);
@@ -287,31 +324,36 @@ export function CanvasItem({
   };
 
   const handleConfirmSave = () => {
-    saveSnippet(snippetName, [component.id]);
+    useEditorStore.getState().saveSnippet(snippetName, [component.id]);
     setSaveDialogOpen(false);
     toast.success("Template salvato!");
   };
 
   // Quick insert via context menu
   const handleQuickInsert = useCallback((type: string) => {
-    addComponent(type, component.id, undefined, isSlotted ? "body" : undefined);
+    useEditorStore.getState().addComponent(type, component.id, undefined, isSlotted ? "body" : undefined);
     toast.success(`${COMPONENTS.find(c => c.type === type)?.label || type} aggiunto`);
-  }, [addComponent, component.id, isSlotted]);
+  }, [component.id, isSlotted]);
 
   // Determine target for quick insert (container or column inside slotted types)
   const canInsertInto = canContain || managed;
 
   // ── Build children content (split by slot for slotted types) ──
+  // PERF-2: Only render DropIndicators when isDragging is true — this dramatically
+  // reduces the number of registered droppables during idle state.
   const renderSlotContent = useCallback((slotChildren: CanvasComponent[]) => {
     if (slotChildren.length === 0) return null;
     return (
       <>
         {slotChildren.map((child, i) => (
           <React.Fragment key={child.id}>
-            <DropIndicator
-              id={`before::${child.id}::${component.id}`}
-              isActive={false}
-            />
+            {isDragging && (
+              <DropIndicator
+                id={`before::${child.id}::${component.id}`}
+                isActive={false}
+                disabled={!isDragging}
+              />
+            )}
             <CanvasItem
               component={child}
               index={i}
@@ -322,16 +364,20 @@ export function CanvasItem({
               onStartInlineEdit={onStartInlineEdit}
               onShowPropPicker={onShowPropPicker}
             />
-            <DropIndicator
-              id={`after::${child.id}::${component.id}`}
-              isActive={false}
-            />
+            {isDragging && (
+              <DropIndicator
+                id={`after::${child.id}::${component.id}`}
+                isActive={false}
+                disabled={!isDragging}
+              />
+            )}
           </React.Fragment>
         ))}
         {isDragging && (
           <DropIndicator
             id={`bottom-slot-${component.id}-${slotChildren[0]?.slot || "body"}`}
             isActive={false}
+            disabled={!isDragging}
           />
         )}
       </>
@@ -430,10 +476,11 @@ export function CanvasItem({
       <>
         {allChildren.map((child, i) => (
           <React.Fragment key={child.id}>
-            {!skipDropIndicators && (
+            {isDragging && !skipDropIndicators && (
               <DropIndicator
                 id={`before::${child.id}::${component.id}`}
                 isActive={false}
+                disabled={!isDragging}
               />
             )}
             <CanvasItem
@@ -446,10 +493,11 @@ export function CanvasItem({
               onStartInlineEdit={onStartInlineEdit}
               onShowPropPicker={onShowPropPicker}
             />
-            {!skipDropIndicators && (
+            {isDragging && !skipDropIndicators && (
               <DropIndicator
                 id={`after::${child.id}::${component.id}`}
                 isActive={false}
+                disabled={!isDragging}
               />
             )}
           </React.Fragment>
@@ -460,6 +508,7 @@ export function CanvasItem({
             isActive={false}
             isDragging={isDragging}
             dropHint="Rilascia qui"
+            disabled={!isDragging}
           />
         )}
       </>
@@ -477,10 +526,11 @@ export function CanvasItem({
 
   return (
     <>
-      {showOuterDropIndicators && (
+      {showOuterDropIndicators && isDragging && (
         <DropIndicator
           id={parentId ? `before::${component.id}::${parentId}` : `before::${component.id}`}
           isActive={false}
+          disabled={!isDragging}
         />
       )}
 
@@ -569,7 +619,7 @@ export function CanvasItem({
               </ContextMenuSub>
               <ContextMenuSeparator />
               <ContextMenuItem
-                disabled={clipboard === null}
+                disabled={!hasClipboard}
                 onClick={handlePaste}
               >
                 <ClipboardPaste className="mr-2 h-4 w-4" />
@@ -588,7 +638,7 @@ export function CanvasItem({
               </ContextMenuItem>
               <ContextMenuSeparator />
               <ContextMenuItem
-                disabled={clipboard === null}
+                disabled={!hasClipboard}
                 onClick={handleRemove}
                 className="text-destructive focus:text-destructive"
               >
@@ -607,9 +657,14 @@ export function CanvasItem({
               ...dragStyle,
               ...(isHidden && !isDragging && !(isContainerOver && isDragging) && !isSelected ? { opacity: 0.3 } : {}),
               borderRadius: "8px",
+              // PERF-1: content-visibility auto — lets the browser skip paint/layout
+              // for off-screen components. contain-intrinsic-size provides a fallback
+              // height estimate so scroll position doesn't jump.
+              contentVisibility: "auto" as React.CSSProperties["contentVisibility"],
+              containIntrinsicSize: "auto 80px",
             }}
             className={`relative group/canvas-item transition-all duration-150 ${
-              isDragging && selectedId === component.id
+              isDragging && isSelected
                 ? "opacity-30 ring-2 ring-primary/40 rounded-lg"
                 : isContainerOver && isDragging
                   ? "ring-2 ring-primary/40 bg-primary/5 rounded-lg"
@@ -718,7 +773,7 @@ export function CanvasItem({
             <span className="ml-auto text-xs text-muted-foreground">Ctrl+C</span>
           </ContextMenuItem>
           <ContextMenuItem
-            disabled={clipboard === null}
+            disabled={!hasClipboard}
             onClick={handlePaste}
           >
             <ClipboardPaste className="mr-2 h-4 w-4" />
@@ -734,14 +789,14 @@ export function CanvasItem({
           <ContextMenuSeparator />
           <ContextMenuItem
             disabled={managed}
-            onClick={() => moveUp(component.id)}
+            onClick={() => useEditorStore.getState().moveUp(component.id)}
           >
             <ArrowUp className="mr-2 h-4 w-4" />
             Sposta su
           </ContextMenuItem>
           <ContextMenuItem
             disabled={managed}
-            onClick={() => moveDown(component.id)}
+            onClick={() => useEditorStore.getState().moveDown(component.id)}
           >
             <ArrowDown className="mr-2 h-4 w-4" />
             Sposta giù
@@ -800,12 +855,17 @@ export function CanvasItem({
         </DialogContent>
       </Dialog>
 
-      {showOuterDropIndicators && (
+      {showOuterDropIndicators && isDragging && (
         <DropIndicator
           id={parentId ? `after::${component.id}::${parentId}` : `after::${component.id}`}
           isActive={false}
+          disabled={!isDragging}
         />
       )}
     </>
   );
 }
+
+// PERF-3: Wrap with React.memo and custom comparison to prevent cascade re-renders.
+// Only re-renders when this specific component's props or state actually changed.
+export const CanvasItem = memo(CanvasItemInner, areCanvasItemPropsEqual);
