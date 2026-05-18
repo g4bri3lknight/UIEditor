@@ -22,7 +22,7 @@ export interface CanvasComponent {
   type: string;
   label: string;
   props: Record<string, string | boolean | number>;
-  slot?: "header" | "body" | "footer"; // Slot assignment for slotted components (card, modal, offcanvas)
+  slot?: string; // Slot assignment for slotted components (card, modal, offcanvas, tab-content, accordion)
   children?: CanvasComponent[];
 }
 

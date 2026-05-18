@@ -85,19 +85,19 @@ function wrap(
   return `<${tag}${clsAttr}${extra}>\n${content}\n</${tag}>`;
 }
 
-function generateChildrenHTML(component: CanvasComponent, indentLevel: number = 0, hiddenComponents?: Set<string>): string {
+function generateChildrenHTML(component: CanvasComponent, indentLevel: number = 0, hiddenComponents?: string[]): string {
   if (!component.children || component.children.length === 0) return "";
   return component.children
     .map((child) => generateComponentHTML(child, indentLevel, hiddenComponents))
     .join("\n");
 }
 
-function generateComponentHTML(component: CanvasComponent, indentLevel: number = 0, hiddenComponents?: Set<string>): string {
+function generateComponentHTML(component: CanvasComponent, indentLevel: number = 0, hiddenComponents?: string[]): string {
   const { type, props, children } = component;
   const p = props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "").trim();
   const customId = String(p.customId || "").trim();
-  const isHidden = hiddenComponents?.has(component.id);
+  const isHidden = hiddenComponents?.includes(component.id);
 
   // Build extra attrs for customId (id attr handled via wrapExtraAttrs)
   const wrapExtraAttrs: Record<string, string> = {};
@@ -281,8 +281,9 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       const inputModeAttr = isCurrency ? " inputmode=\"decimal\"" : "";
 
       if (p.floating) {
-        let html = indent(`<label for="floating${indentLevel}" class="form-label">${label}</label>`, indentLevel + 1);
-        html = indent(`<input type="${htmlInputType}" class="form-control" id="floating${indentLevel}" placeholder="${p.placeholder || ""}"${inputModeAttr} ${finalExtras}>`) + "\n" + html;
+        const inputUid = `input-${component.id}`;
+        let html = indent(`<label for="${inputUid}" class="form-label">${label}</label>`, indentLevel + 1);
+        html = indent(`<input type="${htmlInputType}" class="form-control" id="${inputUid}" placeholder="${p.placeholder || ""}"${inputModeAttr} ${finalExtras}>`) + "\n" + html;
         html = indent(wrap("div", "form-floating mb-3", html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
         return html;
       }
@@ -291,14 +292,14 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
 
       let html = "";
       if (label) {
-        html += indent(`<label for="input${indentLevel}" class="form-label">${label}</label>\n`, indentLevel);
+        html += indent(`<label for="input-${component.id}" class="form-label">${label}</label>\n`, indentLevel);
       }
       html += indent(
-        `<input type="${htmlInputType}" class="${inputCls}${validationClass}" id="input${indentLevel}" placeholder="${p.placeholder || ""}"${inputModeAttr} ${finalExtras}>\n`,
+        `<input type="${htmlInputType}" class="${inputCls}${validationClass}" id="input-${component.id}" placeholder="${p.placeholder || ""}"${inputModeAttr} ${finalExtras}>\n`,
         indentLevel
       );
       if (p.helpText) {
-        html += indent(`<div id="help${indentLevel}" class="form-text">${p.helpText}</div>\n`, indentLevel);
+        html += indent(`<div id="help-${component.id}" class="form-text">${p.helpText}</div>\n`, indentLevel);
       }
       if (p.validation && p.validation !== "none") {
         html += indent(`<div class="${p.validation === "valid" ? "valid-feedback" : "invalid-feedback"}">${p.feedbackMessage || (p.validation === "valid" ? "Looks good!" : "Please correct this field.")}</div>\n`, indentLevel);
@@ -315,10 +316,10 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
 
       let html = "";
       if (p.label) {
-        html += indent(`<label for="ta${indentLevel}" class="form-label">${p.label}</label>\n`, indentLevel);
+        html += indent(`<label for="ta-${component.id}" class="form-label">${p.label}</label>\n`, indentLevel);
       }
       html += indent(
-        `<textarea class="${sizeCls}${validationClass}" id="ta${indentLevel}" rows="${p.rows || 3}" placeholder="${p.placeholder || ""}" ${extras.join(" ")}>${String(p.text || "")}</textarea>\n`,
+        `<textarea class="${sizeCls}${validationClass}" id="ta-${component.id}" rows="${p.rows || 3}" placeholder="${p.placeholder || ""}" ${extras.join(" ")}>${String(p.text || "")}</textarea>\n`,
         indentLevel
       );
       if (p.helpText) {
@@ -346,9 +347,9 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
 
       let html = "";
       if (p.label) {
-        html += indent(`<label for="sel${indentLevel}" class="form-label">${p.label}</label>\n`, indentLevel);
+        html += indent(`<label for="sel-${component.id}" class="form-label">${p.label}</label>\n`, indentLevel);
       }
-      html += indent(`<select class="${sizeCls}${validationClass}" id="sel${indentLevel}" ${extras.join(" ")}>\n${options}\n</select>`, indentLevel);
+      html += indent(`<select class="${sizeCls}${validationClass}" id="sel-${component.id}" ${extras.join(" ")}>\n${options}\n</select>`, indentLevel);
       if (p.validation && p.validation !== "none") {
         html += indent(`<div class="${p.validation === "valid" ? "valid-feedback" : "invalid-feedback"}">${p.feedbackMessage || (p.validation === "valid" ? "Looks good!" : "Please correct this field.")}</div>\n`, indentLevel);
       }
@@ -364,8 +365,8 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.checked) inputAttrs.push("checked");
       if (p.disabled) inputAttrs.push("disabled");
 
-      const html = indent(`<input class="form-check-input" type="checkbox" id="chk${indentLevel}" ${inputAttrs.join(" ")}>\n` +
-        indent(`<label class="form-check-label" for="chk${indentLevel}">${p.label}</label>`, indentLevel + 1), indentLevel);
+      const html = indent(`<input class="form-check-input" type="checkbox" id="chk-${component.id}" ${inputAttrs.join(" ")}>\n` +
+        indent(`<label class="form-check-label" for="chk-${component.id}">${p.label}</label>`, indentLevel + 1), indentLevel);
       return indent(wrap("div", cls, html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
@@ -377,14 +378,14 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.checked) inputAttrs.push("checked");
       if (p.disabled) inputAttrs.push("disabled");
 
-      const html = indent(`<input class="form-check-input" type="radio" name="${p.name}" id="rad${indentLevel}" ${inputAttrs.join(" ")}>\n` +
-        indent(`<label class="form-check-label" for="rad${indentLevel}">${p.label}</label>`, indentLevel + 1), indentLevel);
+      const html = indent(`<input class="form-check-input" type="radio" name="${p.name}" id="rad-${component.id}" ${inputAttrs.join(" ")}>\n` +
+        indent(`<label class="form-check-label" for="rad-${component.id}">${p.label}</label>`, indentLevel + 1), indentLevel);
       return indent(wrap("div", cls, html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     case "range": {
-      const html = indent(`<label for="range${indentLevel}" class="form-label">${p.label}</label>\n` +
-        indent(`<input type="range" class="form-range" id="range${indentLevel}" min="${p.min}" max="${p.max}" step="${p.step}" value="${p.defaultValue}" ${p.disabled ? "disabled" : ""}>`, indentLevel), indentLevel);
+      const html = indent(`<label for="range-${component.id}" class="form-label">${p.label}</label>\n` +
+        indent(`<input type="range" class="form-range" id="range-${component.id}" min="${p.min}" max="${p.max}" step="${p.step}" value="${p.defaultValue}" ${p.disabled ? "disabled" : ""}>`, indentLevel), indentLevel);
       return indent(wrap("div", "", html.trimEnd(), wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
@@ -392,8 +393,8 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       let cls = "form-check form-switch";
       if (p.reverse) cls += " form-check-reverse";
 
-      const html = indent(`<input class="form-check-input" type="checkbox" role="switch" id="sw${indentLevel}" ${p.checked ? "checked" : ""} ${p.disabled ? "disabled" : ""}>\n` +
-        indent(`<label class="form-check-label" for="sw${indentLevel}">${p.label}</label>`, indentLevel + 1), indentLevel);
+      const html = indent(`<input class="form-check-input" type="checkbox" role="switch" id="sw-${component.id}" ${p.checked ? "checked" : ""} ${p.disabled ? "disabled" : ""}>\n` +
+        indent(`<label class="form-check-label" for="sw-${component.id}">${p.label}</label>`, indentLevel + 1), indentLevel);
       return indent(wrap("div", cls, html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
@@ -402,9 +403,9 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
 
       let html = "";
       if (p.label) {
-        html += indent(`<label for="file${indentLevel}" class="form-label">${p.label}</label>\n`, indentLevel);
+        html += indent(`<label for="file-${component.id}" class="form-label">${p.label}</label>\n`, indentLevel);
       }
-      html += indent(`<input class="${sizeCls}" type="file" id="file${indentLevel}" ${p.disabled ? "disabled" : ""}>\n`, indentLevel);
+      html += indent(`<input class="${sizeCls}" type="file" id="file-${component.id}" ${p.disabled ? "disabled" : ""}>\n`, indentLevel);
       if (p.helpText) {
         html += indent(`<div class="form-text">${p.helpText}</div>\n`, indentLevel);
       }
@@ -702,6 +703,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
     }
 
     case "accordion": {
+      const accordionId = customId || `accordion-${component.id}`;
       const children = component.children || [];
       const hasChildren = children && children.length > 0;
       const rawItems = ((p.items as string) || "")
@@ -752,7 +754,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
             wrap("div", `accordion-collapse collapse${show}`, indent(wrap("div", "accordion-body", bodyContent), indentLevel + 3), {
               id: collapseId,
               "aria-labelledby": headerId,
-              "data-bs-parent": "#accordionExample",
+              "data-bs-parent": `#${accordionId}`,
             }),
             indentLevel + 1
           );
@@ -760,7 +762,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         })
         .join("\n");
 
-      return indent(wrap("div", `accordion${flushCls}`, accordionItems, { id: "accordionExample", ...wrapExtraAttrs }, false, customClass, isHidden), indentLevel);
+      return indent(wrap("div", `accordion${flushCls}`, accordionItems, { id: accordionId, ...wrapExtraAttrs }, false, customClass, isHidden), indentLevel);
     }
 
     case "spinner": {
@@ -837,6 +839,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
     }
 
     case "carousel": {
+      const carouselId = customId || `carousel-${component.id}`;
       const slides = ((p.slides as string) || "")
         .split("\n")
         .filter(Boolean);
@@ -857,7 +860,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.indicators) {
         html += indent(wrap("div", "carousel-indicators",
           slides.map((_, i) =>
-            indent(`<button type="button" data-bs-target="#carouselExample" data-bs-slide-to="${i}"${i === 0 ? ' class="active" aria-current="true"' : ""} aria-label="Slide ${i + 1}"></button>`, indentLevel + 2)
+            indent(`<button type="button" data-bs-target="#${carouselId}" data-bs-slide-to="${i}"${i === 0 ? ' class="active" aria-current="true"' : ""} aria-label="Slide ${i + 1}"></button>`, indentLevel + 2)
           ).join("\n")
         ), indentLevel + 1) + "\n";
       }
@@ -865,17 +868,17 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       html += indent(wrap("div", "carousel-inner", slideItems), indentLevel + 1) + "\n";
 
       if (p.controls) {
-        html += indent('<button class="carousel-control-prev" type="button" data-bs-target="#carouselExample" data-bs-slide="prev">\n' +
+        html += indent(`<button class="carousel-control-prev" type="button" data-bs-target="#${carouselId}" data-bs-slide="prev">\n` +
           indent('<span class="carousel-control-prev-icon" aria-hidden="true"></span>\n' +
             '<span class="visually-hidden">Previous</span>', indentLevel + 2) + "\n" +
           indent("</button>", indentLevel + 1), indentLevel + 1) + "\n";
-        html += indent('<button class="carousel-control-next" type="button" data-bs-target="#carouselExample" data-bs-slide="next">\n' +
+        html += indent(`<button class="carousel-control-next" type="button" data-bs-target="#${carouselId}" data-bs-slide="next">\n` +
           indent('<span class="carousel-control-next-icon" aria-hidden="true"></span>\n' +
             '<span class="visually-hidden">Next</span>', indentLevel + 2) + "\n" +
           indent("</button>", indentLevel + 1), indentLevel + 1);
       }
 
-      return indent(wrap("div", `carousel slide${p.dark ? " carousel-dark" : ""}`, html, { id: "carouselExample", "data-bs-ride": p.autoplay ? "carousel" : "false", ...wrapExtraAttrs }, false, customClass, isHidden), indentLevel);
+      return indent(wrap("div", `carousel slide${p.dark ? " carousel-dark" : ""}`, html, { id: carouselId, "data-bs-ride": p.autoplay ? "carousel" : "false", ...wrapExtraAttrs }, false, customClass, isHidden), indentLevel);
     }
 
     case "modal": {
@@ -1250,7 +1253,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       const hasChildren = children && children.length > 0;
       const variant = String(p.variant || "");
       const isShown = !!p.show;
-      const collapseId = customId || `collapse${indentLevel}`;
+      const collapseId = customId || `collapse-${component.id}`;
 
       let btnCls = "btn";
       if (variant) btnCls += ` btn-${variant}`;
@@ -1442,7 +1445,7 @@ function generateThemeCSS(theme: BootstrapTheme): string {
   `;
 }
 
-export function generateFullHTML(components: CanvasComponent[], hiddenComponents?: Set<string>, customCSS?: string, theme?: BootstrapTheme): string {
+export function generateFullHTML(components: CanvasComponent[], hiddenComponents?: string[], customCSS?: string, theme?: BootstrapTheme): string {
   if (components.length === 0) return "";
 
   const body = components

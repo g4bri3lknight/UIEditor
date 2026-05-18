@@ -168,7 +168,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
 
   const managed = selectedComponent ? isAutoManaged(selectedComponent.type) : false;
 
-  const isHidden = selectedComponent ? hiddenComponents.has(selectedComponent.id) : false;
+  const isHidden = selectedComponent ? hiddenComponents.includes(selectedComponent.id) : false;
 
   if (!selectedComponent || !componentDef) {
     return (

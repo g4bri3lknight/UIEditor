@@ -249,7 +249,7 @@ interface EditorState {
   history: CanvasComponent[][];
   historyIndex: number;
   clipboard: CanvasComponent | null;
-  hiddenComponents: Set<string>;
+  hiddenComponents: string[];
   customCSS: string;
   setCustomCSS: (css: string) => void;
 
@@ -293,7 +293,10 @@ interface EditorState {
 
   // ── Saved Snippets (reusable templates) ──
   savedSnippets: SavedSnippet[];
+  _schemaVersion: number;
   _hydrated: boolean;
+  _lastSavedAt: number | null;
+  _isDirty: boolean;
   saveSnippet: (name: string, componentIds: string[], category?: string) => void;
   deleteSnippet: (id: string) => void;
   renameSnippet: (id: string, newName: string) => void;
@@ -306,6 +309,52 @@ interface EditorState {
 // ── History size limit ──
 const MAX_HISTORY = 100;
 
+// ── Schema version for persistence migrations ──
+// Increment this when the persisted state shape changes.
+// Add a corresponding migration in `runMigrations` below.
+const SCHEMA_VERSION = 3;
+
+type PersistedState = Record<string, any>;
+
+/**
+ * Run migrations on persisted state to bring it up to the current schema.
+ * Each migration function receives the state and returns the migrated state.
+ */
+function runMigrations(state: PersistedState): PersistedState {
+  const version = state._schemaVersion ?? 1;
+
+  // v1 → v2: hiddenComponents was a Set<string> (not JSON-serializable).
+  // If it's stored as an object (from Set), convert to array.
+  if (version < 2) {
+    if (state.hiddenComponents && !Array.isArray(state.hiddenComponents)) {
+      try {
+        // A serialized Set becomes an object like { "0": "id1", "1": "id2" } or null
+        state.hiddenComponents = Object.values(state.hiddenComponents);
+      } catch {
+        state.hiddenComponents = [];
+      }
+    }
+    if (!Array.isArray(state.hiddenComponents)) {
+      state.hiddenComponents = [];
+    }
+  }
+
+  // v2 → v3: Ensure savedSnippets have category and components fields.
+  if (version < 3) {
+    if (Array.isArray(state.savedSnippets)) {
+      state.savedSnippets = state.savedSnippets.map((s: PersistedState) => ({
+        ...s,
+        category: s.category || "Generale",
+        components: Array.isArray(s.components) ? s.components : [],
+      }));
+    }
+  }
+
+  // Mark as migrated
+  state._schemaVersion = SCHEMA_VERSION;
+  return state;
+}
+
 // ── Store ──
 export const useEditorStore = create<EditorState>()(
   persist(
@@ -315,7 +364,7 @@ export const useEditorStore = create<EditorState>()(
   history: [[]],
   historyIndex: 0,
   clipboard: null,
-  hiddenComponents: new Set<string>(),
+  hiddenComponents: [],
   customCSS: "",
   setCustomCSS: (css) => set({ customCSS: css }),
 
@@ -428,16 +477,19 @@ export const useEditorStore = create<EditorState>()(
 
   // ── Saved Snippets ──
   savedSnippets: [],
+  _schemaVersion: SCHEMA_VERSION,
   _hydrated: false,
+  _lastSavedAt: null,
+  _isDirty: false,
 
   pushHistory: () => {
     set(s => {
-      const snapshot = JSON.parse(JSON.stringify(s.components)) as CanvasComponent[];
+      const snapshot = structuredClone(s.components) as CanvasComponent[];
       const newHistory = s.history.slice(0, s.historyIndex + 1);
       newHistory.push(snapshot);
       if (newHistory.length > MAX_HISTORY) newHistory.shift();
       const newIdx = newHistory.length - 1;
-      return { history: newHistory, historyIndex: newIdx };
+      return { history: newHistory, historyIndex: newIdx, _isDirty: true };
     });
   },
 
@@ -451,7 +503,7 @@ export const useEditorStore = create<EditorState>()(
       label: def.label,
       props: {},
       children: undefined,
-      slot: slot ? (slot as "header" | "body" | "footer") : undefined,
+      slot: slot || undefined,
     };
 
     // Initialize default props
@@ -541,7 +593,7 @@ export const useEditorStore = create<EditorState>()(
     clone.children = comp.children;
     // Update slot if specified (e.g. moving to a different tab pane)
     if (slot !== undefined) {
-      clone.slot = slot as CanvasComponent["slot"];
+      clone.slot = slot;
     }
 
     set(s => {
@@ -616,7 +668,7 @@ export const useEditorStore = create<EditorState>()(
     set(s => {
       if (s.historyIndex <= 0) return s;
       const newIdx = s.historyIndex - 1;
-      return { components: JSON.parse(JSON.stringify(s.history[newIdx])), historyIndex: newIdx };
+      return { components: structuredClone(s.history[newIdx]), historyIndex: newIdx };
     });
   },
 
@@ -624,7 +676,7 @@ export const useEditorStore = create<EditorState>()(
     set(s => {
       if (s.historyIndex >= s.history.length - 1) return s;
       const newIdx = s.historyIndex + 1;
-      return { components: JSON.parse(JSON.stringify(s.history[newIdx])), historyIndex: newIdx };
+      return { components: structuredClone(s.history[newIdx]), historyIndex: newIdx };
     });
   },
 
@@ -710,13 +762,12 @@ export const useEditorStore = create<EditorState>()(
 
   toggleComponentVisibility: (id) => {
     set(s => {
-      const next = new Set(s.hiddenComponents);
-      if (next.has(id)) {
-        next.delete(id);
+      const arr = s.hiddenComponents;
+      if (arr.includes(id)) {
+        return { hiddenComponents: arr.filter(x => x !== id) };
       } else {
-        next.add(id);
+        return { hiddenComponents: [...arr, id] };
       }
-      return { hiddenComponents: next };
     });
   },
 
@@ -825,10 +876,16 @@ export const useEditorStore = create<EditorState>()(
         components: state.components,
         history: state.history,
         historyIndex: state.historyIndex,
+        hiddenComponents: state.hiddenComponents,
+        customCSS: state.customCSS,
+        _schemaVersion: state._schemaVersion,
       }),
       onRehydrateStorage: () => (state) => {
         try {
           if (state) {
+            // Run schema migrations on the persisted state
+            runMigrations(state as unknown as PersistedState);
+
             // If pages exist from persistence, load the active page's data
             if (state.pages?.length > 0 && state.activePageId) {
               const activePage = state.pages.find(p => p.id === state.activePageId);
@@ -852,6 +909,9 @@ export const useEditorStore = create<EditorState>()(
               state.pages = [defaultPage];
               state.activePageId = defaultPage.id;
             }
+            // Mark as freshly loaded (not dirty)
+            state._isDirty = false;
+            state._lastSavedAt = Date.now();
           }
         } catch (err) {
           console.error("[editor-store] Rehydration error:", err);
@@ -865,3 +925,18 @@ export const useEditorStore = create<EditorState>()(
     }
   )
 );
+
+// ── Auto-save indicator: mark as saved after persist writes ──
+// The persist middleware writes to localStorage asynchronously.
+// We subscribe to changes and, after a short debounce, mark the store as saved.
+let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+useEditorStore.subscribe((state, prevState) => {
+  // Only react to dirty changes (skip selection-only changes)
+  if (state._isDirty && !prevState._isDirty) {
+    // The persist middleware will auto-save; after it writes, mark as saved
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+      useEditorStore.setState({ _isDirty: false, _lastSavedAt: Date.now() });
+    }, 600);
+  }
+});
