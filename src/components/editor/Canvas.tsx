@@ -1255,8 +1255,13 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
               width: Math.max(inlineEdit.rect.width, 200),
               zIndex: 9999,
             }}
-            onMouseDown={(e) => e.preventDefault()}
-          >
+            onMouseDown={(e) => {
+              // Only prevent default on the wrapper — let the input/textarea
+              // handle mouse events normally so the user can reposition the cursor
+              if (e.target === e.currentTarget) {
+                e.preventDefault();
+              }
+            }}>
             {inlineEdit.multiline ? (
               <textarea
                 ref={editInputRef as React.RefObject<HTMLTextAreaElement>}
@@ -1348,7 +1353,12 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
           >
             <div
               className="bg-popover border border-border rounded-lg shadow-lg py-1 min-w-[160px] animate-in fade-in-0 zoom-in-95 duration-100"
-              onMouseDown={(e) => e.preventDefault()}
+              onMouseDown={(e) => {
+                // Let interactive children (buttons, inputs) handle mouse normally
+                if (e.target === e.currentTarget) {
+                  e.preventDefault();
+                }
+              }}
             >
               <div className="px-2.5 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50 mb-0.5">
                 Modifica proprietà
