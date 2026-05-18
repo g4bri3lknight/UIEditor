@@ -382,15 +382,18 @@ export function Editor() {
 
       const captureWidth = previewSizeRef.current.w;
 
-      // Create a temporary off-screen iframe sized to the full content
+      // Create a temporary off-screen iframe
       tempIframe = document.createElement("iframe");
       tempIframe.style.position = "fixed";
       tempIframe.style.left = "-99999px";
       tempIframe.style.top = "0";
       tempIframe.style.width = `${captureWidth}px`;
-      tempIframe.style.height = "8000px";
+      // Start with a minimal height — we'll measure the real content after render
+      tempIframe.style.height = "100px";
       tempIframe.style.border = "none";
       tempIframe.style.background = "white";
+      // Prevent scrollbars from affecting layout
+      tempIframe.style.overflow = "hidden";
       document.body.appendChild(tempIframe);
 
       // Load the HTML content
@@ -410,25 +413,63 @@ export function Editor() {
         throw new Error("Impossibile accedere al contenuto dell'iframe temporaneo");
       }
 
-      // Measure the actual full content size
-      const fullWidth = Math.max(tempBody.scrollWidth, tempHtml.scrollWidth, captureWidth);
-      const fullHeight = Math.max(tempBody.scrollHeight, tempHtml.scrollHeight);
+      // ── Calculate the actual content height ──
+      // We can't trust scrollHeight on a fixed-height iframe because the body
+      // expands to fill it. Instead, find the bottom edge of the last visible
+      // child element to determine the real content height.
+      const measureContentHeight = (): number => {
+        // Reset iframe to auto height temporarily so the body shrinks to content
+        tempIframe!.style.height = "auto";
+        tempIframe!.style.overflow = "visible";
 
-      // Resize iframe to exactly match the content so nothing is clipped
-      tempIframe.style.width = `${fullWidth}px`;
-      tempIframe.style.height = `${fullHeight + 20}px`;
+        // Use scrollHeight now that the iframe is auto-sized
+        const bodyH = tempBody!.scrollHeight;
+        const htmlH = tempHtml!.scrollHeight;
+
+        // Also check via last child's bounding rect as a cross-check
+        let lastChildBottom = 0;
+        const children = tempBody!.children;
+        if (children.length > 0) {
+          const lastChild = children[children.length - 1];
+          const rect = lastChild.getBoundingClientRect();
+          const bodyRect = tempBody!.getBoundingClientRect();
+          lastChildBottom = rect.bottom - bodyRect.top;
+        }
+
+        // Use the largest measurement to avoid clipping
+        return Math.max(bodyH, htmlH, lastChildBottom);
+      };
+
+      const fullHeight = measureContentHeight();
+      const fullWidth = Math.max(tempBody.scrollWidth, tempHtml.scrollWidth, captureWidth);
+
+      // Ensure minimum sensible dimensions
+      const finalHeight = Math.max(fullHeight, 50);
+      const finalWidth = Math.max(fullWidth, 200);
+
+      // Set exact dimensions for capture
+      tempIframe.style.width = `${finalWidth}px`;
+      tempIframe.style.height = `${finalHeight + 4}px`;
+      tempIframe.style.overflow = "hidden";
 
       // Wait for re-layout after resize
-      await new Promise((r) => setTimeout(r, 300));
+      await new Promise((r) => setTimeout(r, 200));
+
+      // Re-measure after resize to catch any reflow changes
+      tempIframe.style.height = "auto";
+      tempIframe.style.overflow = "visible";
+      await new Promise((r) => setTimeout(r, 100));
+      const adjustedHeight = Math.max(tempBody.scrollHeight, tempHtml.scrollHeight, finalHeight);
+      tempIframe.style.height = `${adjustedHeight + 4}px`;
+      tempIframe.style.overflow = "hidden";
+
+      await new Promise((r) => setTimeout(r, 100));
 
       // Use modern-screenshot to capture the full iframe body
-      // Unlike html2canvas, modern-screenshot uses SVG foreignObject which
-      // preserves the real browser rendering — text, form controls, tables,
-      // and all CSS are pixel-perfect.
       const dataUrl = await domToPng(tempBody, {
         scale: 2,
-        width: fullWidth,
-        height: fullHeight,
+        width: finalWidth,
+        height: adjustedHeight + 4,
         backgroundColor: "#ffffff",
         fetchOptions: {
           requestInit: {
