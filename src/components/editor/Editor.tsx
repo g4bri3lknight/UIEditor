@@ -167,7 +167,9 @@ export function Editor() {
             target.tagName !== "SELECT"
           ) {
             e.preventDefault();
+            const comp = useEditorStore.getState().findComponent(selectedId);
             removeComponent(selectedId);
+            if (comp) toast.success(`${comp.label} eliminato`);
           }
         }
       }
@@ -345,8 +347,9 @@ export function Editor() {
               shadow-2xl lg:shadow-none
               h-full
             `}
+            style={{ width: leftSidebar.width }}
           >
-            <LeftSidebar width={280} />
+            <LeftSidebar width={leftSidebar.width} />
             {/* Close button on mobile */}
             <button
               className="lg:hidden absolute top-3 right-3 p-1.5 rounded-md bg-muted/80 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors z-10"
@@ -369,8 +372,8 @@ export function Editor() {
           )}
 
           {/* Left resize handle — desktop only */}
-          <div className="hidden lg:block shrink-0">
-            <ResizeHandle onPointerDown={leftSidebar.startResize} side="left" />
+          <div className="hidden lg:flex shrink-0 h-full">
+            <ResizeHandle onMouseDown={leftSidebar.startResize} side="left" />
           </div>
 
           {/* Canvas */}
@@ -383,8 +386,8 @@ export function Editor() {
           />
 
           {/* Right resize handle — desktop only */}
-          <div className="hidden lg:block shrink-0">
-            <ResizeHandle onPointerDown={rightSidebar.startResize} side="right" />
+          <div className="hidden lg:flex shrink-0 h-full">
+            <ResizeHandle onMouseDown={rightSidebar.startResize} side="right" />
           </div>
 
           {/* Right sidebar — overlay on mobile, inline on desktop */}
@@ -396,8 +399,9 @@ export function Editor() {
               shadow-2xl lg:shadow-none
               h-full
             `}
+            style={{ width: rightSidebar.width }}
           >
-            <RightSidebar width={300} />
+            <RightSidebar width={rightSidebar.width} />
             {/* Close button on mobile */}
             <button
               className="lg:hidden absolute top-3 left-3 p-1.5 rounded-md bg-muted/80 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors z-10"

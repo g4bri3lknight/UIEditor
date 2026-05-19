@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useEditorStore, isAutoManaged } from "@/store/editor-store";
 import { getComponentByType } from "@/lib/editor/bootstrap-components";
-import { PropertyDefinition } from "@/lib/editor/types";
+import { PropertyDefinition, CanvasComponent } from "@/lib/editor/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,16 +12,53 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { X, Trash2, Copy, Info, ArrowUp, ArrowDown, Eye, EyeOff, Tag, Hash, Paintbrush, Search, Layers } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+
 import { IconPicker } from "./IconPicker";
 import { COMPONENT_PRESETS } from "@/lib/editor/component-presets";
+
+// Reusable input with local state for immediate visual feedback
+function ResponsiveInput({
+  value,
+  onChange,
+  placeholder,
+  className,
+  type = "text",
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+  className?: string;
+  type?: string;
+}) {
+  const [localValue, setLocalValue] = useState(value);
+  const [prevValue, setPrevValue] = useState(value);
+  const [focused, setFocused] = useState(false);
+
+  // Sync from store when value changes externally (React-recommended pattern)
+  if (value !== prevValue) {
+    setPrevValue(value);
+    if (!focused) {
+      setLocalValue(value);
+    }
+  }
+
+  const handleChange = useCallback((newVal: string) => {
+    setLocalValue(newVal);
+    onChange(newVal);
+  }, [onChange]);
+
+  return (
+    <Input
+      type={type}
+      value={localValue}
+      onChange={(e) => handleChange(e.target.value)}
+      onFocus={() => setFocused(true)}
+      onBlur={() => { setFocused(false); setLocalValue(value); }}
+      placeholder={placeholder}
+      className={className}
+    />
+  );
+}
 
 function PropertyField({
   prop,
@@ -32,6 +69,29 @@ function PropertyField({
   value: string | boolean | number;
   onChange: (val: string | boolean | number) => void;
 }) {
+  // Local state for text/textarea/number/color inputs to ensure immediate visual feedback.
+  const strValue = String(value);
+  const [localValue, setLocalValue] = useState(strValue);
+  const [prevStrValue, setPrevStrValue] = useState(strValue);
+  const [focused, setFocused] = useState(false);
+
+  // Sync from store when value changes externally (React-recommended render-time pattern)
+  if (strValue !== prevStrValue) {
+    setPrevStrValue(strValue);
+    if (!focused) {
+      setLocalValue(strValue);
+    }
+  }
+
+  const handleChange = useCallback((newVal: string) => {
+    setLocalValue(newVal);
+    if (prop.type === "number") {
+      onChange(Number(newVal));
+    } else {
+      onChange(newVal);
+    }
+  }, [onChange, prop.type]);
+
   switch (prop.type) {
     case "boolean":
       return (
@@ -75,8 +135,10 @@ function PropertyField({
             {prop.label}
           </Label>
           <textarea
-            value={String(value)}
-            onChange={(e) => onChange(e.target.value)}
+            value={localValue}
+            onChange={(e) => handleChange(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => { setFocused(false); setLocalValue(strValue); }}
             placeholder={prop.placeholder}
             rows={3}
             className="w-full px-3 py-2 rounded-md border border-input bg-background text-xs text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y font-mono leading-relaxed"
@@ -95,8 +157,10 @@ function PropertyField({
           </Label>
           <Input
             type="number"
-            value={Number(value)}
-            onChange={(e) => onChange(Number(e.target.value))}
+            value={localValue}
+            onChange={(e) => handleChange(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => { setFocused(false); setLocalValue(strValue); }}
             className="h-8 text-xs"
           />
         </div>
@@ -112,12 +176,14 @@ function PropertyField({
             <input
               type="color"
               value={String(value)}
-              onChange={(e) => onChange(e.target.value)}
+              onChange={(e) => { onChange(e.target.value); setLocalValue(e.target.value); }}
               className="w-8 h-8 rounded border border-input cursor-pointer"
             />
             <Input
-              value={String(value)}
-              onChange={(e) => onChange(e.target.value)}
+              value={localValue}
+              onChange={(e) => handleChange(e.target.value)}
+              onFocus={() => setFocused(true)}
+              onBlur={() => { setFocused(false); setLocalValue(strValue); }}
               className="h-8 text-xs flex-1 font-mono"
             />
           </div>
@@ -131,8 +197,10 @@ function PropertyField({
             {prop.label}
           </Label>
           <Input
-            value={String(value)}
-            onChange={(e) => onChange(e.target.value)}
+            value={localValue}
+            onChange={(e) => handleChange(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => { setFocused(false); setLocalValue(strValue); }}
             placeholder={prop.placeholder}
             className="h-8 text-xs"
           />
@@ -144,33 +212,46 @@ function PropertyField({
   }
 }
 
+// Utility: find component in tree by ID (used for reactive lookups)
+function findInTree(comps: CanvasComponent[], id: string): CanvasComponent | null {
+  for (const c of comps) {
+    if (c.id === id) return c;
+    if (c.children) {
+      const found = findInTree(c.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 interface RightSidebarProps {
   width: number;
 }
 
 export function RightSidebar({ width }: RightSidebarProps) {
-  const {
-    selectedId,
-    selectedIds,
-    updateComponentProps,
-    updateComponentLabel,
-    removeComponent,
-    duplicateComponent,
-    selectComponent,
-    findComponent,
-    getParentInfo,
-    getAncestors,
-    moveUp,
-    moveDown,
-    hiddenComponents,
-    toggleComponentVisibility,
-    customCSS,
-    setCustomCSS,
-    removeSelectedComponents,
-    duplicateSelectedComponents,
-    copySelectedComponents,
-    clearSelection,
-  } = useEditorStore();
+  // Use targeted selectors for reactivity — subscribe to values that affect rendering
+  const selectedId = useEditorStore(s => s.selectedId);
+  const selectedIds = useEditorStore(s => s.selectedIds);
+  const hiddenComponents = useEditorStore(s => s.hiddenComponents);
+  const customCSS = useEditorStore(s => s.customCSS);
+
+  // Subscribe to components so we re-render when any component changes
+  const components = useEditorStore(s => s.components);
+
+  // Get actions from getState() — stable references, no subscriptions needed
+  const updateComponentProps = useEditorStore(s => s.updateComponentProps);
+  const updateComponentLabel = useEditorStore(s => s.updateComponentLabel);
+  const removeComponent = useEditorStore(s => s.removeComponent);
+  const duplicateComponent = useEditorStore(s => s.duplicateComponent);
+  const selectComponent = useEditorStore(s => s.selectComponent);
+  const moveUp = useEditorStore(s => s.moveUp);
+  const moveDown = useEditorStore(s => s.moveDown);
+  const toggleComponentVisibility = useEditorStore(s => s.toggleComponentVisibility);
+  const setCustomCSS = useEditorStore(s => s.setCustomCSS);
+  const removeSelectedComponents = useEditorStore(s => s.removeSelectedComponents);
+  const duplicateSelectedComponents = useEditorStore(s => s.duplicateSelectedComponents);
+  const copySelectedComponents = useEditorStore(s => s.copySelectedComponents);
+  const clearSelection = useEditorStore(s => s.clearSelection);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
@@ -181,7 +262,9 @@ export function RightSidebar({ width }: RightSidebarProps) {
   const multiSelectCount = selectedIds.length;
   const isMultiSelectMode = multiSelectCount > 1;
 
-  const selectedComponent = !isMultiSelectMode && selectedId ? findComponent(selectedId) ?? undefined : undefined;
+  // Find selected component directly from the reactive components array
+  // This ensures we get the LATEST version after any prop update
+  const selectedComponent = !isMultiSelectMode && selectedId ? findInTree(components, selectedId) ?? undefined : undefined;
 
   const componentDef = selectedComponent
     ? getComponentByType(selectedComponent.type)
@@ -190,8 +273,6 @@ export function RightSidebar({ width }: RightSidebarProps) {
   const managed = selectedComponent ? isAutoManaged(selectedComponent.type) : false;
 
   const isHidden = selectedComponent ? hiddenComponents.includes(selectedComponent.id) : false;
-
-  const ancestors = selectedComponent ? getAncestors(selectedComponent.id) : [];
 
   if (!selectedComponent || !componentDef) {
     // Multi-selection bulk actions panel
@@ -266,7 +347,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
               </p>
               <div className="space-y-1">
                 {selectedIds.map(id => {
-                  const comp = findComponent(id);
+                  const comp = findInTree(components, id);
                   if (!comp) return null;
                   const def = getComponentByType(comp.type);
                   return (
@@ -369,39 +450,6 @@ export function RightSidebar({ width }: RightSidebarProps) {
         </div>
       </div>
 
-      {/* Breadcrumb Navigation */}
-      {ancestors.length > 0 && (
-        <div className="px-3 py-1.5 border-b border-border shrink-0">
-          <Breadcrumb>
-            <BreadcrumbList className="text-[10px] gap-1">
-              {ancestors.map((ancestor) => (
-                <React.Fragment key={ancestor.id}>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink
-                      asChild
-                      className="text-[10px] text-muted-foreground hover:text-foreground cursor-pointer"
-                    >
-                      <button
-                        onClick={() => selectComponent(ancestor.id)}
-                        title={ancestor.type}
-                      >
-                        {ancestor.label}
-                      </button>
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="text-[8px]" />
-                </React.Fragment>
-              ))}
-              <BreadcrumbItem>
-                <BreadcrumbPage className="text-[10px] font-medium">
-                  {selectedComponent.label}
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-      )}
-
       {/* Variant Presets */}
       {COMPONENT_PRESETS[selectedComponent.type] && (
         <div className="px-3 py-2 border-b border-border shrink-0">
@@ -442,47 +490,49 @@ export function RightSidebar({ width }: RightSidebarProps) {
         </div>
       )}
 
-      {/* Actions — only for non-managed components */}
-      {!managed && (
-        <div className="flex items-center gap-1 px-3 py-2 border-b border-border shrink-0">
-          <button
-            onClick={() => moveUp(selectedComponent.id)}
-            className="p-1.5 rounded hover:bg-muted transition-colors"
-            title="Sposta su"
-          >
-            <ArrowUp className="w-3.5 h-3.5 text-muted-foreground" />
-          </button>
-          <button
-            onClick={() => moveDown(selectedComponent.id)}
-            className="p-1.5 rounded hover:bg-muted transition-colors"
-            title="Sposta giù"
-          >
-            <ArrowDown className="w-3.5 h-3.5 text-muted-foreground" />
-          </button>
-          <button
-            onClick={() => duplicateComponent(selectedComponent.id)}
-            className="p-1.5 rounded hover:bg-muted transition-colors"
-            title="Duplica"
-          >
-            <Copy className="w-3.5 h-3.5 text-muted-foreground" />
-          </button>
-          <div className="flex-1" />
-          <button
-            onClick={() => toggleComponentVisibility(selectedComponent.id)}
-            className={`p-1.5 rounded transition-colors ${isHidden ? 'bg-muted text-muted-foreground' : 'hover:bg-muted text-muted-foreground'}`}
-            title={isHidden ? 'Mostra componente' : 'Nascondi componente'}
-          >
-            {isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-          </button>
-          <button
-            onClick={() => removeComponent(selectedComponent.id)}
-            className="p-1.5 rounded hover:bg-destructive/10 transition-colors"
-            title="Elimina"
-          >
-            <Trash2 className="w-3.5 h-3.5 text-destructive" />
-          </button>
-        </div>
-      )}
+      {/* Actions — move buttons always visible, other actions only for non-managed */}
+      <div className="flex items-center gap-1 px-3 py-2 border-b border-border shrink-0">
+        <button
+          onClick={() => moveUp(selectedComponent.id)}
+          className="p-1.5 rounded hover:bg-muted transition-colors"
+          title="Sposta su"
+        >
+          <ArrowUp className="w-3.5 h-3.5 text-muted-foreground" />
+        </button>
+        <button
+          onClick={() => moveDown(selectedComponent.id)}
+          className="p-1.5 rounded hover:bg-muted transition-colors"
+          title="Sposta giù"
+        >
+          <ArrowDown className="w-3.5 h-3.5 text-muted-foreground" />
+        </button>
+        {!managed && (
+          <>
+            <button
+              onClick={() => duplicateComponent(selectedComponent.id)}
+              className="p-1.5 rounded hover:bg-muted transition-colors"
+              title="Duplica"
+            >
+              <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
+            <div className="flex-1" />
+            <button
+              onClick={() => toggleComponentVisibility(selectedComponent.id)}
+              className={`p-1.5 rounded transition-colors ${isHidden ? 'bg-muted text-muted-foreground' : 'hover:bg-muted text-muted-foreground'}`}
+              title={isHidden ? 'Mostra componente' : 'Nascondi componente'}
+            >
+              {isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            </button>
+            <button
+              onClick={() => removeComponent(selectedComponent.id)}
+              className="p-1.5 rounded hover:bg-destructive/10 transition-colors"
+              title="Elimina"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-destructive" />
+            </button>
+          </>
+        )}
+      </div>
 
       {/* Property Fields */}
       <ScrollArea className="flex-1 min-h-0">
@@ -490,9 +540,9 @@ export function RightSidebar({ width }: RightSidebarProps) {
           {/* Nome (rename label) */}
           <div className="space-y-1.5">
             <Label className="text-xs font-normal text-muted-foreground">Nome</Label>
-            <Input
+            <ResponsiveInput
               value={selectedComponent.label}
-              onChange={(e) => updateComponentLabel(selectedComponent.id, e.target.value)}
+              onChange={(val) => updateComponentLabel(selectedComponent.id, val)}
               className="h-8 text-xs"
             />
           </div>
@@ -598,11 +648,11 @@ export function RightSidebar({ width }: RightSidebarProps) {
                   <Tag className="w-3 h-3" />
                   Classi CSS
                 </Label>
-                <Input
+                <ResponsiveInput
                   value={String(selectedComponent.props.customClass || "")}
-                  onChange={(e) =>
+                  onChange={(val) =>
                     updateComponentProps(selectedComponent.id, {
-                      customClass: e.target.value,
+                      customClass: val,
                     })
                   }
                   placeholder="es. my-class custom-styling"
@@ -615,11 +665,11 @@ export function RightSidebar({ width }: RightSidebarProps) {
                   <Hash className="w-3 h-3" />
                   ID HTML
                 </Label>
-                <Input
+                <ResponsiveInput
                   value={String(selectedComponent.props.customId || "")}
-                  onChange={(e) =>
+                  onChange={(val) =>
                     updateComponentProps(selectedComponent.id, {
-                      customId: e.target.value,
+                      customId: val,
                     })
                   }
                   placeholder="es. sezione-principale"

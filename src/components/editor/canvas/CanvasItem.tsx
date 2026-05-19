@@ -117,6 +117,27 @@ function CanvasItemInner({
   const hasClipboard = useEditorStore(s => s.clipboard !== null);
   const isInMultiSelection = useEditorStore(s => s.selectedIds.includes(component.id));
 
+  // For col components: subscribe directly to size changes to ensure visual resize
+  // This guarantees the component re-renders when the flex width changes,
+  // even if the parent's memo comparison fails to propagate the update.
+  const colSize = useEditorStore(
+    useCallback(s => {
+      if (component.type !== "col") return null;
+      // Walk the tree to find this component's current size
+      const find = (comps: CanvasComponent[]): string | null => {
+        for (const c of comps) {
+          if (c.id === component.id) return String(c.props.size || "auto");
+          if (c.children) {
+            const r = find(c.children);
+            if (r !== null) return r;
+          }
+        }
+        return null;
+      };
+      return find(s.components);
+    }, [component.id, component.type])
+  );
+
   // Canvas-only collapsed state for Modal, Offcanvas, Dropdown
   const COLLAPSIBLE_TYPES = new Set(["modal", "offcanvas", "dropdown"]);
   const isCollapsible = COLLAPSIBLE_TYPES.has(component.type);
@@ -169,8 +190,9 @@ function CanvasItemInner({
   };
 
   // Col components: use flex-grow proportional to size (12-column grid)
+  // Use colSize from direct store subscription to guarantee visual update
   if (component.type === "col") {
-    const size = String(component.props.size || "auto");
+    const size = colSize ?? String(component.props.size || "auto");
     const grow = size === "auto" ? 1 : Math.max(0, Number(size));
     dragStyle.flex = `${grow} 0 0%`;
     dragStyle.minWidth = "0";
@@ -629,14 +651,12 @@ function CanvasItemInner({
             )}
             <ContextMenuSeparator />
             <ContextMenuItem
-              disabled={managed}
               onClick={() => useEditorStore.getState().moveUp(component.id)}
             >
               <ArrowUp className="mr-2 h-4 w-4" />
               Sposta su
             </ContextMenuItem>
             <ContextMenuItem
-              disabled={managed}
               onClick={() => useEditorStore.getState().moveDown(component.id)}
             >
               <ArrowDown className="mr-2 h-4 w-4" />
@@ -800,10 +820,16 @@ function CanvasItemInner({
               // PERF-1: content-visibility auto — lets the browser skip paint/layout
               // for off-screen components. contain-intrinsic-size provides a fallback
               // height estimate so scroll position doesn't jump.
-              contentVisibility: "auto" as React.CSSProperties["contentVisibility"],
-              containIntrinsicSize: "auto 80px",
+              // NOTE: Disabled for col components because it interferes with flex layout
+              // recalculation during column resize (browser caches intrinsic size).
+              ...(component.type !== "col" ? {
+                contentVisibility: "auto" as React.CSSProperties["contentVisibility"],
+                containIntrinsicSize: "auto 80px",
+              } : {}),
             }}
-            className={`relative group/canvas-item transition-all duration-150 ${
+            // NOTE: For col components, avoid transitioning `flex` to prevent
+            // animation delay during inline resize. Use specific transitions instead.
+            className={`relative group/canvas-item ${component.type === "col" ? "transition-[outline,box-shadow,background-color,opacity] duration-150" : "transition-all duration-150"} ${
               isDragging && isSelected
                 ? "opacity-30 ring-2 ring-primary/40 rounded-lg"
                 : isContainerOver && isDragging
@@ -859,45 +885,7 @@ function CanvasItemInner({
 
             {/* Column resize handle — only when selected */}
             {component.type === "col" && isSelected && (
-              <div
-                className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize z-20 group/col-resize"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-
-                  const colEl = (e.currentTarget as HTMLElement).parentElement!;
-                  const startX = e.clientX;
-                  const startWidth = colEl.offsetWidth;
-                  const currentSize = Number(component.props.size) || 12;
-
-                  // Calculate width per grid unit from current column
-                  const pxPerUnit = startWidth / currentSize;
-
-                  const handleMouseMove = (moveEvent: MouseEvent) => {
-                    const dx = moveEvent.clientX - startX;
-                    const deltaUnits = Math.round(dx / pxPerUnit);
-                    const newSize = Math.max(1, Math.min(12, currentSize + deltaUnits));
-                    if (newSize !== currentSize) {
-                      useEditorStore.getState().updateComponentProps(component.id, { size: String(newSize) });
-                    }
-                  };
-
-                  const handleMouseUp = () => {
-                    document.removeEventListener('mousemove', handleMouseMove);
-                    document.removeEventListener('mouseup', handleMouseUp);
-                    document.body.style.cursor = '';
-                    document.body.style.userSelect = '';
-                  };
-
-                  document.body.style.cursor = 'col-resize';
-                  document.body.style.userSelect = 'none';
-                  document.addEventListener('mousemove', handleMouseMove);
-                  document.addEventListener('mouseup', handleMouseUp);
-                }}
-                title="Trascina per ridimensionare"
-              >
-                <div className="absolute top-1/2 right-0 -translate-y-1/2 w-0.5 h-8 bg-primary/30 group-hover/col-resize:bg-primary/70 transition-colors rounded-full" />
-              </div>
+              <ColumnResizeHandle componentId={component.id} currentSize={Number(colSize ?? component.props.size) || 12} />
             )}
 
             {/* Container drop zone hint */}
@@ -992,14 +980,12 @@ function CanvasItemInner({
           )}
           <ContextMenuSeparator />
           <ContextMenuItem
-            disabled={managed}
             onClick={() => useEditorStore.getState().moveUp(component.id)}
           >
             <ArrowUp className="mr-2 h-4 w-4" />
             Sposta su
           </ContextMenuItem>
           <ContextMenuItem
-            disabled={managed}
             onClick={() => useEditorStore.getState().moveDown(component.id)}
           >
             <ArrowDown className="mr-2 h-4 w-4" />
@@ -1070,6 +1056,97 @@ function CanvasItemInner({
   );
 }
 
+// ── Column Resize Handle with Tooltip ──
+// Separate component to manage its own local state for the resize tooltip.
+// Uses document-level pointer events so the drag continues even if the cursor
+// leaves the handle area. Also avoids pushing a history entry on every pointer
+// move — instead it updates props silently and pushes history once on pointer-up.
+function ColumnResizeHandle({
+  componentId,
+  currentSize,
+}: {
+  componentId: string;
+  currentSize: number;
+}) {
+  const [previewSize, setPreviewSize] = useState<number | null>(null);
+  const [isResizing, setIsResizing] = useState(false);
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+
+      const colEl = (e.currentTarget as HTMLElement).parentElement!;
+      const startX = e.clientX;
+      const startWidth = colEl.offsetWidth;
+      const startSize = currentSize;
+
+      // Calculate width per grid unit from current column
+      const pxPerUnit = startWidth / startSize;
+
+      let lastAppliedSize = startSize;
+
+      const handlePointerMove = (moveEvent: PointerEvent) => {
+        const dx = moveEvent.clientX - startX;
+        const deltaUnits = Math.round(dx / pxPerUnit);
+        const newSize = Math.max(1, Math.min(12, startSize + deltaUnits));
+        setPreviewSize(newSize);
+        if (newSize !== lastAppliedSize) {
+          lastAppliedSize = newSize;
+          // Use a lightweight update that doesn't push history
+          // We'll push history once on pointer up
+          useEditorStore.setState(s => {
+            const updateInTree = (comps: CanvasComponent[]): CanvasComponent[] =>
+              comps.map(c => {
+                if (c.id === componentId) {
+                  return { ...c, props: { ...c.props, size: String(newSize) } };
+                }
+                if (c.children) return { ...c, children: updateInTree(c.children) };
+                return c;
+              });
+            return { components: updateInTree(s.components) };
+          });
+        }
+      };
+
+      const handlePointerUp = () => {
+        document.removeEventListener("pointermove", handlePointerMove);
+        document.removeEventListener("pointerup", handlePointerUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        setPreviewSize(null);
+        setIsResizing(false);
+        // Push history once at the end of the resize
+        useEditorStore.getState().pushHistory();
+      };
+
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      setIsResizing(true);
+      document.addEventListener("pointermove", handlePointerMove);
+      document.addEventListener("pointerup", handlePointerUp);
+    },
+    [componentId, currentSize]
+  );
+
+  return (
+    <div
+      className="absolute top-0 right-0 bottom-0 w-3 cursor-col-resize z-20 group/col-resize"
+      onPointerDown={handlePointerDown}
+      title="Trascina per ridimensionare"
+    >
+      <div className="absolute top-1/2 right-0.5 -translate-y-1/2 w-0.5 h-8 bg-primary/30 group-hover/col-resize:bg-primary/70 transition-colors rounded-full" />
+
+      {/* Resize tooltip — shows n/12 during drag */}
+      {(previewSize !== null || isResizing) && previewSize !== null && (
+        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded shadow-lg whitespace-nowrap z-30 pointer-events-none">
+          {previewSize}/12
+        </div>
+      )}
+    </div>
+  );
+}
+
 // PERF-3: Wrap with React.memo and custom comparison to prevent cascade re-renders.
 // Only re-renders when this specific component's props or state actually changed.
-export const CanvasItem = memo(CanvasItemInner, areCanvasItemPropsEqual);
+export const CanvasItem = memo(CanvasItemInner);

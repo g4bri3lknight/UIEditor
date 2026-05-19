@@ -12,6 +12,7 @@ import {
   Bookmark, Trash2, Pencil, Check, X, Plus,
   Download, Upload, LayoutTemplate,
 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 
 // ── Helper: count total components in a tree ──
@@ -352,8 +353,8 @@ export function TemplatesPanel() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" style={{ scrollbarGutter: "stable" }}>
-        <div className="p-2 space-y-2 pb-6">
+      <ScrollArea className="flex-1 min-h-0">
+        <div className="p-2 space-y-2 pb-4">
           {/* ── Template Predefiniti ── */}
           <div className="rounded-lg border border-border/50 bg-background/50 overflow-hidden">
             <button
@@ -507,7 +508,7 @@ export function TemplatesPanel() {
             )}
           </div>
         </div>
-      </div>
+      </ScrollArea>
     </div>
   );
 }

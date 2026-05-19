@@ -5,9 +5,11 @@ import { useEditorStore, isAutoManaged, isSlottedType } from "@/store/editor-sto
 import type { CanvasComponent } from "@/lib/editor/types";
 import {
   LayoutGrid, Type, FileInput, MousePointerClick, Navigation,
-  Layers, Table, Image, Wrench, ChevronRight, EyeOff,
-  ArrowUp, ArrowDown,
+  Layers, Table, Image, Wrench, ChevronRight, EyeOff, Eye,
+  ArrowUp, ArrowDown, Trash2,
 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
 
 // ── Icon lookup for component types in the Layers tree ──
 const LAYOUT_TYPES = new Set(["container", "row", "col"]);
@@ -61,12 +63,14 @@ function LayerTreeItem({
   component,
   depth,
   selectedId,
+  hiddenComponents,
   onSelect,
-  isHidden,
+  onToggleVisibility,
   expandedNodes,
   toggleExpand,
   onMoveUp,
   onMoveDown,
+  onDelete,
   canMoveUp,
   canMoveDown,
   parentType,
@@ -74,18 +78,21 @@ function LayerTreeItem({
   component: CanvasComponent;
   depth: number;
   selectedId: string | null;
+  hiddenComponents: string[];
   onSelect: (id: string) => void;
-  isHidden: boolean;
+  onToggleVisibility: (id: string) => void;
   expandedNodes: Set<string>;
   toggleExpand: (id: string) => void;
   onMoveUp: (id: string) => void;
   onMoveDown: (id: string) => void;
+  onDelete: (id: string) => void;
   canMoveUp: (id: string) => boolean;
   canMoveDown: (id: string) => boolean;
   parentType?: string;
 }) {
   const autoManaged = isAutoManaged(component.type);
   const isSelected = selectedId === component.id;
+  const isHidden = hiddenComponents.includes(component.id);
   const layerIcon = getLayerIcon(component.type);
   const hasChildren = component.children && component.children.length > 0;
   const isExpanded = expandedNodes.has(component.id);
@@ -109,7 +116,7 @@ function LayerTreeItem({
           isSelected
             ? "bg-primary/10"
             : "hover:bg-muted/50"
-        } ${autoManaged ? "opacity-50" : ""} ${isHidden && !isSelected ? "opacity-40" : ""}`}
+        } ${autoManaged ? "opacity-60" : ""} ${isHidden && !isSelected ? "opacity-40" : ""}`}
         style={{ paddingLeft: `${depth * 16 + 4}px` }}
       >
         {/* Expand/collapse toggle */}
@@ -149,15 +156,21 @@ function LayerTreeItem({
               {component.slot}
             </span>
           )}
-          {isHidden && (
-            <EyeOff className="w-3 h-3 text-muted-foreground/60 shrink-0 ml-auto" />
-          )}
         </button>
 
-        {/* Move up/down arrows — visible on hover */}
+        {/* Action buttons — visible on hover or when selected */}
         <div className={`shrink-0 flex items-center gap-0.5 transition-opacity duration-100 ${
           isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
         }`}>
+          {/* Toggle visibility */}
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleVisibility(component.id); }}
+            className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            title={isHidden ? "Mostra" : "Nascondi"}
+          >
+            {isHidden ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+          </button>
+          {/* Move up/down */}
           <button
             onClick={(e) => { e.stopPropagation(); onMoveUp(component.id); }}
             disabled={!canMoveUp(component.id)}
@@ -174,6 +187,16 @@ function LayerTreeItem({
           >
             <ArrowDown className="w-3 h-3" />
           </button>
+          {/* Delete — hidden for auto-managed types (col, table-row, table-cell) */}
+          {!autoManaged && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(component.id); }}
+              className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+              title="Elimina"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          )}
         </div>
       </div>
       {/* Children — only rendered if expanded */}
@@ -185,12 +208,14 @@ function LayerTreeItem({
               component={child}
               depth={depth + 1}
               selectedId={selectedId}
+              hiddenComponents={hiddenComponents}
               onSelect={onSelect}
-              isHidden={isHidden}
+              onToggleVisibility={onToggleVisibility}
               expandedNodes={expandedNodes}
               toggleExpand={toggleExpand}
               onMoveUp={onMoveUp}
               onMoveDown={onMoveDown}
+              onDelete={onDelete}
               canMoveUp={canMoveUp}
               canMoveDown={canMoveDown}
               parentType={component.type}
@@ -208,8 +233,11 @@ export function LayersPanel() {
   const selectedId = useEditorStore((s) => s.selectedId);
   const selectComponent = useEditorStore((s) => s.selectComponent);
   const hiddenComponents = useEditorStore((s) => s.hiddenComponents);
-  const moveComponentInTree = useEditorStore((s) => s.moveComponentInTree);
+  const moveUp = useEditorStore((s) => s.moveUp);
+  const moveDown = useEditorStore((s) => s.moveDown);
   const getParentInfo = useEditorStore((s) => s.getParentInfo);
+  const removeComponent = useEditorStore((s) => s.removeComponent);
+  const toggleComponentVisibility = useEditorStore((s) => s.toggleComponentVisibility);
 
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(() => {
     // Auto-expand root-level items with children
@@ -259,26 +287,23 @@ export function LayersPanel() {
     [selectComponent]
   );
 
-  // ── Move up/down logic ──
+  // ── Move up/down logic ── Use store's moveUp/moveDown directly
   const handleMoveUp = useCallback((id: string) => {
-    const info = getParentInfo(id);
-    if (!info) return;
-    const { parent, index } = info;
-    if (index <= 0) return;
-    const newParentId = parent ? parent.id : null;
-    moveComponentInTree(id, newParentId, index - 1);
-  }, [getParentInfo, moveComponentInTree]);
+    moveUp(id);
+  }, [moveUp]);
 
   const handleMoveDown = useCallback((id: string) => {
-    const info = getParentInfo(id);
-    if (!info) return;
-    const { parent, index } = info;
-    const siblings = parent ? (parent.children || []) : useEditorStore.getState().components;
-    if (index >= siblings.length - 1) return;
-    const newParentId = parent ? parent.id : null;
-    // After removing from index i, insert at i+1 to place after the next sibling
-    moveComponentInTree(id, newParentId, index + 1);
-  }, [getParentInfo, moveComponentInTree]);
+    moveDown(id);
+  }, [moveDown]);
+
+  const handleDelete = useCallback((id: string) => {
+    removeComponent(id);
+    toast.success("Componente eliminato");
+  }, [removeComponent]);
+
+  const handleToggleVisibility = useCallback((id: string) => {
+    toggleComponentVisibility(id);
+  }, [toggleComponentVisibility]);
 
   const checkCanMoveUp = useCallback((id: string): boolean => {
     const info = getParentInfo(id);
@@ -336,26 +361,28 @@ export function LayersPanel() {
           })}
         </div>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" style={{ scrollbarGutter: "stable" }}>
-        <div className="p-2 space-y-0.5 pb-6">
+      <ScrollArea className="flex-1 min-h-0">
+        <div className="p-2 space-y-0.5 pb-12">
           {components.map((comp) => (
             <LayerTreeItem
               key={comp.id}
               component={comp}
               depth={0}
               selectedId={selectedId}
+              hiddenComponents={hiddenComponents}
               onSelect={handleSelect}
-              isHidden={hiddenComponents.includes(comp.id)}
+              onToggleVisibility={handleToggleVisibility}
               expandedNodes={expandedNodes}
               toggleExpand={toggleExpand}
               onMoveUp={handleMoveUp}
               onMoveDown={handleMoveDown}
+              onDelete={handleDelete}
               canMoveUp={checkCanMoveUp}
               canMoveDown={checkCanMoveDown}
             />
           ))}
         </div>
-      </div>
+      </ScrollArea>
     </div>
   );
 }

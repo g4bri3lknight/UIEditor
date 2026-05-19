@@ -24,28 +24,34 @@ export function useSidebarResize(
   const isResizing = useRef(false);
   const startX = useRef(0);
   const startWidth = useRef(0);
-  const currentWidth = useRef(width);
+  const latestWidth = useRef(width);
 
-  // Keep the ref in sync with the state
+  // Keep ref in sync
   useEffect(() => {
-    currentWidth.current = width;
+    latestWidth.current = width;
   }, [width]);
 
+  // Save to localStorage when width changes and not resizing
+  useEffect(() => {
+    if (!isResizing.current) {
+      localStorage.setItem(storageKey, String(width));
+    }
+  }, [width, storageKey]);
+
   const startResize = useCallback(
-    (e: React.PointerEvent) => {
+    (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
       isResizing.current = true;
       startX.current = e.clientX;
-      startWidth.current = width;
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      startWidth.current = latestWidth.current;
       document.body.style.cursor = "col-resize";
       document.body.style.userSelect = "none";
 
-      const onMove = (ev: PointerEvent) => {
+      const onMove = (ev: MouseEvent) => {
         if (!isResizing.current) return;
+        ev.preventDefault();
         const dx = ev.clientX - startX.current;
-        // Right sidebar: dragging left (negative dx) should INCREASE width
         const newW = Math.max(
           minWidth,
           Math.min(
@@ -54,53 +60,59 @@ export function useSidebarResize(
           )
         );
         setWidth(newW);
+        latestWidth.current = newW;
       };
 
       const onUp = () => {
         isResizing.current = false;
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
-        document.removeEventListener("pointermove", onMove);
-        document.removeEventListener("pointerup", onUp);
-        localStorage.setItem(storageKey, String(currentWidth.current));
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+        localStorage.setItem(storageKey, String(latestWidth.current));
       };
 
-      document.addEventListener("pointermove", onMove);
-      document.addEventListener("pointerup", onUp);
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
     },
-    [width, minWidth, maxWidth, storageKey, direction]
+    [minWidth, maxWidth, storageKey, direction]
   );
 
-  return { width, startResize };
+  return { width, startResize, isResizing };
 }
 
 // ── Resize handle component ──
+// Full-height vertical strip that allows dragging anywhere along the sidebar edge
 export function ResizeHandle({
-  onPointerDown,
+  onMouseDown,
   side,
 }: {
-  onPointerDown: (e: React.PointerEvent) => void;
+  onMouseDown: (e: React.MouseEvent) => void;
   side: "left" | "right";
 }) {
   return (
     <div
-      onPointerDown={onPointerDown}
-      className={`group relative w-[5px] shrink-0 cursor-col-resize transition-colors duration-150
+      onMouseDown={onMouseDown}
+      onDragStart={() => false}
+      className={`
+        group relative shrink-0 cursor-col-resize select-none
+        w-[6px] h-full flex-none
         ${side === "left" ? "border-r border-border" : "border-l border-border"}
-        hover:bg-primary/20 active:bg-primary/30`}
+        hover:bg-primary/20 hover:border-primary/40
+        active:bg-primary/30
+        transition-colors duration-75
+      `}
       title="Trascina per ridimensionare"
     >
-      {/* Visible grip indicator on hover */}
+      {/* Grip dots indicator — centered vertically, only visual */}
       <div
-        className={`absolute top-1/2 -translate-y-1/2 ${
-          side === "left" ? "right-0" : "left-0"
-        } translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none`}
+        className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 pointer-events-none"
       >
-        <div className="flex flex-col gap-[2px] py-3 px-[2px]">
+        <div className="flex flex-col gap-[2px] py-2">
           {Array.from({ length: 5 }).map((_, i) => (
             <div
               key={i}
-              className="w-[3px] h-[3px] rounded-full bg-primary/60"
+              className="w-[2px] h-[2px] rounded-full bg-border group-hover:bg-primary/60 transition-colors duration-75"
             />
           ))}
         </div>

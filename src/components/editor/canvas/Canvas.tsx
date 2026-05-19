@@ -7,6 +7,7 @@ import { MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, VIEWPORT_BREAKPOINTS, type ViewportKey }
 import { DropIndicator } from "./DropIndicator";
 import { CanvasItem } from "./CanvasItem";
 import { CanvasToolbar } from "./CanvasToolbar";
+import { StatusBar } from "./StatusBar";
 import { InlineEditOverlay, type InlineEditState, type PropPickerState } from "./InlineEditOverlay";
 
 // ── Empty state ──
@@ -60,7 +61,6 @@ export function Canvas({
   const { components, selectComponent, updateComponentProps } = useEditorStore();
   const bootstrapTheme = useEditorStore(s => s.bootstrapTheme);
   const customCSS = useEditorStore(s => s.customCSS);
-  const canvasDarkMode = useEditorStore(s => s.canvasDarkMode);
   const showGrid = useEditorStore(s => s.showGrid);
   const isDragging = !!activeDragId;
 
@@ -79,10 +79,6 @@ export function Canvas({
 
   const handleZoomReset = useCallback(() => {
     setZoom(100);
-  }, []);
-
-  const handleToggleDarkMode = useCallback(() => {
-    useEditorStore.getState().toggleCanvasDarkMode();
   }, []);
 
   const handleToggleGrid = useCallback(() => {
@@ -172,19 +168,14 @@ export function Canvas({
 
   return (
     <div className="flex-1 flex flex-col h-full bg-muted/30 overflow-hidden">
-      {/* Canvas Toolbar */}
+      {/* Canvas Toolbar — breadcrumb + zoom + grid */}
       <CanvasToolbar
         zoom={zoom}
-        viewport={viewport}
         isDragging={isDragging}
-        componentCount={components.length}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onZoomReset={handleZoomReset}
         onZoomChange={setZoom}
-        onViewportChange={setViewport}
-        canvasDarkMode={canvasDarkMode}
-        onToggleDarkMode={handleToggleDarkMode}
         showGrid={showGrid}
         onToggleGrid={handleToggleGrid}
         onToggleLeftSidebar={onToggleLeftSidebar}
@@ -193,7 +184,7 @@ export function Canvas({
         rightSidebarOpen={rightSidebarOpen}
       />
 
-      {/* Drop Zone — always light theme so Bootstrap components stay readable */}
+      {/* Drop Zone */}
       <div
         ref={(node) => {
           setNodeRef(node);
@@ -204,7 +195,7 @@ export function Canvas({
         className={`flex-1 overflow-auto transition-colors duration-200 ${
           isOver && isDragging ? "bg-primary/5" : ""
         }`}
-        style={{ backgroundColor: canvasDarkMode ? "#1a1d20" : "#f8f9fa", colorScheme: canvasDarkMode ? "dark" : "light" }}
+        style={{ backgroundColor: "#f8f9fa" }}
       >
         <div
           className="w-[95%] mx-auto p-6 origin-top"
@@ -215,16 +206,14 @@ export function Canvas({
             <style dangerouslySetInnerHTML={{ __html: customCSS }} />
           )}
           <div
-            data-bs-theme={canvasDarkMode ? "dark" : "light"}
             style={{
               position: "relative",
               maxWidth: viewport === "xl" ? "100%" : `${VIEWPORT_BREAKPOINTS.find(bp => bp.key === viewport)?.width || "100%"}px`,
               margin: "0 auto",
               transition: "max-width 200ms ease-out",
-              border: viewport !== "xl" ? (canvasDarkMode ? "1px solid #495057" : "1px solid #e5e7eb") : "none",
+              border: viewport !== "xl" ? "1px solid #e5e7eb" : "none",
               borderRadius: viewport !== "xl" ? "8px" : "0",
               overflow: "hidden",
-              colorScheme: canvasDarkMode ? "dark" : "light",
               // Theme CSS custom properties — cascade to all Bootstrap components in canvas
               "--bs-primary": bootstrapTheme.primaryColor,
               "--bs-secondary": bootstrapTheme.secondaryColor,
@@ -232,16 +221,16 @@ export function Canvas({
               "--bs-danger": bootstrapTheme.dangerColor,
               "--bs-warning": bootstrapTheme.warningColor,
               "--bs-info": bootstrapTheme.infoColor,
-              "--bs-body-bg": canvasDarkMode ? (bootstrapTheme.bodyBg === "#ffffff" ? "#212529" : bootstrapTheme.bodyBg) : bootstrapTheme.bodyBg,
-              "--bs-body-color": canvasDarkMode ? (bootstrapTheme.bodyColor === "#212529" ? "#dee2e6" : bootstrapTheme.bodyColor) : bootstrapTheme.bodyColor,
+              "--bs-body-bg": bootstrapTheme.bodyBg,
+              "--bs-body-color": bootstrapTheme.bodyColor,
               "--bs-font-family": bootstrapTheme.fontFamily,
               "--bs-border-radius": bootstrapTheme.borderRadius,
               "--bs-border-radius-sm": bootstrapTheme.borderRadius,
               "--bs-border-radius-lg": bootstrapTheme.borderRadius,
               "--bs-border-radius-pill": `calc(${bootstrapTheme.borderRadius} * 10)`,
               // Also set background and color directly for the body
-              backgroundColor: canvasDarkMode ? (bootstrapTheme.bodyBg === "#ffffff" ? "#212529" : bootstrapTheme.bodyBg) : bootstrapTheme.bodyBg,
-              color: canvasDarkMode ? (bootstrapTheme.bodyColor === "#212529" ? "#dee2e6" : bootstrapTheme.bodyColor) : bootstrapTheme.bodyColor,
+              backgroundColor: bootstrapTheme.bodyBg,
+              color: bootstrapTheme.bodyColor,
               fontFamily: bootstrapTheme.fontFamily,
             } as React.CSSProperties}
           >
@@ -322,6 +311,12 @@ export function Canvas({
           </div>
         </div>
       </div>
+
+      {/* Status Bar — viewport modifiers + shortcuts */}
+      <StatusBar
+        viewport={viewport}
+        onViewportChange={setViewport}
+      />
 
       {/* Inline text editing overlay */}
       <InlineEditOverlay

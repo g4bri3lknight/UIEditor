@@ -175,7 +175,11 @@ function syncRowChildren(comp: CanvasComponent): CanvasComponent {
       })),
     };
   }
-  if (comp.children) {
+  // For non-row types with children, recurse — but avoid creating a new
+  // children array reference if nothing changed (important for React.memo).
+  // Leaf nodes with empty children arrays are returned as-is to preserve
+  // reference equality and prevent unnecessary re-renders.
+  if (comp.children && comp.children.length > 0) {
     return { ...comp, children: comp.children.map(syncRowChildren) };
   }
   return comp;
@@ -284,10 +288,6 @@ interface EditorState {
   updateTheme: (theme: Partial<BootstrapTheme>) => void;
   resetTheme: () => void;
 
-  // ── Canvas Dark Mode ──
-  canvasDarkMode: boolean;
-  toggleCanvasDarkMode: () => void;
-
   // ── Canvas Grid Overlay (FEAT-6) ──
   showGrid: boolean;
   toggleGrid: () => void;
@@ -330,6 +330,9 @@ interface EditorState {
 
 // ── History size limit ──
 const MAX_HISTORY = 100;
+
+// ── Debounce timer for property update history pushes ──
+let propHistoryTimer: ReturnType<typeof setTimeout> | null = null;
 
 // ── Schema version for persistence migrations ──
 // Increment this when the persisted state shape changes.
@@ -401,9 +404,6 @@ export const useEditorStore = create<EditorState>()(
   resetTheme: () => {
     set({ bootstrapTheme: { ...DEFAULT_THEME } });
   },
-
-  canvasDarkMode: false,
-  toggleCanvasDarkMode: () => set(s => ({ canvasDarkMode: !s.canvasDarkMode })),
 
   // ── Canvas Grid Overlay (FEAT-6) ──
   showGrid: false,
@@ -771,7 +771,15 @@ export const useEditorStore = create<EditorState>()(
         });
       return { components: updateInTree(s.components) };
     });
-    get().pushHistory();
+    // Debounce history push for property updates to improve responsiveness.
+    // Instead of pushing history on every keystroke (which triggers expensive
+    // structuredClone), we delay the push so rapid edits are batched.
+    if (!propHistoryTimer) {
+      propHistoryTimer = setTimeout(() => {
+        propHistoryTimer = null;
+        useEditorStore.getState().pushHistory();
+      }, 400);
+    }
   },
 
   updateComponentLabel: (id, newLabel) => {
@@ -786,7 +794,13 @@ export const useEditorStore = create<EditorState>()(
         });
       return { components: updateInTree(s.components) };
     });
-    get().pushHistory();
+    // Debounce history push for label updates (same as prop updates)
+    if (!propHistoryTimer) {
+      propHistoryTimer = setTimeout(() => {
+        propHistoryTimer = null;
+        useEditorStore.getState().pushHistory();
+      }, 400);
+    }
   },
 
   clearCanvas: () => {
@@ -893,19 +907,98 @@ export const useEditorStore = create<EditorState>()(
   moveUp: (id) => {
     const info = get().getParentInfo(id);
     if (!info || info.index === 0) return;
-    const parentId = info.parent?.id ?? null;
-    get().moveComponentInTree(id, parentId, info.index - 1);
+    const fromIdx = info.index;
+    const toIdx = info.index - 1;
+
+    set(s => {
+      // Find the parent array (root or nested) and swap the two items
+      const swapInTree = (comps: CanvasComponent[]): CanvasComponent[] => {
+        // Check if the target is a direct child of this array
+        const foundIdx = comps.findIndex(c => c.id === id);
+        if (foundIdx !== -1 && toIdx >= 0 && toIdx < comps.length) {
+          const newArr = [...comps];
+          [newArr[fromIdx], newArr[toIdx]] = [newArr[toIdx], newArr[fromIdx]];
+          // Update column labels if parent is a row
+          return newArr.map((c, i) => {
+            if (c.type === "col") {
+              return { ...c, label: `Column ${i + 1}` };
+            }
+            return c;
+          });
+        }
+        // Recurse into children
+        return comps.map(c => {
+          if (c.children) {
+            const childIdx = c.children.findIndex(ch => ch.id === id);
+            if (childIdx !== -1 && toIdx >= 0 && toIdx < c.children.length) {
+              const newChildren = [...c.children];
+              [newChildren[fromIdx], newChildren[toIdx]] = [newChildren[toIdx], newChildren[fromIdx]];
+              // Update column labels if parent is a row
+              return {
+                ...c,
+                children: c.type === "row"
+                  ? newChildren.map((ch, i) => ({ ...ch, label: `Column ${i + 1}` }))
+                  : newChildren,
+              };
+            }
+            const updatedChildren = swapInTree(c.children);
+            return updatedChildren === c.children ? c : { ...c, children: updatedChildren };
+          }
+          return c;
+        });
+      };
+
+      return { components: swapInTree(s.components) };
+    });
+    get().pushHistory();
+    get()._syncCurrentPage();
   },
 
   moveDown: (id) => {
     const info = get().getParentInfo(id);
-    if (!info || info.index === undefined) return;
-    const parentId = info.parent?.id ?? null;
-    const siblings = info.parent ? info.parent.children! : get().components;
+    if (!info) return;
+    const siblings = info.parent ? (info.parent.children || []) : get().components;
     if (info.index >= siblings.length - 1) return;
-    // After removing from index i, the next sibling shifts to index i.
-    // To place after it, insert at index i+1 in the post-removal array.
-    get().moveComponentInTree(id, parentId, info.index + 1);
+    const fromIdx = info.index;
+    const toIdx = info.index + 1;
+
+    set(s => {
+      const swapInTree = (comps: CanvasComponent[]): CanvasComponent[] => {
+        const foundIdx = comps.findIndex(c => c.id === id);
+        if (foundIdx !== -1 && toIdx >= 0 && toIdx < comps.length) {
+          const newArr = [...comps];
+          [newArr[fromIdx], newArr[toIdx]] = [newArr[toIdx], newArr[fromIdx]];
+          return newArr.map((c, i) => {
+            if (c.type === "col") {
+              return { ...c, label: `Column ${i + 1}` };
+            }
+            return c;
+          });
+        }
+        return comps.map(c => {
+          if (c.children) {
+            const childIdx = c.children.findIndex(ch => ch.id === id);
+            if (childIdx !== -1 && toIdx >= 0 && toIdx < c.children.length) {
+              const newChildren = [...c.children];
+              [newChildren[fromIdx], newChildren[toIdx]] = [newChildren[toIdx], newChildren[fromIdx]];
+              return {
+                ...c,
+                children: c.type === "row"
+                  ? newChildren.map((ch, i) => ({ ...ch, label: `Column ${i + 1}` }))
+                  : newChildren,
+              };
+            }
+            const updatedChildren = swapInTree(c.children);
+            return updatedChildren === c.children ? c : { ...c, children: updatedChildren };
+          }
+          return c;
+        });
+      };
+
+      return { components: swapInTree(s.components) };
+    });
+    get().pushHistory();
+    get()._syncCurrentPage();
   },
 
   toggleComponentVisibility: (id) => {
@@ -1037,7 +1130,6 @@ export const useEditorStore = create<EditorState>()(
         collapsedComponents: state.collapsedComponents,
         customCSS: state.customCSS,
         _schemaVersion: state._schemaVersion,
-        canvasDarkMode: state.canvasDarkMode,
         showGrid: state.showGrid,
       }),
       onRehydrateStorage: () => (state) => {
