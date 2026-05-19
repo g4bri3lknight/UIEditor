@@ -267,6 +267,7 @@ interface EditorState {
   pushHistory: () => void;
   findComponent: (id: string) => CanvasComponent | null;
   getParentInfo: (id: string) => { parent: CanvasComponent | null; index: number } | null;
+  getAncestors: (id: string) => CanvasComponent[];
   getSelectedComponent: () => CanvasComponent | null;
   copyComponent: (id: string) => void;
   pasteComponent: (parentId?: string | null, index?: number) => void;
@@ -275,11 +276,32 @@ interface EditorState {
   moveUp: (id: string) => void;
   moveDown: (id: string) => void;
   toggleComponentVisibility: (id: string) => void;
+  collapsedComponents: string[];
+  toggleComponentCollapsed: (id: string) => void;
 
   // ── Custom Theme ──
   bootstrapTheme: BootstrapTheme;
   updateTheme: (theme: Partial<BootstrapTheme>) => void;
   resetTheme: () => void;
+
+  // ── Canvas Dark Mode ──
+  canvasDarkMode: boolean;
+  toggleCanvasDarkMode: () => void;
+
+  // ── Canvas Grid Overlay (FEAT-6) ──
+  showGrid: boolean;
+  toggleGrid: () => void;
+
+  // ── Multi-selection (FEAT-7) ──
+  selectedIds: string[];
+  addToSelection: (id: string) => void;
+  removeFromSelection: (id: string) => void;
+  toggleInSelection: (id: string) => void;
+  clearSelection: () => void;
+  selectAll: () => void;
+  removeSelectedComponents: () => void;
+  duplicateSelectedComponents: () => void;
+  copySelectedComponents: () => void;
 
   // ── Multi-page Support ──
   pages: EditorPage[];
@@ -365,6 +387,7 @@ export const useEditorStore = create<EditorState>()(
   historyIndex: 0,
   clipboard: null,
   hiddenComponents: [],
+  collapsedComponents: [],
   customCSS: "",
   setCustomCSS: (css) => set({ customCSS: css }),
 
@@ -377,6 +400,106 @@ export const useEditorStore = create<EditorState>()(
   },
   resetTheme: () => {
     set({ bootstrapTheme: { ...DEFAULT_THEME } });
+  },
+
+  canvasDarkMode: false,
+  toggleCanvasDarkMode: () => set(s => ({ canvasDarkMode: !s.canvasDarkMode })),
+
+  // ── Canvas Grid Overlay (FEAT-6) ──
+  showGrid: false,
+  toggleGrid: () => set(s => ({ showGrid: !s.showGrid })),
+
+  // ── Multi-selection (FEAT-7) ──
+  selectedIds: [],
+  addToSelection: (id) => set(s => {
+    if (s.selectedIds.includes(id)) return s;
+    return { selectedIds: [...s.selectedIds, id] };
+  }),
+  removeFromSelection: (id) => set(s => ({
+    selectedIds: s.selectedIds.filter(x => x !== id),
+  })),
+  toggleInSelection: (id) => set(s => {
+    if (s.selectedIds.includes(id)) {
+      return { selectedIds: s.selectedIds.filter(x => x !== id) };
+    }
+    return { selectedIds: [...s.selectedIds, id] };
+  }),
+  clearSelection: () => set({ selectedIds: [] }),
+  selectAll: () => {
+    const { components } = get();
+    // Collect all non-auto-managed IDs from the tree
+    const allIds: string[] = [];
+    const collectIds = (comps: CanvasComponent[]) => {
+      for (const c of comps) {
+        if (!isAutoManaged(c.type)) {
+          allIds.push(c.id);
+        }
+        if (c.children) collectIds(c.children);
+      }
+    };
+    collectIds(components);
+    set({ selectedIds: allIds, selectedId: null });
+  },
+  removeSelectedComponents: () => {
+    const { selectedIds } = get();
+    if (selectedIds.length === 0) return;
+    set(s => {
+      let newComps = s.components;
+      for (const id of selectedIds) {
+        newComps = removeFromTree(newComps, id);
+      }
+      return {
+        components: newComps,
+        selectedIds: [],
+        selectedId: s.selectedId && selectedIds.includes(s.selectedId) ? null : s.selectedId,
+      };
+    });
+    get().pushHistory();
+  },
+  duplicateSelectedComponents: () => {
+    const { selectedIds, components } = get();
+    if (selectedIds.length === 0) return;
+    // Duplicate each selected component and insert after original
+    const clones: { comp: CanvasComponent; afterId: string }[] = [];
+    for (const id of selectedIds) {
+      const comp = findInTree(components, id);
+      if (!comp || isAutoManaged(comp.type)) continue;
+      const clone = deepCloneWithNewIds(comp);
+      clones.push({ comp: clone, afterId: id });
+    }
+    if (clones.length === 0) return;
+    set(s => {
+      let newComps = s.components;
+      const newSelectedIds: string[] = [];
+      for (const { comp, afterId } of clones) {
+        const parentInfo = get().getParentInfo(afterId);
+        if (parentInfo) {
+          newComps = addToTree(newComps, parentInfo.parent?.id ?? null, comp, parentInfo.index + 1);
+        } else {
+          const rootIndex = newComps.findIndex(c => c.id === afterId);
+          newComps = addToTree(newComps, null, comp, rootIndex >= 0 ? rootIndex + 1 : undefined);
+        }
+        newSelectedIds.push(comp.id);
+      }
+      return { components: newComps, selectedIds: newSelectedIds };
+    });
+    get().pushHistory();
+  },
+  copySelectedComponents: () => {
+    const { selectedIds, components } = get();
+    if (selectedIds.length === 0) return;
+    // Store all selected components as an array in clipboard
+    const copied = selectedIds
+      .map(id => findInTree(components, id))
+      .filter((c): c is CanvasComponent => c !== null && !isAutoManaged(c.type))
+      .map(c => deepCloneWithNewIds(c));
+    // Use the first component as clipboard for backward compatibility
+    // and also store the full array via a separate mechanism
+    if (copied.length > 0) {
+      set({ clipboard: copied[0] });
+    }
+    // Store multi-clipboard in a global ref for paste operation
+    (get() as any)._multiClipboard = copied;
   },
 
   // ── Multi-page Support ──
@@ -411,6 +534,7 @@ export const useEditorStore = create<EditorState>()(
         history: page.history,
         historyIndex: page.historyIndex,
         selectedId: null,
+        selectedIds: [],
       });
     }
   },
@@ -435,6 +559,7 @@ export const useEditorStore = create<EditorState>()(
       history: newPage.history,
       historyIndex: newPage.historyIndex,
       selectedId: null,
+      selectedIds: [],
     }));
   },
 
@@ -454,6 +579,7 @@ export const useEditorStore = create<EditorState>()(
         history: page.history,
         historyIndex: page.historyIndex,
         selectedId: null,
+        selectedIds: [],
       });
     } else {
       set({ pages: newPages });
@@ -556,7 +682,11 @@ export const useEditorStore = create<EditorState>()(
     if (!comp || isAutoManaged(comp.type)) return;
     set(s => {
       const newComps = removeFromTree(s.components, id);
-      return { components: newComps, selectedId: s.selectedId === id ? null : s.selectedId };
+      return {
+        components: newComps,
+        selectedId: s.selectedId === id ? null : s.selectedId,
+        selectedIds: s.selectedIds.filter(x => x !== id),
+      };
     });
     get().pushHistory();
   },
@@ -624,7 +754,7 @@ export const useEditorStore = create<EditorState>()(
     get().pushHistory();
   },
 
-  selectComponent: (id) => set({ selectedId: id }),
+  selectComponent: (id) => set({ selectedId: id, selectedIds: id ? [id] : [] }),
 
   updateComponentProps: (id, props) => {
     set(s => {
@@ -660,7 +790,7 @@ export const useEditorStore = create<EditorState>()(
   },
 
   clearCanvas: () => {
-    set({ components: [], selectedId: null });
+    set({ components: [], selectedId: null, selectedIds: [] });
     get().pushHistory();
   },
 
@@ -694,6 +824,24 @@ export const useEditorStore = create<EditorState>()(
       return null;
     };
     return search(get().components, null);
+  },
+
+  getAncestors: (id) => {
+    const ancestors: CanvasComponent[] = [];
+    const search = (comps: CanvasComponent[], path: CanvasComponent[]): boolean => {
+      for (const c of comps) {
+        if (c.id === id) {
+          ancestors.push(...path);
+          return true;
+        }
+        if (c.children) {
+          if (search(c.children, [...path, c])) return true;
+        }
+      }
+      return false;
+    };
+    search(get().components, []);
+    return ancestors;
   },
 
   getSelectedComponent: () => {
@@ -732,13 +880,13 @@ export const useEditorStore = create<EditorState>()(
         typeof item.props === "object"
     );
     if (!isValid) return false;
-    set({ components: data, selectedId: null });
+    set({ components: data, selectedId: null, selectedIds: [] });
     get().pushHistory();
     return true;
   },
 
   loadTemplate: (components) => {
-    set({ components, selectedId: null });
+    set({ components, selectedId: null, selectedIds: [] });
     get().pushHistory();
   },
 
@@ -770,6 +918,15 @@ export const useEditorStore = create<EditorState>()(
       }
     });
   },
+
+  toggleComponentCollapsed: (id) => set(s => {
+    const arr = s.collapsedComponents;
+    if (arr.includes(id)) {
+      return { collapsedComponents: arr.filter(x => x !== id) };
+    } else {
+      return { collapsedComponents: [...arr, id] };
+    }
+  }),
 
   // ── Saved Snippets ──
   saveSnippet: (name, componentIds, category) => {
@@ -877,8 +1034,11 @@ export const useEditorStore = create<EditorState>()(
         history: state.history,
         historyIndex: state.historyIndex,
         hiddenComponents: state.hiddenComponents,
+        collapsedComponents: state.collapsedComponents,
         customCSS: state.customCSS,
         _schemaVersion: state._schemaVersion,
+        canvasDarkMode: state.canvasDarkMode,
+        showGrid: state.showGrid,
       }),
       onRehydrateStorage: () => (state) => {
         try {

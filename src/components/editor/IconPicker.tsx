@@ -10,273 +10,89 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
-// Comprehensive Bootstrap Icons list
-const BOOTSTRAP_ICONS = [
-  "house", "house-fill", "gear", "gear-fill", "person", "person-fill",
-  "search", "cart", "cart-fill", "heart", "heart-fill", "star", "star-fill",
-  "envelope", "envelope-fill", "bell", "bell-fill", "bookmark", "bookmark-fill",
-  "calendar", "clock", "cloud", "cloud-sun", "download", "upload", "trash",
-  "trash-fill", "pencil", "eye", "eye-fill", "lock", "lock-fill", "unlock", "unlock-fill",
-  "check", "check-lg", "check-circle", "check-circle-fill",
-  "x", "x-lg", "x-circle", "x-circle-fill",
-  "plus", "plus-lg", "plus-circle", "plus-circle-fill",
-  "dash", "dash-lg", "dash-circle", "dash-circle-fill",
-  "arrow-right", "arrow-left", "arrow-up", "arrow-down",
-  "chevron-down", "chevron-up", "chevron-left", "chevron-right",
-  "info-circle", "info-circle-fill", "info", "info-fill",
-  "exclamation-triangle", "exclamation-triangle-fill", "exclamation-circle", "exclamation-circle-fill",
-  "question-circle", "question-circle-fill",
-  "link", "link-45deg", "link-break",
-  "image", "image-fill", "images", "camera", "camera-fill",
-  "music", "music-note", "play", "play-fill", "play-circle", "play-circle-fill",
-  "pause", "pause-fill", "stop", "stop-fill",
-  "volume-up", "volume-mute", "mic", "mic-fill",
-  "wifi", "bluetooth", "battery", "battery-full", "lightning",
-  "sun", "sun-fill", "moon", "moon-fill", "moon-stars",
-  "snow", "thermometer", "droplet", "droplet-fill", "fire", "fire-fill",
-  "tree", "tree-fill", "globe", "globe-americas", "globe-europe-africa",
-  "map", "map-fill", "geo-alt", "geo-alt-fill", "pin-map",
-  "building", "building-fill", "shop", "briefcase", "tools", "wrench",
-  "cog", "sliders", "palette", "fonts", "code", "code-slash", "terminal",
-  "database", "database-fill", "server", "cloud-upload", "cloud-download", "share",
-  "chat", "chat-fill", "chat-dots", "chat-dots-fill",
-  "people", "people-fill", "person-plus", "person-plus-fill",
-  "shield", "shield-fill", "shield-check", "shield-lock",
-  "key", "key-fill",
-  "box", "box-fill", "box-arrow-down", "box-arrow-up", "boxes",
-  "folder", "folder-fill", "folder2", "folder2-open", "folder-plus",
-  "file", "file-fill", "file-earmark", "file-text", "file-code", "file-image", "file-pdf",
-  "layers", "grid", "grid-fill", "list", "list-ul", "list-ol",
-  "skip-forward", "skip-backward", "rewind", "fast-forward",
-  "skip-forward-btn", "skip-backward-btn",
-  "speaker", "speedometer", "cpu", "laptop", "phone", "phone-fill",
-  "display", "display-fill", "keyboard", "keyboard-fill", "printer",
-  "headphones", "headset", "router",
-  "sort-up", "sort-down", "filter", "funnel",
-  "clipboard", "clipboard-check", "clipboard-plus",
-  "scissors", "eraser", "hammer", "screwdriver",
-  "zoom-in", "zoom-out", "search-heart",
-  "bookmark-star", "bookmarks", "bookmarks-fill",
-  "journal", "journal-text", "journal-code",
-  "book", "book-fill", "book-half",
-  "award", "award-fill", "trophy", "trophy-fill", "medal", "medal-fill",
-  "flag", "flag-fill", "flag-checkered",
-  "gem", "diamond", "diamond-fill", "star-half", "heartbreak",
-  "emoji-smile", "emoji-heart-eyes", "emoji-laughing", "emoji-neutral", "emoji-frown",
-  "emoji-dizzy", "emoji-grin", "emoji-sunglasses", "emoji-wink",
-  "hand-thumbs-up", "hand-thumbs-down", "hand-index", "hand-index-thumb",
-  "bag", "bag-fill", "bag-check", "bag-plus", "bag-x",
-  "basket", "basket-fill", "basket2", "basket3",
-  "cash", "cash-stack", "credit-card", "credit-card-fill", "wallet", "wallet2",
-  "tag", "tag-fill", "tags", "tags-fill", "gift", "gift-fill",
-  "graph-up", "graph-down", "bar-chart", "bar-chart-fill",
-  "pie-chart", "pie-chart-fill", "activity", "percent", "calculator",
-  "home", "home-fill", "door-closed", "door-open",
-  "mountain", "water", "umbrella", "compass",
-  "signpost", "pin", "thumbtack", "paperclip",
-  "send", "send-fill", "reply", "reply-all", "forward",
-  "megaphone", "broadcast", "rss",
-  "twitter", "github", "gitlab", "linkedin", "facebook", "instagram", "youtube",
-  "slack", "discord", "reddit", "twitch", "telegram", "whatsapp",
-  "mastodon", "threads", "medium", "wordpress",
-  "qr-code", "barcode",
-  "fingerprint", "robot", "incognito",
-  "password", "passkey", "person-lock",
-  "safe", "safe-fill",
-  "bug", "bug-fill", "spider",
-  "magic", "magic-wand",
-  "controller", "joystick",
-  "car", "truck", "bicycle", "scooter", "airplane", "airplane-fill",
-  "train-front", "bus-front",
-  "rocket", "rocket-fill",
-  "life-preserver", "buoy",
-  "cup-hot", "cake", "egg-fried",
-  "chess", "dice-1", "dice-2", "dice-3", "dice-4", "dice-5", "dice-6",
-  "puzzle", "puzzle-piece",
-  "toggle-on", "toggle-off",
-  "circle", "circle-fill", "circle-half", "square", "square-fill", "square-half",
-  "hexagon", "hexagon-fill", "octagon", "octagon-fill", "triangle", "triangle-fill",
-  "dot", "three-dots", "three-dots-vertical", "more",
-  "type-bold", "type-italic", "type-underline",
-  "text-left", "text-center", "text-right",
-  "justify", "paragraph",
-  "border-all", "border-none", "border-style",
-  "layout-sidebar", "layout-split", "layout-three-columns",
-  "table", "table-fill", "table-cells",
-  "diagram-2", "diagram-3", "node-plus", "node-minus",
-  "stack", "columns", "layers", "layer-group",
-  "vector-pen", "brush", "paint-roller",
-  "fullscreen", "aspect-ratio",
-  "caret-up", "caret-down", "caret-left", "caret-right",
-  "hand-pointer", "cursor",
-  "arrow-clockwise", "arrow-counterclockwise", "arrow-repeat",
-  "check2", "check2-all", "check2-circle",
-  "circle-dashed", "record", "record-circle",
-  "app-indicator", "brightness-high", "brightness-low",
-  "lightbulb", "lightbulb-fill", "oil-can", "palette2",
-  "file-earmark-text", "file-earmark-code", "file-earmark-image", "file-earmark-pdf",
-  "file-earmark-plus", "file-earmark-check",
-  "input-cursor", "font-size",
-  "hdd", "hdd-fill", "hdd-network", "hdd-rack",
-  "motherboard", "memory", "gpu-card",
-  "usb-drive", "usb-plug", "sim", "sd-card",
-  "modem", "smartwatch", "bandaid",
-  "signpost-2", "signpost-split",
-  "person-badge", "person-check", "person-dash",
-  "person-gear", "person-lines-fill", "person-vcard",
-  "person-standing", "person-walking", "person-running", "person-bounding-box",
-  "person-workspace",
-  "envelope-open", "envelope-heart", "envelope-paper",
-  "chat-left", "chat-right", "chat-square",
-  "chat-left-dots", "chat-right-dots", "chat-square-dots",
-  "chat-heart", "chat-left-text", "chat-right-text", "chat-square-text",
-  "telephone", "telephone-fill", "telephone-forward",
-  "cart-plus", "cart-check", "cart-x", "cart-dash",
-  "cart2", "cart3", "cart4",
-  "storefront", "shop-window",
-  "graph-up-arrow", "graph-down-arrow",
-  "bar-chart-line", "pie-chart-fill",
-  "house-door", "house-door-fill", "house-heart", "house-add",
-  "house-check", "house-dash", "house-exclamation",
-  "house-gear", "house-lock", "house-person", "house-plus", "house-x",
-  "flower1", "flower2", "flower3", "forest", "pine-tree",
-  "cloud-rain", "cloud-snow", "cloud-lightning",
-  "cloud-fog", "cloud-moon",
-  "wind", "tornado", "hurricane", "volcano", "flood",
-  "database-add", "database-check", "database-dash", "database-gear",
-  "database-lock", "database-minus", "database-plus", "database-x",
-  "hard-drive", "hard-drive-fill", "box-seam",
-  "shield-exclamation", "shield-minus", "shield-plus", "shield-slash", "shield-x",
-  "eye-slash", "eye-slash-fill",
-  "alarm", "alarm-fill", "clock-history", "hourglass", "timer", "stopwatch",
-  "sort-alpha-down", "sort-alpha-up", "sort-numeric-down", "sort-numeric-up",
-  "filter-left", "filter-right",
-  "clipboard2", "clipboard2-check", "clipboard2-plus", "clipboard2-x",
-  "sliders2", "gear-wide",
-  "binoculars", "sunglasses",
-  "mortarboard", "gender-male", "gender-female",
-  "cloud-check", "cloud-minus", "cloud-plus", "cloud-slash",
-  "battery-half", "battery-quarter", "battery-charging", "battery-empty",
-  "lightning-charge", "power", "plug",
-  "thermometer-half", "fan",
-  "snow2", "snow3",
-  "fuel-pump", "ev-station",
-  "easel", "receipt",
-  "badge-cc", "badge-sd", "badge-tm",
-  "boss", "servicestack",
-  "speedometer2", "gauge",
-  "landing", "takeoff",
-  "broadcast-pin",
-  "menu-app", "menu-button", "menu-down", "menu-up",
-  "back", "forward",
-  "collection", "collection-fill",
-  "kanban", "kanban-fill",
-  "bar-chart-steps",
-  "bezier", "bezier2",
-  "braces", "braces-asterisk",
-  "bucket", "bucket-fill",
-  "capslock", "capslock-fill",
-  "card-heading", "card-text", "card-checklist", "card-image", "card-list",
-  "chat-quote",
-  "clipboard-data", "clipboard-minus", "clipboard-x",
-  "code-square",
-  "cone", "cone-striped",
-  "cup", "cup-fill", "cup-straw",
-  "cursor-text",
-  "dash-square", "dash-circle-dotted",
-  "dice-1-fill", "dice-2-fill", "dice-3-fill", "dice-4-fill", "dice-5-fill", "dice-6-fill",
-  "disc", "disc-fill",
-  "distribute-horizontal", "distribute-vertical",
-  "door-closed-fill", "door-open-fill",
-  "download", "upload",
-  "egg", "egg-fill",
-  "eject", "eject-fill",
-  "emoji-angry", "emoji-angry-fill", "emoji-dizzy-fill", "emoji-expressionless",
-  "emoji-frown-fill", "emoji-heart-eyes-fill", "emoji-laughing-fill",
-  "emoji-neutral-fill", "emoji-smile-fill", "emoji-smile-upside-down",
-  "emoji-smile-upside-down-fill", "emoji-sunglasses-fill", "emoji-wink-fill",
-  "file-arrow-down", "file-arrow-up", "file-check", "file-minus", "file-plus", "file-x",
-  "file-earmark-arrow-down", "file-earmark-arrow-up",
-  "file-earmark-check", "file-earmark-excel", "file-earmark-lock",
-  "file-earmark-minus", "file-earmark-play", "file-earmark-slides",
-  "file-earmark-word", "file-earmark-zip", "file-earmark-x",
-  "file-music", "file-play",
-  "film",
-  "folder2-fill", "folder2-plus",
-  "funnel-fill",
-  "gear-wide-connected",
-  "grip-horizontal", "grip-vertical",
-  "handbag", "handbag-fill",
-  "heptagon", "heptagon-fill", "heptagon-half",
-  "hourglass-bottom", "hourglass-top",
-  "hr",
-  "image-alt",
-  "inbox",
-  "info-square", "info-square-fill",
-  "intersect", "union",
-  "journal-album", "journal-arrow-down", "journal-arrow-up",
-  "journal-check", "journal-medical", "journal-minus", "journal-plus",
-  "journal-richtext", "journal-x", "journals",
-  "kanban",
-  "ladder", "lamp", "lamp-fill",
-  "lightning-charge-fill", "lightning-fill",
-  "list-check", "list-nested", "list-stars", "list-task",
-  "mailbox", "mailbox2",
-  "markdown",
-  "menu-button-wide", "menu-button-wide-fill",
-  "minecart",
-  "mouse", "mouse-fill", "mouse2", "mouse2-fill",
-  "music-note-beamed", "music-note-list", "music-player",
-  "newspaper",
-  "node-minus-fill", "node-plus-fill",
-  "nut", "nut-fill",
-  "option",
-  "outlet",
-  "paint-bucket",
-  "palette-fill", "palette2",
-  "patch-check", "patch-exclamation", "patch-minus", "patch-plus", "patch-question",
-  "peace", "peace-fill",
-  "pen", "pen-fill",
-  "pencil-square",
-  "pentagon", "pentagon-fill", "pentagon-half",
-  "pie-chart",
-  "pip",
-  "plus-square", "plus-square-fill", "plus-circle-dotted", "plus-square-dotted",
-  "print", "print-fill",
-  "question-diamond", "question-square",
-  "rainbow",
-  "reception-0", "reception-1", "reception-2", "reception-3", "reception-4",
-  "record-btn", "record-btn-fill", "record-circle-fill", "record-fill",
-  "reply-fill", "reply-all-fill",
-  "rss-fill",
-  "rulers",
-  "save", "save-fill", "save2", "save2-fill",
-  "segmented-nav",
-  "shift",
-  "shop",
-  "shuffle",
-  "skip-end", "skip-end-btn", "skip-end-btn-fill", "skip-end-circle",
-  "skip-start", "skip-start-btn", "skip-start-btn-fill", "skip-start-circle",
-  "slash", "slash-circle", "slash-square",
-  "soundwave",
-  "spellcheck",
-  "stack",
-  "star-fill", "stars",
-  "stickies", "sticky",
-  "stop-btn", "stop-circle", "stop-circle-fill", "stoplights",
-  "subtract",
-  "suit-club", "suit-club-fill", "suit-diamond-fill", "suit-heart", "suit-heart-fill", "suit-spade", "suit-spade-fill",
-  "ticket-perforated", "ticket-perforated-fill",
-  "tropical-storm",
-  "window", "window-dock", "window-sidebar",
-  "wireless",
-  "wrench-adjustable", "wrench-adjustable-circle", "wrench-adjustable-circle-fill",
-  "x-diamond", "x-octagon", "x-square",
-  "yaml",
-];
-
-// Deduplicate while preserving order
-const UNIQUE_ICONS = [...new Set(BOOTSTRAP_ICONS)];
+// Categorized Bootstrap Icons
+const ICON_CATEGORIES: Record<string, { label: string; icons: string[] }> = {
+  "ui": {
+    label: "Interfaccia",
+    icons: ["house", "house-fill", "gear", "gear-fill", "search", "menu-app", "menu-button", "menu-down", "menu-up", "sliders", "sliders2", "toggle-on", "toggle-off", "fullscreen", "aspect-ratio", "grip-horizontal", "grip-vertical", "layout-sidebar", "layout-split", "layout-three-columns", "columns", "layers", "layer-group", "grid", "grid-fill", "list", "list-ul", "list-ol", "filter", "funnel", "sort-up", "sort-down", "app-indicator", "three-dots", "three-dots-vertical", "more", "dot"],
+  },
+  "arrows": {
+    label: "Frecce",
+    icons: ["arrow-right", "arrow-left", "arrow-up", "arrow-down", "arrow-clockwise", "arrow-counterclockwise", "arrow-repeat", "chevron-down", "chevron-up", "chevron-left", "chevron-right", "caret-up", "caret-down", "caret-left", "caret-right", "back", "forward", "rewind", "fast-forward", "skip-forward", "skip-backward", "expand", "collapse"],
+  },
+  "actions": {
+    label: "Azioni",
+    icons: ["plus", "plus-lg", "plus-circle", "plus-circle-fill", "dash", "dash-lg", "dash-circle", "dash-circle-fill", "check", "check-lg", "check-circle", "check-circle-fill", "check2", "check2-all", "check2-circle", "x", "x-lg", "x-circle", "x-circle-fill", "pencil", "pen", "pen-fill", "pencil-square", "eraser", "scissors", "trash", "trash-fill", "download", "upload", "save", "save-fill", "clipboard", "clipboard-check", "clipboard-plus", "clipboard2-check", "copy", "paste"],
+  },
+  "communication": {
+    label: "Comunicazione",
+    icons: ["envelope", "envelope-fill", "envelope-open", "bell", "bell-fill", "chat", "chat-fill", "chat-dots", "chat-dots-fill", "telephone", "telephone-fill", "megaphone", "broadcast", "rss", "send", "send-fill", "reply", "reply-all", "forward", "share"],
+  },
+  "media": {
+    label: "Media",
+    icons: ["play", "play-fill", "play-circle", "play-circle-fill", "pause", "pause-fill", "stop", "stop-fill", "music", "music-note", "volume-up", "volume-mute", "mic", "mic-fill", "camera", "camera-fill", "image", "image-fill", "images", "film", "record", "record-circle", "headphones", "headset", "speaker", "speedometer"],
+  },
+  "objects": {
+    label: "Oggetti",
+    icons: ["folder", "folder-fill", "folder2", "folder2-open", "folder-plus", "file", "file-fill", "file-earmark", "file-text", "file-code", "file-image", "file-pdf", "box", "box-fill", "box-arrow-down", "box-arrow-up", "boxes", "lock", "lock-fill", "unlock", "unlock-fill", "key", "key-fill", "shield", "shield-fill", "shield-check", "bookmark", "bookmark-fill", "tag", "tag-fill", "tags", "gift", "gift-fill", "trophy", "trophy-fill", "award", "award-fill"],
+  },
+  "people": {
+    label: "Persone",
+    icons: ["person", "person-fill", "people", "people-fill", "person-plus", "person-plus-fill", "person-badge", "person-check", "person-gear", "hand-thumbs-up", "hand-thumbs-down", "hand-index", "emoji-smile", "emoji-heart-eyes", "emoji-laughing", "emoji-neutral", "emoji-frown"],
+  },
+  "devices": {
+    label: "Dispositivi",
+    icons: ["laptop", "phone", "phone-fill", "display", "display-fill", "keyboard", "keyboard-fill", "printer", "mouse", "monitor", "smartwatch", "cpu", "hard-drive", "hdd", "router", "usb-drive", "battery", "battery-full", "wifi", "bluetooth"],
+  },
+  "weather": {
+    label: "Meteo",
+    icons: ["sun", "sun-fill", "moon", "moon-fill", "moon-stars", "cloud", "cloud-sun", "cloud-rain", "cloud-snow", "cloud-lightning", "cloud-fog", "snow", "thermometer", "droplet", "droplet-fill", "fire", "fire-fill", "wind", "lightning", "umbrella", "rainbow"],
+  },
+  "transport": {
+    label: "Trasporti",
+    icons: ["car", "truck", "bicycle", "scooter", "airplane", "airplane-fill", "train-front", "bus-front", "rocket", "rocket-fill", "fuel-pump"],
+  },
+  "commerce": {
+    label: "Commercio",
+    icons: ["cart", "cart-fill", "cart-plus", "cart-check", "bag", "bag-fill", "bag-check", "basket", "basket-fill", "shop", "storefront", "cash", "cash-stack", "credit-card", "credit-card-fill", "wallet", "receipt", "percent", "calculator", "graph-up", "graph-down", "bar-chart", "bar-chart-fill", "pie-chart", "pie-chart-fill"],
+  },
+  "social": {
+    label: "Social",
+    icons: ["twitter", "github", "gitlab", "linkedin", "facebook", "instagram", "youtube", "slack", "discord", "reddit", "twitch", "telegram", "whatsapp", "mastodon", "threads", "medium", "wordpress"],
+  },
+  "shapes": {
+    label: "Forme",
+    icons: ["circle", "circle-fill", "circle-half", "square", "square-fill", "square-half", "triangle", "triangle-fill", "hexagon", "hexagon-fill", "octagon", "octagon-fill", "star", "star-fill", "star-half", "heart", "heart-fill", "diamond", "diamond-fill", "gem"],
+  },
+  "nature": {
+    label: "Natura",
+    icons: ["tree", "tree-fill", "flower1", "flower2", "flower3", "forest", "pine-tree", "mountain", "water"],
+  },
+  "text": {
+    label: "Testo",
+    icons: ["type-bold", "type-italic", "type-underline", "text-left", "text-center", "text-right", "justify", "paragraph", "fonts", "font-size", "input-cursor", "cursor-text", "code", "code-slash", "terminal", "code-square", "braces"],
+  },
+  "security": {
+    label: "Sicurezza",
+    icons: ["shield", "shield-fill", "shield-check", "shield-lock", "shield-exclamation", "key", "key-fill", "lock", "lock-fill", "unlock", "unlock-fill", "fingerprint", "password", "eye", "eye-fill", "eye-slash", "eye-slash-fill", "incognito"],
+  },
+  "signs": {
+    label: "Segnali",
+    icons: ["info-circle", "info-circle-fill", "exclamation-triangle", "exclamation-triangle-fill", "exclamation-circle", "exclamation-circle-fill", "question-circle", "question-circle-fill", "check-circle", "check-circle-fill", "x-circle", "x-circle-fill", "plus-circle", "plus-circle-fill", "dash-circle", "dash-circle-fill"],
+  },
+  "maps": {
+    label: "Mappe",
+    icons: ["geo-alt", "geo-alt-fill", "globe", "globe-americas", "globe-europe-africa", "map", "map-fill", "pin-map", "compass", "signpost", "signpost-2", "pin", "thumbtack", "paperclip"],
+  },
+  "time": {
+    label: "Tempo",
+    icons: ["clock", "clock-history", "alarm", "alarm-fill", "hourglass", "timer", "stopwatch", "calendar"],
+  },
+  "medical": {
+    label: "Medico",
+    icons: ["heart", "heart-fill", "heartbreak", "bandaid", "hospital", "capsule", "prescription", "syringe"],
+  },
+};
 
 interface IconPickerProps {
   open: boolean;
@@ -287,6 +103,7 @@ interface IconPickerProps {
 
 export function IconPicker({ open, onClose, onSelect, currentValue }: IconPickerProps) {
   const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -300,10 +117,22 @@ export function IconPicker({ open, onClose, onSelect, currentValue }: IconPicker
   }, [open]);
 
   const filteredIcons = useMemo(() => {
-    if (!search.trim()) return UNIQUE_ICONS;
+    let icons: string[];
+    if (selectedCategory === "all") {
+      // Gather all unique icons from all categories
+      const allIcons = new Set<string>();
+      Object.values(ICON_CATEGORIES).forEach(cat => {
+        cat.icons.forEach(icon => allIcons.add(icon));
+      });
+      icons = [...allIcons];
+    } else {
+      icons = ICON_CATEGORIES[selectedCategory]?.icons || [];
+    }
+
+    if (!search.trim()) return icons;
     const q = search.toLowerCase().replace(/^bi-?/, "").trim();
-    return UNIQUE_ICONS.filter((icon) => icon.includes(q));
-  }, [search]);
+    return icons.filter((icon) => icon.includes(q));
+  }, [search, selectedCategory]);
 
   const handleSelect = (iconName: string) => {
     onSelect(iconName);
@@ -324,7 +153,7 @@ export function IconPicker({ open, onClose, onSelect, currentValue }: IconPicker
             Seleziona Icona
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground mb-3">
-            {filteredIcons.length} icone Bootstrap disponibili
+            {filteredIcons.length} icone{selectedCategory !== "all" ? ` in ${ICON_CATEGORIES[selectedCategory]?.label}` : ""}
           </DialogDescription>
           <Input
             ref={inputRef}
@@ -333,19 +162,46 @@ export function IconPicker({ open, onClose, onSelect, currentValue }: IconPicker
             placeholder="Cerca icona... (es. house, gear, star)"
             className="h-8 text-xs"
           />
+
+          {/* Category Tabs */}
+          <div className="flex gap-1 overflow-x-auto py-1.5 -mx-1 px-1 scrollbar-thin">
+            <button
+              onClick={() => setSelectedCategory("all")}
+              className={`shrink-0 px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
+                selectedCategory === "all"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              Tutte
+            </button>
+            {Object.entries(ICON_CATEGORIES).map(([key, cat]) => (
+              <button
+                key={key}
+                onClick={() => setSelectedCategory(key)}
+                className={`shrink-0 px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
+                  selectedCategory === key
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Scrollable Grid */}
         <div
           ref={scrollRef}
           className="flex-1 min-h-0 overflow-y-auto px-3 pb-3"
-          style={{ maxHeight: "calc(75vh - 120px)" }}
+          style={{ maxHeight: "calc(75vh - 160px)" }}
         >
           {filteredIcons.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 gap-2">
               <p className="text-xs text-muted-foreground">Nessuna icona trovata</p>
               <p className="text-[10px] text-muted-foreground/60">
-                Prova un termine diverso
+                Prova un termine diverso o cambia categoria
               </p>
             </div>
           ) : (

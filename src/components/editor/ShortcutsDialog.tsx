@@ -19,10 +19,10 @@ const EDIT_SHORTCUTS = [
   { keys: "Ctrl + Z", desc: "Annulla" },
   { keys: "Ctrl + Y", desc: "Ripristina" },
   { keys: "Ctrl + Shift + Z", desc: "Ripristina (alternativo)" },
-  { keys: "Ctrl + C", desc: "Copia componente selezionato" },
+  { keys: "Ctrl + C", desc: "Copia componente/i selezionato/i" },
   { keys: "Ctrl + V", desc: "Incolla componente" },
-  { keys: "Ctrl + D", desc: "Duplica componente selezionato" },
-  { keys: "Delete / Backspace", desc: "Elimina componente selezionato" },
+  { keys: "Ctrl + D", desc: "Duplica componente/i selezionato/i" },
+  { keys: "Delete / Backspace", desc: "Elimina componente/i selezionato/i" },
 ];
 
 const NAV_SHORTCUTS = [
@@ -30,6 +30,13 @@ const NAV_SHORTCUTS = [
   { keys: "Alt + ↓", desc: "Sposta componente giù" },
   { keys: "Escape", desc: "Seleziona genitore / Deseleziona" },
   { keys: "?", desc: "Apri scorciatoie da tastiera" },
+];
+
+const SELECTION_SHORTCUTS = [
+  { keys: "Ctrl + Click", desc: "Aggiungi/rimuovi componente dalla selezione" },
+  { keys: "Shift + Click", desc: "Estendi selezione" },
+  { keys: "Ctrl + A", desc: "Seleziona tutti i componenti" },
+  { keys: "Escape", desc: "Deseleziona tutto (se multi-selezione)" },
 ];
 
 const PROJECT_SHORTCUTS = [
@@ -90,6 +97,7 @@ export function ShortcutsDialog({ open, onOpenChange }: ShortcutsDialogProps) {
         </DialogHeader>
         <div className="space-y-4 mt-2">
           <ShortcutSection title="Modifica" shortcuts={EDIT_SHORTCUTS} />
+          <ShortcutSection title="Selezione multipla" shortcuts={SELECTION_SHORTCUTS} />
           <ShortcutSection title="Navigazione" shortcuts={NAV_SHORTCUTS} />
           <ShortcutSection title="Progetto" shortcuts={PROJECT_SHORTCUTS} />
         </div>

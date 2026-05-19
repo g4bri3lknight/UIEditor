@@ -10,8 +10,18 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { X, Trash2, Copy, Info, ArrowUp, ArrowDown, Eye, EyeOff, Tag, Hash, Paintbrush } from "lucide-react";
+import { X, Trash2, Copy, Info, ArrowUp, ArrowDown, Eye, EyeOff, Tag, Hash, Paintbrush, Search, Layers } from "lucide-react";
+import { toast } from "sonner";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { IconPicker } from "./IconPicker";
+import { COMPONENT_PRESETS } from "@/lib/editor/component-presets";
 
 function PropertyField({
   prop,
@@ -141,6 +151,7 @@ interface RightSidebarProps {
 export function RightSidebar({ width }: RightSidebarProps) {
   const {
     selectedId,
+    selectedIds,
     updateComponentProps,
     updateComponentLabel,
     removeComponent,
@@ -148,19 +159,29 @@ export function RightSidebar({ width }: RightSidebarProps) {
     selectComponent,
     findComponent,
     getParentInfo,
+    getAncestors,
     moveUp,
     moveDown,
     hiddenComponents,
     toggleComponentVisibility,
     customCSS,
     setCustomCSS,
+    removeSelectedComponents,
+    duplicateSelectedComponents,
+    copySelectedComponents,
+    clearSelection,
   } = useEditorStore();
 
+  const [searchQuery, setSearchQuery] = useState("");
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [iconPickerPropKey, setIconPickerPropKey] = useState<string>("");
   const [iconPickerValue, setIconPickerValue] = useState<string>("");
 
-  const selectedComponent = selectedId ? findComponent(selectedId) ?? undefined : undefined;
+  // Multi-selection mode
+  const multiSelectCount = selectedIds.length;
+  const isMultiSelectMode = multiSelectCount > 1;
+
+  const selectedComponent = !isMultiSelectMode && selectedId ? findComponent(selectedId) ?? undefined : undefined;
 
   const componentDef = selectedComponent
     ? getComponentByType(selectedComponent.type)
@@ -170,7 +191,123 @@ export function RightSidebar({ width }: RightSidebarProps) {
 
   const isHidden = selectedComponent ? hiddenComponents.includes(selectedComponent.id) : false;
 
+  const ancestors = selectedComponent ? getAncestors(selectedComponent.id) : [];
+
   if (!selectedComponent || !componentDef) {
+    // Multi-selection bulk actions panel
+    if (isMultiSelectMode) {
+      return (
+        <div
+          className="border-l border-border bg-card flex flex-col h-full shrink-0 overflow-hidden"
+          style={{ width: `${width}px` }}
+        >
+          <div className="p-3 border-b border-border shrink-0">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Selezione multipla
+              </h2>
+              <button
+                onClick={() => { selectComponent(null); clearSelection(); }}
+                className="p-1 rounded hover:bg-muted transition-colors"
+              >
+                <X className="w-3.5 h-3.5 text-muted-foreground" />
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-amber-500" />
+              <span className="text-sm font-medium">{multiSelectCount} componenti selezionati</span>
+            </div>
+          </div>
+
+          {/* Multi-selection actions */}
+          <div className="p-3 space-y-2">
+            <p className="text-[10px] text-muted-foreground/70 mb-2">
+              Le azioni verranno applicate a tutti i componenti selezionati.
+            </p>
+            <button
+              onClick={() => {
+                duplicateSelectedComponents();
+                toast.success(`${multiSelectCount} componenti duplicati`);
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-md border border-input bg-background text-xs text-foreground hover:bg-muted/50 transition-colors"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              Duplica tutti ({multiSelectCount})
+            </button>
+            <button
+              onClick={() => {
+                copySelectedComponents();
+                toast.success(`${multiSelectCount} componenti copiati`);
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-md border border-input bg-background text-xs text-foreground hover:bg-muted/50 transition-colors"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              Copia tutti ({multiSelectCount})
+              <span className="ml-auto text-[10px] text-muted-foreground">Ctrl+C</span>
+            </button>
+            <button
+              onClick={() => {
+                removeSelectedComponents();
+                toast.success(`${multiSelectCount} componenti eliminati`);
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-md border border-destructive/30 bg-destructive/5 text-xs text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Elimina tutti ({multiSelectCount})
+              <span className="ml-auto text-[10px] text-destructive/60">Del</span>
+            </button>
+          </div>
+
+          {/* Selected items list */}
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="p-3">
+              <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">
+                Componenti selezionati
+              </p>
+              <div className="space-y-1">
+                {selectedIds.map(id => {
+                  const comp = findComponent(id);
+                  if (!comp) return null;
+                  const def = getComponentByType(comp.type);
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => selectComponent(id)}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors text-left"
+                    >
+                      <Badge variant="secondary" className="text-[9px] px-1.5 py-0 font-normal shrink-0">
+                        {def?.label || comp.type}
+                      </Badge>
+                      <span className="text-xs text-foreground truncate">{comp.label}</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          useEditorStore.getState().removeFromSelection(id);
+                        }}
+                        className="ml-auto p-0.5 rounded hover:bg-muted-foreground/10 transition-colors shrink-0"
+                      >
+                        <X className="w-3 h-3 text-muted-foreground" />
+                      </button>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </ScrollArea>
+
+          {/* Shortcuts hint */}
+          <div className="border-t border-border px-3 py-2 shrink-0">
+            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-muted-foreground/50">
+              <span><kbd className="px-1 py-0.5 bg-muted rounded border border-border font-mono">Ctrl+Click</kbd> Aggiungi/Rimuovi</span>
+              <span><kbd className="px-1 py-0.5 bg-muted rounded border border-border font-mono">Shift+Click</kbd> Estendi</span>
+              <span><kbd className="px-1 py-0.5 bg-muted rounded border border-border font-mono">Ctrl+A</kbd> Seleziona tutto</span>
+              <span><kbd className="px-1 py-0.5 bg-muted rounded border border-border font-mono">Esc</kbd> Deseleziona</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div
         className="border-l border-border bg-card flex flex-col h-full shrink-0 overflow-hidden"
@@ -231,6 +368,71 @@ export function RightSidebar({ width }: RightSidebarProps) {
           </span>
         </div>
       </div>
+
+      {/* Breadcrumb Navigation */}
+      {ancestors.length > 0 && (
+        <div className="px-3 py-1.5 border-b border-border shrink-0">
+          <Breadcrumb>
+            <BreadcrumbList className="text-[10px] gap-1">
+              {ancestors.map((ancestor) => (
+                <React.Fragment key={ancestor.id}>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink
+                      asChild
+                      className="text-[10px] text-muted-foreground hover:text-foreground cursor-pointer"
+                    >
+                      <button
+                        onClick={() => selectComponent(ancestor.id)}
+                        title={ancestor.type}
+                      >
+                        {ancestor.label}
+                      </button>
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator className="text-[8px]" />
+                </React.Fragment>
+              ))}
+              <BreadcrumbItem>
+                <BreadcrumbPage className="text-[10px] font-medium">
+                  {selectedComponent.label}
+                </BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+      )}
+
+      {/* Variant Presets */}
+      {COMPONENT_PRESETS[selectedComponent.type] && (
+        <div className="px-3 py-2 border-b border-border shrink-0">
+          <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-1.5">
+            Varianti rapide
+          </p>
+          <div className="flex flex-wrap gap-1">
+            {COMPONENT_PRESETS[selectedComponent.type].map((preset) => {
+              // Check if this preset matches the current props
+              const isActive = Object.entries(preset.props).every(
+                ([key, value]) => selectedComponent.props[key] === value
+              );
+              return (
+                <button
+                  key={preset.name}
+                  onClick={() => {
+                    updateComponentProps(selectedComponent.id, preset.props);
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                  }`}
+                >
+                  {preset.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Auto-managed info for columns */}
       {managed && (
@@ -296,55 +498,94 @@ export function RightSidebar({ width }: RightSidebarProps) {
           </div>
 
           <Separator />
-          {Object.entries(propGroups).map(([groupName, props], idx) => (
-            <div key={groupName}>
-              {Object.keys(propGroups).length > 1 && (
-                <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">
-                  {groupName}
-                </p>
+
+          {/* Property Search */}
+          <div className="space-y-1.5">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Cerca proprietà..."
+                className="h-8 text-xs pl-7 pr-7"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted transition-colors"
+                >
+                  <X className="w-3 h-3 text-muted-foreground" />
+                </button>
               )}
-              <div className="space-y-2.5">
-                {props.map((prop) => (
-                  prop.key === "iconLeft" ? (
-                    <div key={prop.key} className="space-y-1.5">
-                      <Label className="text-xs font-normal text-muted-foreground">
-                        {prop.label}
-                      </Label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIconPickerPropKey(prop.key);
-                          setIconPickerValue(String(selectedComponent.props[prop.key] ?? ""));
-                          setIconPickerOpen(true);
-                        }}
-                        className="w-full flex items-center gap-2 h-8 px-3 rounded-md border border-input bg-background text-xs text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
-                      >
-                        {selectedComponent.props[prop.key] ? (
-                          <>
-                            <i className={`bi-${String(selectedComponent.props[prop.key]).replace(/^bi-?/, '')}`} style={{ fontSize: "14px" }} />
-                            <span className="flex-1 text-left font-mono truncate">{String(selectedComponent.props[prop.key])}</span>
-                          </>
-                        ) : (
-                          <span className="text-muted-foreground">Clicca per selezionare...</span>
-                        )}
-                      </button>
-                    </div>
-                  ) : (
-                    <PropertyField
-                      key={prop.key}
-                      prop={prop}
-                      value={selectedComponent.props[prop.key] ?? prop.defaultValue}
-                      onChange={(val) =>
-                        updateComponentProps(selectedComponent.id, {
-                          [prop.key]: val,
-                        })
-                      }
-                    />
-                  )
-                ))}
-              </div>
             </div>
-          ))}
+          </div>
+
+          {(() => {
+            const filteredGroups = Object.entries(propGroups).map(([groupName, props]) => {
+              const filteredProps = searchQuery.trim()
+                ? props.filter(p => p.label.toLowerCase().includes(searchQuery.toLowerCase()) || p.key.toLowerCase().includes(searchQuery.toLowerCase()))
+                : props;
+              return { groupName, props: filteredProps };
+            }).filter(g => g.props.length > 0);
+
+            if (filteredGroups.length === 0) {
+              return (
+                <p className="text-xs text-muted-foreground text-center py-4">
+                  Nessuna proprietà trovata
+                </p>
+              );
+            }
+
+            return filteredGroups.map(({ groupName, props }) => (
+              <div key={groupName}>
+                {Object.keys(propGroups).length > 1 && !searchQuery.trim() && (
+                  <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">
+                    {groupName}
+                  </p>
+                )}
+                <div className="space-y-2.5">
+                  {props.map((prop) => (
+                    prop.key === "iconLeft" ? (
+                      <div key={prop.key} className="space-y-1.5">
+                        <Label className="text-xs font-normal text-muted-foreground">
+                          {prop.label}
+                        </Label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIconPickerPropKey(prop.key);
+                            setIconPickerValue(String(selectedComponent.props[prop.key] ?? ""));
+                            setIconPickerOpen(true);
+                          }}
+                          className="w-full flex items-center gap-2 h-8 px-3 rounded-md border border-input bg-background text-xs text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+                        >
+                          {selectedComponent.props[prop.key] ? (
+                            <>
+                              <i className={`bi-${String(selectedComponent.props[prop.key]).replace(/^bi-?/, '')}`} style={{ fontSize: "14px" }} />
+                              <span className="flex-1 text-left font-mono truncate">{String(selectedComponent.props[prop.key])}</span>
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground">Clicca per selezionare...</span>
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <PropertyField
+                        key={prop.key}
+                        prop={prop}
+                        value={selectedComponent.props[prop.key] ?? prop.defaultValue}
+                        onChange={(val) =>
+                          updateComponentProps(selectedComponent.id, {
+                            [prop.key]: val,
+                          })
+                        }
+                      />
+                    )
+                  ))}
+                </div>
+              </div>
+            ));
+          })()}
 
           {/* Avanzato (Advanced) */}
           <div>

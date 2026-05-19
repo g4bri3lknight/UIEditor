@@ -73,6 +73,10 @@ export function Editor() {
   const leftSidebar = useSidebarResize("editor-left-width", 256, 180, 400);
   const rightSidebar = useSidebarResize("editor-right-width", 288, 200, 500, "right");
 
+  // ── Mobile sidebar visibility ──
+  const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
+  const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
+
   // ── Generated HTML code ──
   const htmlCode = useMemo(
     () => generateFullHTML(components, hiddenComponents, customCSS, bootstrapTheme),
@@ -142,8 +146,20 @@ export function Editor() {
         redo();
       }
       if (e.key === "Delete" || e.key === "Backspace") {
-        const { selectedId } = useEditorStore.getState();
-        if (selectedId) {
+        const { selectedId, selectedIds } = useEditorStore.getState();
+        if (selectedIds.length > 1) {
+          const target = e.target as HTMLElement;
+          if (
+            target.tagName !== "INPUT" &&
+            target.tagName !== "TEXTAREA" &&
+            target.tagName !== "SELECT"
+          ) {
+            e.preventDefault();
+            const count = selectedIds.length;
+            useEditorStore.getState().removeSelectedComponents();
+            toast.success(`${count} componenti eliminati`);
+          }
+        } else if (selectedId) {
           const target = e.target as HTMLElement;
           if (
             target.tagName !== "INPUT" &&
@@ -156,8 +172,11 @@ export function Editor() {
         }
       }
       if (e.key === "Escape") {
-        const { selectedId } = useEditorStore.getState();
-        if (selectedId) {
+        const { selectedId, selectedIds } = useEditorStore.getState();
+        if (selectedIds.length > 1) {
+          // Clear multi-selection first
+          useEditorStore.getState().clearSelection();
+        } else if (selectedId) {
           const parentInfo = useEditorStore.getState().getParentInfo(selectedId);
           if (parentInfo?.parent) {
             useEditorStore.getState().selectComponent(parentInfo.parent.id);
@@ -168,6 +187,18 @@ export function Editor() {
         setShortcutsDialogOpen(false);
         setCodeDialogOpen(false);
         setPreviewDialogOpen(false);
+      }
+      // Ctrl+A — Select all components
+      if (e.key === "a" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        const target = e.target as HTMLElement;
+        if (
+          target.tagName !== "INPUT" &&
+          target.tagName !== "TEXTAREA" &&
+          target.tagName !== "SELECT"
+        ) {
+          e.preventDefault();
+          useEditorStore.getState().selectAll();
+        }
       }
       if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
         const target = e.target as HTMLElement;
@@ -180,8 +211,19 @@ export function Editor() {
         }
       }
       if (e.key === "c" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
-        const { selectedId } = useEditorStore.getState();
-        if (selectedId) {
+        const { selectedId, selectedIds } = useEditorStore.getState();
+        if (selectedIds.length > 1) {
+          const target = e.target as HTMLElement;
+          if (
+            target.tagName !== "INPUT" &&
+            target.tagName !== "TEXTAREA" &&
+            target.tagName !== "SELECT"
+          ) {
+            e.preventDefault();
+            useEditorStore.getState().copySelectedComponents();
+            toast.success(`${selectedIds.length} componenti copiati`);
+          }
+        } else if (selectedId) {
           const target = e.target as HTMLElement;
           if (
             target.tagName !== "INPUT" &&
@@ -215,8 +257,20 @@ export function Editor() {
         handleSave();
       }
       if (e.key === "d" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
-        const { selectedId } = useEditorStore.getState();
-        if (selectedId) {
+        const { selectedId, selectedIds } = useEditorStore.getState();
+        if (selectedIds.length > 1) {
+          const target = e.target as HTMLElement;
+          if (
+            target.tagName !== "INPUT" &&
+            target.tagName !== "TEXTAREA" &&
+            target.tagName !== "SELECT"
+          ) {
+            e.preventDefault();
+            const count = selectedIds.length;
+            useEditorStore.getState().duplicateSelectedComponents();
+            toast.success(`${count} componenti duplicati`);
+          }
+        } else if (selectedId) {
           const target = e.target as HTMLElement;
           if (
             target.tagName !== "INPUT" &&
@@ -280,13 +334,90 @@ export function Editor() {
         {/* Page Tabs */}
         <PageTabs onAddPage={() => { addPage(); toast.success("Nuova pagina creata"); }} />
 
-        {/* Main Content — Resizable Sidebars */}
-        <div className="flex-1 flex overflow-hidden">
-          <LeftSidebar width={leftSidebar.width} />
-          <ResizeHandle onPointerDown={leftSidebar.startResize} side="left" />
-          <Canvas activeDragId={activeDragId} />
-          <ResizeHandle onPointerDown={rightSidebar.startResize} side="right" />
-          <RightSidebar width={rightSidebar.width} />
+        {/* Main Content — Resizable Sidebars (desktop) / Overlay sidebars (mobile) */}
+        <div className="flex-1 flex overflow-hidden relative">
+          {/* Left sidebar — overlay on mobile, inline on desktop */}
+          <div
+            className={`
+              shrink-0
+              ${leftSidebarOpen ? "flex" : "hidden"} lg:flex
+              fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto
+              shadow-2xl lg:shadow-none
+              h-full
+            `}
+          >
+            <LeftSidebar width={280} />
+            {/* Close button on mobile */}
+            <button
+              className="lg:hidden absolute top-3 right-3 p-1.5 rounded-md bg-muted/80 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors z-10"
+              onClick={() => setLeftSidebarOpen(false)}
+              aria-label="Chiudi pannello componenti"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Mobile backdrop for left sidebar */}
+          {leftSidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black/30 z-40 lg:hidden"
+              onClick={() => setLeftSidebarOpen(false)}
+              aria-hidden="true"
+            />
+          )}
+
+          {/* Left resize handle — desktop only */}
+          <div className="hidden lg:block shrink-0">
+            <ResizeHandle onPointerDown={leftSidebar.startResize} side="left" />
+          </div>
+
+          {/* Canvas */}
+          <Canvas
+            activeDragId={activeDragId}
+            onToggleLeftSidebar={() => setLeftSidebarOpen((v) => !v)}
+            onToggleRightSidebar={() => setRightSidebarOpen((v) => !v)}
+            leftSidebarOpen={leftSidebarOpen}
+            rightSidebarOpen={rightSidebarOpen}
+          />
+
+          {/* Right resize handle — desktop only */}
+          <div className="hidden lg:block shrink-0">
+            <ResizeHandle onPointerDown={rightSidebar.startResize} side="right" />
+          </div>
+
+          {/* Right sidebar — overlay on mobile, inline on desktop */}
+          <div
+            className={`
+              shrink-0
+              ${rightSidebarOpen ? "flex" : "hidden"} lg:flex
+              fixed lg:relative inset-y-0 right-0 z-50 lg:z-auto
+              shadow-2xl lg:shadow-none
+              h-full
+            `}
+          >
+            <RightSidebar width={300} />
+            {/* Close button on mobile */}
+            <button
+              className="lg:hidden absolute top-3 left-3 p-1.5 rounded-md bg-muted/80 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors z-10"
+              onClick={() => setRightSidebarOpen(false)}
+              aria-label="Chiudi pannello proprietà"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Mobile backdrop for right sidebar */}
+          {rightSidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black/30 z-40 lg:hidden"
+              onClick={() => setRightSidebarOpen(false)}
+              aria-hidden="true"
+            />
+          )}
         </div>
       </div>
 

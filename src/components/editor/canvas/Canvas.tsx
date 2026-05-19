@@ -44,8 +44,24 @@ function EmptyCanvas({ isOver }: { isOver: boolean }) {
   );
 }
 
-export function Canvas({ activeDragId }: { activeDragId: string | null }) {
+export function Canvas({
+  activeDragId,
+  onToggleLeftSidebar,
+  onToggleRightSidebar,
+  leftSidebarOpen,
+  rightSidebarOpen,
+}: {
+  activeDragId: string | null;
+  onToggleLeftSidebar?: () => void;
+  onToggleRightSidebar?: () => void;
+  leftSidebarOpen?: boolean;
+  rightSidebarOpen?: boolean;
+}) {
   const { components, selectComponent, updateComponentProps } = useEditorStore();
+  const bootstrapTheme = useEditorStore(s => s.bootstrapTheme);
+  const customCSS = useEditorStore(s => s.customCSS);
+  const canvasDarkMode = useEditorStore(s => s.canvasDarkMode);
+  const showGrid = useEditorStore(s => s.showGrid);
   const isDragging = !!activeDragId;
 
   // ── Zoom state ──
@@ -63,6 +79,14 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
 
   const handleZoomReset = useCallback(() => {
     setZoom(100);
+  }, []);
+
+  const handleToggleDarkMode = useCallback(() => {
+    useEditorStore.getState().toggleCanvasDarkMode();
+  }, []);
+
+  const handleToggleGrid = useCallback(() => {
+    useEditorStore.getState().toggleGrid();
   }, []);
 
   // Ctrl+Scroll to zoom
@@ -138,6 +162,8 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
       setPropPicker(null);
     }
     selectComponent(null);
+    // Clear multi-selection
+    useEditorStore.getState().clearSelection();
   }, [inlineEdit, commitEdit, propPicker, selectComponent]);
 
   const handleDismissPropPicker = useCallback(() => {
@@ -157,6 +183,14 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
         onZoomReset={handleZoomReset}
         onZoomChange={setZoom}
         onViewportChange={setViewport}
+        canvasDarkMode={canvasDarkMode}
+        onToggleDarkMode={handleToggleDarkMode}
+        showGrid={showGrid}
+        onToggleGrid={handleToggleGrid}
+        onToggleLeftSidebar={onToggleLeftSidebar}
+        onToggleRightSidebar={onToggleRightSidebar}
+        leftSidebarOpen={leftSidebarOpen}
+        rightSidebarOpen={rightSidebarOpen}
       />
 
       {/* Drop Zone — always light theme so Bootstrap components stay readable */}
@@ -170,23 +204,78 @@ export function Canvas({ activeDragId }: { activeDragId: string | null }) {
         className={`flex-1 overflow-auto transition-colors duration-200 ${
           isOver && isDragging ? "bg-primary/5" : ""
         }`}
-        style={{ backgroundColor: "#f8f9fa", colorScheme: "light" }}
+        style={{ backgroundColor: canvasDarkMode ? "#1a1d20" : "#f8f9fa", colorScheme: canvasDarkMode ? "dark" : "light" }}
       >
         <div
           className="w-[95%] mx-auto p-6 origin-top"
           style={{ transform: `scale(${zoom / 100})`, transition: 'transform 150ms ease-out' }}
         >
+          {/* Custom CSS injection for canvas */}
+          {customCSS && (
+            <style dangerouslySetInnerHTML={{ __html: customCSS }} />
+          )}
           <div
+            data-bs-theme={canvasDarkMode ? "dark" : "light"}
             style={{
+              position: "relative",
               maxWidth: viewport === "xl" ? "100%" : `${VIEWPORT_BREAKPOINTS.find(bp => bp.key === viewport)?.width || "100%"}px`,
               margin: "0 auto",
               transition: "max-width 200ms ease-out",
-              border: viewport !== "xl" ? "1px solid #e5e7eb" : "none",
+              border: viewport !== "xl" ? (canvasDarkMode ? "1px solid #495057" : "1px solid #e5e7eb") : "none",
               borderRadius: viewport !== "xl" ? "8px" : "0",
               overflow: "hidden",
-              colorScheme: "light",
-            }}
+              colorScheme: canvasDarkMode ? "dark" : "light",
+              // Theme CSS custom properties — cascade to all Bootstrap components in canvas
+              "--bs-primary": bootstrapTheme.primaryColor,
+              "--bs-secondary": bootstrapTheme.secondaryColor,
+              "--bs-success": bootstrapTheme.successColor,
+              "--bs-danger": bootstrapTheme.dangerColor,
+              "--bs-warning": bootstrapTheme.warningColor,
+              "--bs-info": bootstrapTheme.infoColor,
+              "--bs-body-bg": canvasDarkMode ? (bootstrapTheme.bodyBg === "#ffffff" ? "#212529" : bootstrapTheme.bodyBg) : bootstrapTheme.bodyBg,
+              "--bs-body-color": canvasDarkMode ? (bootstrapTheme.bodyColor === "#212529" ? "#dee2e6" : bootstrapTheme.bodyColor) : bootstrapTheme.bodyColor,
+              "--bs-font-family": bootstrapTheme.fontFamily,
+              "--bs-border-radius": bootstrapTheme.borderRadius,
+              "--bs-border-radius-sm": bootstrapTheme.borderRadius,
+              "--bs-border-radius-lg": bootstrapTheme.borderRadius,
+              "--bs-border-radius-pill": `calc(${bootstrapTheme.borderRadius} * 10)`,
+              // Also set background and color directly for the body
+              backgroundColor: canvasDarkMode ? (bootstrapTheme.bodyBg === "#ffffff" ? "#212529" : bootstrapTheme.bodyBg) : bootstrapTheme.bodyBg,
+              color: canvasDarkMode ? (bootstrapTheme.bodyColor === "#212529" ? "#dee2e6" : bootstrapTheme.bodyColor) : bootstrapTheme.bodyColor,
+              fontFamily: bootstrapTheme.fontFamily,
+            } as React.CSSProperties}
           >
+          {/* Grid Overlay (FEAT-6) — 12-column Bootstrap grid */}
+          {showGrid && (
+            <div
+              className="absolute inset-0 pointer-events-none z-50"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(12, 1fr)",
+                gap: "0px",
+                padding: "0 12px",
+              }}
+            >
+              {Array.from({ length: 12 }, (_, i) => (
+                <div
+                  key={i}
+                  className="h-full relative"
+                  style={{
+                    borderLeft: i > 0 ? "1px solid rgba(59, 130, 246, 0.15)" : "none",
+                    borderRight: i === 11 ? "1px solid rgba(59, 130, 246, 0.15)" : "none",
+                    background: "repeating-linear-gradient(to bottom, rgba(59, 130, 246, 0.04) 0px, rgba(59, 130, 246, 0.04) 1px, transparent 1px, transparent 40px)",
+                  }}
+                >
+                  <span
+                    className="absolute top-1 left-1/2 -translate-x-1/2 text-[8px] font-bold"
+                    style={{ color: "rgba(59, 130, 246, 0.35)" }}
+                  >
+                    {i + 1}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
           {components.length === 0 ? (
             <EmptyCanvas isOver={isOver && isDragging} />
           ) : (

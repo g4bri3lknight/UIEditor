@@ -31,6 +31,8 @@ import {
   Plus,
   BookmarkPlus,
   Pencil,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useEditorStore, isContainer, isAutoManaged, isSlottedType, getTabSlots, getAccordionSlots } from "@/store/editor-store";
 import { BootstrapRenderer } from "../BootstrapRenderer";
@@ -113,6 +115,12 @@ function CanvasItemInner({
   const isSelected = useEditorStore(s => s.selectedId === component.id);
   const isHidden = useEditorStore(s => s.hiddenComponents.includes(component.id));
   const hasClipboard = useEditorStore(s => s.clipboard !== null);
+  const isInMultiSelection = useEditorStore(s => s.selectedIds.includes(component.id));
+
+  // Canvas-only collapsed state for Modal, Offcanvas, Dropdown
+  const COLLAPSIBLE_TYPES = new Set(["modal", "offcanvas", "dropdown"]);
+  const isCollapsible = COLLAPSIBLE_TYPES.has(component.type);
+  const isCollapsed = useEditorStore(s => isCollapsible && s.collapsedComponents.includes(component.id));
 
   const canContain = isContainer(component.type);
   const isSlotted = isSlottedType(component.type);
@@ -255,9 +263,24 @@ function CanvasItemInner({
   const handleSelect = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      useEditorStore.getState().selectComponent(component.id);
+      const store = useEditorStore.getState();
+      // Multi-selection support (FEAT-7)
+      if (e.shiftKey) {
+        // Shift+Click: add/remove from multi-selection
+        if (isInMultiSelection) {
+          store.removeFromSelection(component.id);
+        } else {
+          store.addToSelection(component.id);
+        }
+      } else if (e.ctrlKey || e.metaKey) {
+        // Ctrl/Cmd+Click: toggle in multi-selection
+        store.toggleInSelection(component.id);
+      } else {
+        // Normal click: single selection
+        store.selectComponent(component.id);
+      }
     },
-    [component.id]
+    [component.id, isInMultiSelection]
   );
 
   // ── Inline text editing on double-click ──
@@ -524,6 +547,123 @@ function CanvasItemInner({
     ...(isHidden && !isDragging && !isSelected ? { opacity: 0.3 } : {}),
   };
 
+  // If this component is collapsed in the canvas, show a minimal placeholder
+  if (isCollapsed) {
+    return (
+      <>
+        {showOuterDropIndicators && isDragging && (
+          <DropIndicator
+            id={parentId ? `before::${component.id}::${parentId}` : `before::${component.id}`}
+            isActive={false}
+            disabled={!isDragging}
+          />
+        )}
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            <div
+              ref={mergedRef}
+              style={{
+                ...dragStyle,
+                borderRadius: "8px",
+              }}
+              className={`relative group/canvas-item transition-all duration-150 ${
+                isSelected
+                  ? "ring-2 ring-primary/50 bg-primary/5 rounded-lg"
+                  : "hover:ring-1 hover:ring-border rounded-lg"
+              }`}
+              onClick={handleSelect}
+              onDoubleClick={handleDoubleClick}
+              {...attributes}
+              {...listeners}
+            >
+              {isSelected && (
+                <div className="absolute -top-1.5 left-2 bg-primary text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-t-md z-10 leading-tight">
+                  {component.label}
+                </div>
+              )}
+              <div className="flex items-center gap-2 px-3 py-2">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <EyeOff className="w-3.5 h-3.5" />
+                  <span className="text-xs font-medium">{component.label}</span>
+                  <span className="text-[10px] text-muted-foreground/60">({component.type} — compresso)</span>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    useEditorStore.getState().toggleComponentCollapsed(component.id);
+                  }}
+                  className="ml-auto p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  title="Espandi nel canvas"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuItem
+              disabled={managed}
+              onClick={handleDuplicate}
+            >
+              <ClipboardCopy className="mr-2 h-4 w-4" />
+              Duplica
+            </ContextMenuItem>
+            <ContextMenuItem onClick={handleCopy}>
+              <Copy className="mr-2 h-4 w-4" />
+              Copia
+              <span className="ml-auto text-xs text-muted-foreground">Ctrl+C</span>
+            </ContextMenuItem>
+            <ContextMenuItem
+              disabled={!hasClipboard}
+              onClick={handlePaste}
+            >
+              <ClipboardPaste className="mr-2 h-4 w-4" />
+              Incolla
+              <span className="ml-auto text-xs text-muted-foreground">Ctrl+V</span>
+            </ContextMenuItem>
+            {!managed && (
+              <ContextMenuItem onClick={handleSaveAsTemplate}>
+                <BookmarkPlus className="mr-2 h-4 w-4" />
+                Salva come template
+              </ContextMenuItem>
+            )}
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              disabled={managed}
+              onClick={() => useEditorStore.getState().moveUp(component.id)}
+            >
+              <ArrowUp className="mr-2 h-4 w-4" />
+              Sposta su
+            </ContextMenuItem>
+            <ContextMenuItem
+              disabled={managed}
+              onClick={() => useEditorStore.getState().moveDown(component.id)}
+            >
+              <ArrowDown className="mr-2 h-4 w-4" />
+              Sposta giù
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              disabled={managed}
+              onClick={handleRemove}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Elimina
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+        {showOuterDropIndicators && isDragging && (
+          <DropIndicator
+            id={parentId ? `after::${component.id}::${parentId}` : `after::${component.id}`}
+            isActive={false}
+            disabled={!isDragging}
+          />
+        )}
+      </>
+    );
+  }
+
   return (
     <>
       {showOuterDropIndicators && isDragging && (
@@ -670,7 +810,9 @@ function CanvasItemInner({
                   ? "ring-2 ring-primary/40 bg-primary/5 rounded-lg"
                   : isSelected
                     ? "ring-2 ring-primary/50 bg-primary/5 rounded-lg"
-                    : "hover:ring-1 hover:ring-border rounded-lg"
+                    : isInMultiSelection
+                      ? "ring-2 ring-amber-400/60 bg-amber-50/30 dark:bg-amber-900/10 rounded-lg"
+                      : "hover:ring-1 hover:ring-border rounded-lg"
             }${isInline ? " inline-flex" : ""}`}
             onClick={handleSelect}
             onDoubleClick={handleDoubleClick}
@@ -691,8 +833,70 @@ function CanvasItemInner({
 
             {/* Selection label */}
             {isSelected && (
-              <div className="absolute -top-1.5 left-2 bg-primary text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-t-md z-10 leading-tight">
-                {managed ? `Column ${index + 1}` : component.label}
+              <div className="absolute -top-1.5 left-2 bg-primary text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-t-md z-10 leading-tight flex items-center gap-1">
+                <span>{managed ? `Column ${index + 1}` : component.label}</span>
+                {isCollapsible && !isCollapsed && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      useEditorStore.getState().toggleComponentCollapsed(component.id);
+                    }}
+                    className="ml-1 hover:bg-primary-foreground/20 rounded p-0.5 transition-colors"
+                    title="Comprimi nel canvas"
+                  >
+                    <EyeOff className="w-2.5 h-2.5" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Multi-selection indicator — amber badge for secondary selection */}
+            {isInMultiSelection && !isSelected && (
+              <div className="absolute -top-1.5 left-2 bg-amber-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-t-md z-10 leading-tight">
+                {managed ? `Col ${index + 1}` : component.label}
+              </div>
+            )}
+
+            {/* Column resize handle — only when selected */}
+            {component.type === "col" && isSelected && (
+              <div
+                className="absolute top-0 right-0 bottom-0 w-2 cursor-col-resize z-20 group/col-resize"
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+
+                  const colEl = (e.currentTarget as HTMLElement).parentElement!;
+                  const startX = e.clientX;
+                  const startWidth = colEl.offsetWidth;
+                  const currentSize = Number(component.props.size) || 12;
+
+                  // Calculate width per grid unit from current column
+                  const pxPerUnit = startWidth / currentSize;
+
+                  const handleMouseMove = (moveEvent: MouseEvent) => {
+                    const dx = moveEvent.clientX - startX;
+                    const deltaUnits = Math.round(dx / pxPerUnit);
+                    const newSize = Math.max(1, Math.min(12, currentSize + deltaUnits));
+                    if (newSize !== currentSize) {
+                      useEditorStore.getState().updateComponentProps(component.id, { size: String(newSize) });
+                    }
+                  };
+
+                  const handleMouseUp = () => {
+                    document.removeEventListener('mousemove', handleMouseMove);
+                    document.removeEventListener('mouseup', handleMouseUp);
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                  };
+
+                  document.body.style.cursor = 'col-resize';
+                  document.body.style.userSelect = 'none';
+                  document.addEventListener('mousemove', handleMouseMove);
+                  document.addEventListener('mouseup', handleMouseUp);
+                }}
+                title="Trascina per ridimensionare"
+              >
+                <div className="absolute top-1/2 right-0 -translate-y-1/2 w-0.5 h-8 bg-primary/30 group-hover/col-resize:bg-primary/70 transition-colors rounded-full" />
               </div>
             )}
 

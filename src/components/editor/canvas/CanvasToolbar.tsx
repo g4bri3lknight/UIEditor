@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCcw, Sun, Moon, PanelLeft, PanelRight, Grid3x3 } from "lucide-react";
 import { MIN_ZOOM, MAX_ZOOM, ZOOM_LEVELS, VIEWPORT_BREAKPOINTS, type ViewportKey } from "./constants";
 
 interface CanvasToolbarProps {
@@ -14,6 +14,14 @@ interface CanvasToolbarProps {
   onZoomReset: () => void;
   onZoomChange: (zoom: number) => void;
   onViewportChange: (viewport: ViewportKey) => void;
+  canvasDarkMode?: boolean;
+  onToggleDarkMode?: () => void;
+  showGrid?: boolean;
+  onToggleGrid?: () => void;
+  onToggleLeftSidebar?: () => void;
+  onToggleRightSidebar?: () => void;
+  leftSidebarOpen?: boolean;
+  rightSidebarOpen?: boolean;
 }
 
 export function CanvasToolbar({
@@ -26,10 +34,39 @@ export function CanvasToolbar({
   onZoomReset,
   onZoomChange,
   onViewportChange,
+  canvasDarkMode,
+  onToggleDarkMode,
+  showGrid,
+  onToggleGrid,
+  onToggleLeftSidebar,
+  onToggleRightSidebar,
+  leftSidebarOpen,
+  rightSidebarOpen,
 }: CanvasToolbarProps) {
   return (
     <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card shrink-0">
       <div className="flex items-center gap-2">
+        {/* Mobile sidebar toggles */}
+        {onToggleLeftSidebar && (
+          <button
+            onClick={onToggleLeftSidebar}
+            className={`lg:hidden p-1.5 rounded transition-colors ${leftSidebarOpen ? "text-foreground bg-muted" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+            title="Componenti"
+            aria-label="Attiva/disattiva pannello componenti"
+          >
+            <PanelLeft className="w-4 h-4" />
+          </button>
+        )}
+        {onToggleRightSidebar && (
+          <button
+            onClick={onToggleRightSidebar}
+            className={`lg:hidden p-1.5 rounded transition-colors ${rightSidebarOpen ? "text-foreground bg-muted" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+            title="Proprietà"
+            aria-label="Attiva/disattiva pannello proprietà"
+          >
+            <PanelRight className="w-4 h-4" />
+          </button>
+        )}
         <div
           className={`w-2 h-2 rounded-full transition-colors ${
             isDragging ? "bg-primary animate-pulse" : "bg-muted-foreground/30"
@@ -103,6 +140,35 @@ export function CanvasToolbar({
             </button>
           )}
         </div>
+        <div className="w-px h-4 bg-border" />
+        {/* Dark mode toggle */}
+        {onToggleDarkMode !== undefined && (
+          <button
+            onClick={onToggleDarkMode}
+            className={`p-1.5 rounded transition-colors ${
+              canvasDarkMode
+                ? "bg-primary/15 text-primary"
+                : "hover:bg-muted text-muted-foreground hover:text-foreground"
+            }`}
+            title={canvasDarkMode ? "Modalità chiara" : "Modalità scura"}
+          >
+            {canvasDarkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+          </button>
+        )}
+        {/* Grid toggle */}
+        {onToggleGrid !== undefined && (
+          <button
+            onClick={onToggleGrid}
+            className={`p-1.5 rounded transition-colors ${
+              showGrid
+                ? "bg-primary/15 text-primary"
+                : "hover:bg-muted text-muted-foreground hover:text-foreground"
+            }`}
+            title={showGrid ? "Nascondi griglia" : "Mostra griglia Bootstrap"}
+          >
+            <Grid3x3 className="w-3.5 h-3.5" />
+          </button>
+        )}
         <div className="w-px h-4 bg-border" />
         <div className="flex items-center gap-1 text-[10px] text-muted-foreground/50">
           <kbd className="px-1.5 py-0.5 bg-muted rounded border border-border font-mono">Ctrl+Z</kbd>
