@@ -1,4 +1,5 @@
 import React from "react";
+import { sanitizeHTML } from "@/lib/sanitize";
 import { CanvasComponent } from "@/lib/editor/types";
 import { registerRenderer } from "./registry";
 import { BS, BS_BG, BS_TEXT, Wrapper, getButtonStyle } from "./shared";
@@ -242,7 +243,7 @@ function renderAccordion(
                 </div>
                 {i === 0 && (
                   <div style={{ padding: "16px 20px", background: BS.white, fontSize: "0.9375rem", color: BS.body, minHeight: "40px" }}>
-                    {hasSlotContent ? slotContent : <div dangerouslySetInnerHTML={{ __html: item.body }} />}
+                    {hasSlotContent ? slotContent : <div dangerouslySetInnerHTML={{ __html: sanitizeHTML(item.body) }} />}
                   </div>
                 )}
               </div>
@@ -785,9 +786,110 @@ function renderOffcanvas(
   );
 }
 
+// ── Memoized Renderer Components (Performance Optimization) ──
+// These wrapper components prevent unnecessary re-renders by memoizing
+// the main renderer functions and using shallow comparison for props.
+
+/**
+ * CardRenderer - Memoized wrapper for renderCard
+ * Prevents re-renders when component.id, isDragging, and children haven't changed
+ */
+const CardRenderer = React.memo(
+  function CardRenderer(props: {
+    component: CanvasComponent;
+    renderChildren?: React.ReactNode;
+    slotChildren?: Record<string, React.ReactNode>;
+    isDragging?: boolean;
+  }) {
+    return renderCard(props.component, props.renderChildren, props.slotChildren, props.isDragging) as React.ReactElement;
+  },
+  (prev, next) => {
+    // Return true (skip render) if props are equal
+    return (
+      prev.component.id === next.component.id &&
+      prev.component.props === next.component.props &&
+      prev.isDragging === next.isDragging &&
+      prev.renderChildren === next.renderChildren &&
+      prev.slotChildren === next.slotChildren
+    );
+  }
+);
+
+/**
+ * AlertRenderer - Memoized wrapper for renderAlert
+ * Prevents re-renders when component.id, isDragging, and children haven't changed
+ */
+const AlertRenderer = React.memo(
+  function AlertRenderer(props: {
+    component: CanvasComponent;
+    renderChildren?: React.ReactNode;
+    slotChildren?: Record<string, React.ReactNode>;
+    isDragging?: boolean;
+  }) {
+    return renderAlert(props.component, props.renderChildren, props.slotChildren, props.isDragging) as React.ReactElement;
+  },
+  (prev, next) => {
+    return (
+      prev.component.id === next.component.id &&
+      prev.component.props === next.component.props &&
+      prev.isDragging === next.isDragging
+    );
+  }
+);
+
+/**
+ * ModalRenderer - Memoized wrapper for renderModal
+ * Prevents re-renders when component.id, isDragging, and children haven't changed
+ */
+const ModalRenderer = React.memo(
+  function ModalRenderer(props: {
+    component: CanvasComponent;
+    renderChildren?: React.ReactNode;
+    slotChildren?: Record<string, React.ReactNode>;
+    isDragging?: boolean;
+  }) {
+    return renderModal(props.component, props.renderChildren, props.slotChildren, props.isDragging) as React.ReactElement;
+  },
+  (prev, next) => {
+    return (
+      prev.component.id === next.component.id &&
+      prev.component.props === next.component.props &&
+      prev.isDragging === next.isDragging &&
+      prev.renderChildren === next.renderChildren &&
+      prev.slotChildren === next.slotChildren
+    );
+  }
+);
+
+/**
+ * FormBuilderRenderer - Memoized wrapper for renderFormBuilder
+ * Prevents re-renders when component.id and props haven't changed
+ */
+const FormBuilderRenderer = React.memo(
+  function FormBuilderRenderer(props: {
+    component: CanvasComponent;
+    renderChildren?: React.ReactNode;
+    slotChildren?: Record<string, React.ReactNode>;
+    isDragging?: boolean;
+  }) {
+    return renderFormBuilder(props.component, props.renderChildren, props.slotChildren, props.isDragging) as React.ReactElement;
+  },
+  (prev, next) => {
+    return (
+      prev.component.id === next.component.id &&
+      prev.component.props === next.component.props &&
+      prev.isDragging === next.isDragging
+    );
+  }
+);
+
 // ── Register all content renderers ──
-registerRenderer("card", renderCard);
-registerRenderer("alert", renderAlert);
+registerRenderer("card", (component, renderChildren, slotChildren, isDragging) =>
+  React.createElement(CardRenderer, { component, renderChildren, slotChildren, isDragging })
+);
+registerRenderer("alert", (component, renderChildren, slotChildren, isDragging) =>
+  React.createElement(AlertRenderer, { component, renderChildren, slotChildren, isDragging })
+);
 registerRenderer("badge", renderBadge);
 registerRenderer("progress", renderProgress);
 registerRenderer("accordion", renderAccordion);
@@ -796,6 +898,10 @@ registerRenderer("list-group", renderListGroup);
 registerRenderer("toast", renderToast);
 registerRenderer("jumbotron", renderJumbotron);
 registerRenderer("carousel", renderCarousel);
-registerRenderer("modal", renderModal);
-registerRenderer("form-builder", renderFormBuilder);
+registerRenderer("modal", (component, renderChildren, slotChildren, isDragging) =>
+  React.createElement(ModalRenderer, { component, renderChildren, slotChildren, isDragging })
+);
+registerRenderer("form-builder", (component, renderChildren, slotChildren, isDragging) =>
+  React.createElement(FormBuilderRenderer, { component, renderChildren, slotChildren, isDragging })
+);
 registerRenderer("offcanvas", renderOffcanvas);

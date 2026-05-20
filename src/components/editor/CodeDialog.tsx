@@ -29,12 +29,23 @@ export function CodeDialog({ open, onOpenChange, htmlCode }: CodeDialogProps) {
       toast.success("Codice copiato negli appunti!");
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      const textarea = document.createElement("textarea");
-      textarea.value = htmlCode;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
+      try {
+        // Fallback: se Clipboard API non disponibile, usare metodo legacy
+        const textarea = document.createElement("textarea");
+        textarea.value = htmlCode;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        if (!document.execCommand("copy")) {
+          throw new Error("execCommand fallback failed");
+        }
+        document.body.removeChild(textarea);
+      } catch (fallbackError) {
+        console.error("Copy fallback failed:", fallbackError);
+        toast.error("Errore nel copia negli appunti");
+        return;
+      }
       setCopied(true);
       toast.success("Codice copiato negli appunti!");
       setTimeout(() => setCopied(false), 2000);
