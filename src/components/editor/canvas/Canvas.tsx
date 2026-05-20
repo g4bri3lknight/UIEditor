@@ -3,6 +3,7 @@
 import React, { useCallback, useRef, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { useEditorStore } from "@/store/editor-store";
+import { sanitizeCSS } from "@/lib/sanitize";
 import { MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, VIEWPORT_BREAKPOINTS, type ViewportKey } from "./constants";
 import { DropIndicator } from "./DropIndicator";
 import { CanvasItem } from "./CanvasItem";
@@ -203,7 +204,7 @@ export function Canvas({
         >
           {/* Custom CSS injection for canvas */}
           {customCSS && (
-            <style dangerouslySetInnerHTML={{ __html: customCSS }} />
+            <style dangerouslySetInnerHTML={{ __html: sanitizeCSS(customCSS) }} />
           )}
           <div
             style={{

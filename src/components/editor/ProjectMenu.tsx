@@ -3,6 +3,7 @@
 import React, { useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useEditorStore } from "@/store/editor-store";
+import { logger } from "@/lib/logger";
 import {
   Save,
   Upload,
@@ -91,7 +92,9 @@ export function ProjectMenu({ onOpenThemeDialog }: ProjectMenuProps) {
         return;
       }
       toast.success("Progetto caricato!");
-    } catch {
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      logger.error("Failed to load project", err, "ProjectMenu");
       toast.error("Errore nel caricamento del progetto");
     }
   }, []);

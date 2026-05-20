@@ -1,5 +1,6 @@
 // Bootstrap GUI Editor - HTML Code Generator
 import { CanvasComponent } from "./types";
+import { escapeHTML } from "@/lib/sanitize";
 import type { BootstrapTheme } from "@/store/editor-store";
 
 // Bootstrap color map for CSS preview
@@ -54,7 +55,7 @@ function indent(str: string, level: number): string {
 function attrs(props: Record<string, string>): string {
   return Object.entries(props)
     .filter(([, v]) => v !== "" && v !== undefined)
-    .map(([k, v]) => ` ${k}="${v}"`)
+    .map(([k, v]) => ` ${escapeHTML(k)}="${escapeHTML(v)}"`)
     .join("");
 }
 
