@@ -36,7 +36,7 @@ function makeRow(colCount: number, colChildren: CanvasComponent[][]): CanvasComp
     type: "row",
     label: "Row",
     props: { cols: String(colCount), gutter: "3", verticalAlign: "start" },
-    children: colChildren.map((ch, i) => makeCol(String(Math.floor(12 / colCount)), ch)),
+    children: colChildren.map((ch, _i) => makeCol(String(Math.floor(12 / colCount)), ch)),
   };
 }
 

@@ -105,8 +105,8 @@ function resolveDropTarget(
   parentComp: CanvasComponent,
   type: string,
   store: ReturnType<typeof useEditorStore.getState>,
-  action: "add" | "move",
-  activeId?: string
+  _action: "add" | "move",
+  _activeId?: string
 ): { parentId: string | null; slot?: string } | null {
   // If dropping on a column
   if (parentComp.type === "col") {

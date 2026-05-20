@@ -88,9 +88,6 @@ function getFirstEditableProp(type: string): { key: string; multiline: boolean }
   return props && props.length > 0 ? props[0] : null;
 }
 
-function hasEditableProps(type: string): boolean {
-  return !!EDITABLE_TEXT_PROPS[type];
-}
 
 // ── Drop indicator between items ──
 function DropIndicator({
@@ -176,7 +173,7 @@ function SlotDropZone({
 function CanvasItem({
   component,
   index,
-  siblings,
+  siblings: _siblings,
   parentId,
   isDragging,
   depth = 0,
@@ -325,7 +322,6 @@ function CanvasItem({
 
   // First column cells with no child components: bold text
   if (isTableCell && index === 0) {
-    const cellP = component.props as Record<string, string | boolean | number>;
     const hasCellChildren = component.children && component.children.length > 0;
     if (!hasCellChildren) {
       dragStyle.fontWeight = "600";
@@ -947,7 +943,7 @@ function CanvasItem({
 const MIN_ZOOM = 25;
 const MAX_ZOOM = 200;
 const ZOOM_STEP = 10;
-const ZOOM_LEVELS = [25, 50, 75, 100, 125, 150, 200];
+
 
 // ── Viewport breakpoints ──
 const VIEWPORT_BREAKPOINTS = [

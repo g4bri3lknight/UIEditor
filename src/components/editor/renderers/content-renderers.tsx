@@ -1,8 +1,9 @@
+/* eslint-disable @next/next/no-img-element */
 import React from "react";
 import { sanitizeHTML } from "@/lib/sanitize";
 import { CanvasComponent } from "@/lib/editor/types";
 import { registerRenderer } from "./registry";
-import { BS, BS_BG, BS_TEXT, Wrapper, getButtonStyle } from "./shared";
+import { BS, BS_BG, Wrapper, getButtonStyle } from "./shared";
 
 // ── Card ──
 function renderCard(
@@ -103,9 +104,9 @@ function renderCard(
 // ── Alert ──
 function renderAlert(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -142,9 +143,9 @@ function renderAlert(
 // ── Badge ──
 function renderBadge(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -165,9 +166,9 @@ function renderBadge(
 // ── Progress ──
 function renderProgress(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -207,9 +208,9 @@ function renderProgress(
 // ── Accordion ──
 function renderAccordion(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
+  _renderChildren?: React.ReactNode,
   slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -258,9 +259,9 @@ function renderAccordion(
 // ── Spinner ──
 function renderSpinner(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -292,9 +293,9 @@ function renderSpinner(
 // ── List Group ──
 function renderListGroup(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -325,9 +326,9 @@ function renderListGroup(
 // ── Toast ──
 function renderToast(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -357,9 +358,9 @@ function renderToast(
 // ── Jumbotron ──
 function renderJumbotron(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -407,9 +408,9 @@ function renderJumbotron(
 // ── Carousel ──
 function renderCarousel(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -532,14 +533,14 @@ function renderModal(
 // ── Form Builder ──
 function renderFormBuilder(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
 
-  let formFields: Array<Record<string, any>> = [];
+  let formFields: Array<Record<string, unknown>> = [];
   try {
     formFields = JSON.parse(String(p.fields || "[]"));
   } catch {
@@ -552,7 +553,7 @@ function renderFormBuilder(
   const submitBtnStyle = getButtonStyle(submitBaseVariant, isSubmitOutline);
   const isInline = layout === "inline";
 
-  const renderFormField = (field: Record<string, any>, idx: number) => {
+  const renderFormField = (field: Record<string, unknown>, idx: number) => {
     const fieldLabel = String(field.label || "");
     const fieldType = String(field.type || "input");
     const isCheckLike = fieldType === "checkbox" || fieldType === "switch" || fieldType === "radio";
@@ -731,7 +732,7 @@ function renderOffcanvas(
   component: CanvasComponent,
   renderChildren?: React.ReactNode,
   slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -17,7 +17,6 @@ import { PageTabs } from "./PageTabs";
 import { CodeDialog } from "./CodeDialog";
 import { PreviewDialog } from "./PreviewDialog";
 import { ThemeDialog } from "./ThemeDialog";
-import { ProjectMenu } from "./ProjectMenu";
 import { ShortcutsDialog } from "./ShortcutsDialog";
 import { ResizeHandle, useSidebarResize } from "./ResizeHandle";
 import {

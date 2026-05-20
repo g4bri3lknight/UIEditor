@@ -6,9 +6,9 @@ import { BS, BS_BG, Wrapper, getButtonStyle, pageBtnStyle } from "./shared";
 // ── Navbar ──
 function renderNavbar(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -42,9 +42,9 @@ function renderNavbar(
 // ── Nav Tabs ──
 function renderNavTabs(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -91,9 +91,9 @@ function renderNavTabs(
 // ── Breadcrumb ──
 function renderBreadcrumb(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -119,9 +119,9 @@ function renderBreadcrumb(
 // ── Pagination ──
 function renderPagination(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -150,9 +150,9 @@ function renderPagination(
 // ── Dropdown ──
 function renderDropdown(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");

@@ -35,7 +35,7 @@ export function renderComponent(
   }
   // Fallback for unknown types
   const p = component.props as Record<string, string | boolean | number>;
-  const customClass = String(p.customClass || "");
+  const _customClass = String(p.customClass || "");
   return (
     <div style={{ padding: "8px", borderRadius: "4px", position: "relative" }}>
       <div style={{ color: "#6c757d", fontSize: "0.875rem" }}>Unknown: {component.type}</div>

@@ -1,14 +1,14 @@
 import React from "react";
 import { CanvasComponent } from "@/lib/editor/types";
 import { registerRenderer } from "./registry";
-import { BS, BS_BG, BS_TEXT, spacing, Wrapper } from "./shared";
+import { BS, BS_TEXT, spacing, Wrapper } from "./shared";
 
 // ── Divider (hr) ──
 function renderDivider(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -32,9 +32,9 @@ function renderDivider(
 // ── Spacer ──
 function renderSpacer(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -51,9 +51,9 @@ function renderSpacer(
 // ── Link ──
 function renderLink(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -85,9 +85,9 @@ function renderLink(
 // ── Collapse ──
 function renderCollapse(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
+  _renderChildren?: React.ReactNode,
   slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -138,9 +138,9 @@ function renderCollapse(
 // ── Tab Content ──
 function renderTabContent(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
+  _renderChildren?: React.ReactNode,
   slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -152,7 +152,7 @@ function renderTabContent(
   const active = Number(p.active) || 0;
   const style = String(p.style || "tabs");
 
-  const hasSlotChildren = slotChildren && Object.keys(slotChildren).length > 0;
+  const _hasSlotChildren = slotChildren && Object.keys(slotChildren).length > 0;
   const hasDirectChildren = component.children && component.children.length > 0;
 
   return (
@@ -220,9 +220,9 @@ function renderTabContent(
 // ── Tooltip ──
 function renderTooltip(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -277,13 +277,13 @@ function renderTooltip(
 // ── Popover ──
 function renderPopover(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
-  const placement = String(p.placement || "top");
+  const _placement = String(p.placement || "top");
   return (
     <Wrapper customClass={customClass} style={{ padding: "8px 4px" }}>
       <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>

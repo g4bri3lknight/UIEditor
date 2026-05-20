@@ -151,14 +151,14 @@ export function PreviewDialog({ open, onOpenChange }: PreviewDialogProps) {
       document.body.appendChild(tempIframe);
 
       await new Promise<void>((resolve, reject) => {
-        tempIframe!.onload = () => resolve();
-        tempIframe!.onerror = () => reject(new Error("Errore nel caricamento del contenuto"));
-        tempIframe!.srcdoc = htmlCode;
+        tempIframe?.addEventListener("load", () => resolve());
+        tempIframe?.addEventListener("error", () => reject(new Error("Errore nel caricamento del contenuto")));
+        if (tempIframe) tempIframe.srcdoc = htmlCode;
       });
 
       await new Promise((r) => setTimeout(r, 1500));
 
-      const tempDoc = tempIframe.contentDocument;
+      const tempDoc = tempIframe?.contentDocument;
       const tempBody = tempDoc?.body;
       const tempHtml = tempDoc?.documentElement;
       if (!tempBody || !tempHtml || !tempDoc) {
@@ -166,19 +166,21 @@ export function PreviewDialog({ open, onOpenChange }: PreviewDialogProps) {
       }
 
       const measureContentHeight = (): number => {
-        tempIframe!.style.height = "auto";
-        tempIframe!.style.overflow = "visible";
+        if (tempIframe) {
+          tempIframe.style.height = "auto";
+          tempIframe.style.overflow = "visible";
+        }
 
-        const bodyH = tempBody!.scrollHeight;
-        const htmlH = tempHtml!.scrollHeight;
+        const bodyH = tempBody?.scrollHeight ?? 0;
+        const htmlH = tempHtml?.scrollHeight ?? 0;
 
         let lastChildBottom = 0;
-        const children = tempBody!.children;
-        if (children.length > 0) {
+        const children = tempBody?.children;
+        if (children && children.length > 0) {
           const lastChild = children[children.length - 1];
           const rect = lastChild.getBoundingClientRect();
-          const bodyRect = tempBody!.getBoundingClientRect();
-          lastChildBottom = rect.bottom - bodyRect.top;
+          const bodyRect = tempBody?.getBoundingClientRect();
+          lastChildBottom = bodyRect ? rect.bottom - bodyRect.top : 0;
         }
 
         return Math.max(bodyH, htmlH, lastChildBottom);
@@ -248,6 +250,7 @@ export function PreviewDialog({ open, onOpenChange }: PreviewDialogProps) {
         toast.success("Screenshot scaricato!");
       }
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error("Screenshot error:", err);
       toast.error("Errore durante la generazione dello screenshot");
     } finally {

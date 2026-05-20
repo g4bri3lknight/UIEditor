@@ -238,13 +238,13 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.inline) {
         return indent(`<code>${p.code as string}</code>`, indentLevel);
       }
-      let html = indent(`<code>${p.code as string}</code>`, indentLevel + 1);
+      const html = indent(`<code>${p.code as string}</code>`, indentLevel + 1);
       return indent(wrap("pre", "", html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
     // ── FORMS ──
     case "input": {
-      let sizeCls = p.size ? `form-control${p.size !== "" ? ` form-control-${p.size}` : ""}` : "form-control";
+      const sizeCls = p.size ? `form-control${p.size !== "" ? ` form-control-${p.size}` : ""}` : "form-control";
       let inputCls = sizeCls;
       const extras: string[] = [];
 
@@ -262,7 +262,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       // Helper: format number as Italian currency (1.234,56 €)
       const formatEuroForCode = (val: string | number | undefined) => {
         if (!val && val !== 0) return "";
-        const raw = String(val).replace(/[^\d.,\-]/g, "").replace(/\./g, "").replace(",", ".");
+        const raw = String(val).replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", ".");
         const num = parseFloat(raw);
         if (isNaN(num)) return "";
         return String(num.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })) + " €";
@@ -309,7 +309,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
     }
 
     case "textarea": {
-      let sizeCls = p.size ? `form-control${p.size !== "" ? ` form-control-${p.size}` : ""}` : "form-control";
+      const sizeCls = p.size ? `form-control${p.size !== "" ? ` form-control-${p.size}` : ""}` : "form-control";
       const extras: string[] = [];
       if (p.disabled) extras.push("disabled");
 
@@ -333,7 +333,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
     }
 
     case "select-input": {
-      let sizeCls = p.size ? `form-select${p.size !== "" ? ` form-select-${p.size}` : ""}` : "form-select";
+      const sizeCls = p.size ? `form-select${p.size !== "" ? ` form-select-${p.size}` : ""}` : "form-select";
       const extras: string[] = [];
       if (p.multiple) extras.push("multiple");
       if (p.disabled) extras.push("disabled");
@@ -400,7 +400,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
     }
 
     case "file-input": {
-      let sizeCls = p.size ? `form-control${p.size !== "" ? ` form-control-${p.size}` : ""}` : "form-control";
+      const sizeCls = p.size ? `form-control${p.size !== "" ? ` form-control-${p.size}` : ""}` : "form-control";
 
       let html = "";
       if (p.label) {
@@ -414,7 +414,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
     }
 
     case "input-group": {
-      let sizeCls = p.size ? `input-group${p.size !== "" ? ` input-group-${p.size}` : ""}` : "input-group";
+      const sizeCls = p.size ? `input-group${p.size !== "" ? ` input-group-${p.size}` : ""}` : "input-group";
       let html = "";
 
       if (p.prepend) {
@@ -444,17 +444,17 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
     }
 
     case "button-group": {
-      let variant = p.variant as string;
-      let isOutline = variant.startsWith("outline-");
-      let baseVariant = isOutline ? variant.replace("outline-", "") : variant;
+      const variant = p.variant as string;
+      const isOutline = variant.startsWith("outline-");
+      const baseVariant = isOutline ? variant.replace("outline-", "") : variant;
 
       const btns = ((p.buttons as string) || "")
         .split(",")
         .map((b) => b.trim())
         .filter(Boolean);
 
-      let sizeCls = p.size ? ` btn-${p.size}` : "";
-      let html = btns
+      const sizeCls = p.size ? ` btn-${p.size}` : "";
+      const html = btns
         .map(
           (btn) =>
             indent(
@@ -493,7 +493,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         .join("\n");
 
       const expandClass = p.expand === "never" ? "" : p.expand === "always" ? "navbar-expand" : `navbar-expand-${p.expand}`;
-      let cls = `navbar ${expandClass} navbar-${p.variant} bg-${p.bgColor}`;
+      const cls = `navbar ${expandClass} navbar-${p.variant} bg-${p.bgColor}`;
 
       let content = indent(wrap("a", "navbar-brand", p.brand as string, { href: "#" }), indentLevel + 2);
       content += "\n" + indent('<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">\n' +
@@ -557,7 +557,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       const pages = Number(p.pages) || 5;
       const active = Number(p.active) || 1;
 
-      let sizeCls = p.size ? ` pagination-${p.size}` : "";
+      const sizeCls = p.size ? ` pagination-${p.size}` : "";
 
       const items: string[] = [];
       items.push(indent(wrap("li", "page-item", indent(wrap("a", "page-link", "&laquo;", { href: "#" }), indentLevel + 1)), indentLevel));
@@ -583,7 +583,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         })
         .join("\n");
 
-      let btnCls = `btn btn-${p.variant}${p.size ? ` btn-${p.size}` : ""} dropdown-toggle`;
+      const btnCls = `btn btn-${p.variant}${p.size ? ` btn-${p.size}` : ""} dropdown-toggle`;
       let wrapperCls = "btn-group";
       if (p.direction === "up") wrapperCls = "dropup";
       else if (p.direction === "end") wrapperCls = "dropend";
@@ -685,7 +685,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       else if (p.variant === "animated") barCls += " progress-bar-striped progress-bar-animated";
       else if (p.variant) barCls += ` bg-${p.variant}`;
 
-      let html = indent(
+      const html = indent(
         wrap("div", barCls, p.label ? `${p.value}%` : "", {
           role: "progressbar",
           "aria-valuenow": String(p.value),
@@ -696,7 +696,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         indentLevel + 1
       );
 
-      let outerCls = "progress";
+      const outerCls = "progress";
       if (p.height && Number(p.height) > 0) {
         return indent(wrap("div", outerCls, html, { style: `height: ${p.height}px`, ...wrapExtraAttrs }, false, customClass, isHidden), indentLevel);
       }
@@ -821,8 +821,8 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
 
     case "jumbotron": {
       const isDark = p.bgColor === "dark" || p.bgColor === "primary";
-      const textCls = isDark ? "text-white" : "";
-      const mbCls = p.bgColor === "dark" ? "mb-0 text-white" : `mb-0`;
+      const _textCls = isDark ? "text-white" : "";
+      const _mbCls = p.bgColor === "dark" ? "mb-0 text-white" : `mb-0`;
 
       let html = indent(`<h1 class="display-4">${p.title}</h1>\n`, indentLevel + 1);
       html += indent(`<p class="lead">${p.lead}</p>\n`, indentLevel + 1);
@@ -847,7 +847,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
 
       const slideItems = slides
         .map((slide, i) => {
-          let html = indent(wrap("div", `carousel-item${i === 0 ? " active" : ""}`,
+          const html = indent(wrap("div", `carousel-item${i === 0 ? " active" : ""}`,
             indent(wrap("div", "carousel-caption d-none d-md-block",
               indent(wrap("h5", "", slide, {}, true), indentLevel + 4) + "\n" +
               indent("<p>Some representative placeholder content for the slide.</p>", indentLevel + 4)
@@ -883,7 +883,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
     }
 
     case "modal": {
-      let sizeAttr = p.size ? `modal-${p.size}` : "";
+      const sizeAttr = p.size ? `modal-${p.size}` : "";
       let dialogCls = `modal-dialog ${sizeAttr}`;
       if (p.centered) dialogCls += " modal-dialog-centered";
       if (p.scrollable) dialogCls += " modal-dialog-scrollable";
@@ -900,7 +900,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         ? bodySlotChildren.map(c => generateComponentHTML(c, indentLevel + 3, hiddenComponents)).join("\n")
         : (p.text as string || "").replace(/\n/g, "<br>\n");
 
-      let headerHTML = hasHeaderSlot
+      const headerHTML = hasHeaderSlot
         ? headerSlotChildren.map(c => generateComponentHTML(c, indentLevel + 3, hiddenComponents)).join("\n")
         : indent(`<h5 class="modal-title">${p.title || "Modal"}</h5>\n`, indentLevel + 3);
 
@@ -931,7 +931,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         footerHTML = "\n" + indent(wrap("div", footerClass, footerContent), indentLevel + 2);
       }
 
-      let html = indent(wrap("div", "modal-content",
+      const html = indent(wrap("div", "modal-content",
         indent(wrap("div", "modal-header",
           headerHTML +
           indent('<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>', indentLevel + 3)
@@ -951,7 +951,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
     }
 
     case "form-builder": {
-      let formFields: Array<Record<string, any>> = [];
+      let formFields: Array<Record<string, unknown>> = [];
       try {
         formFields = JSON.parse(String(p.fields || "[]"));
       } catch {
@@ -970,7 +970,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       const formAttrs: Record<string, string> = { ...wrapExtraAttrs };
       if (p.noValidate) formAttrs["novalidate"] = "";
 
-      const generateFieldHTML = (field: Record<string, any>, idx: number): string => {
+      const generateFieldHTML = (field: Record<string, unknown>, idx: number): string => {
         const fieldType = String(field.type || "input");
         const fieldLabel = String(field.label || "");
         const isCheckLike = fieldType === "checkbox" || fieldType === "switch" || fieldType === "radio";
@@ -987,7 +987,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
           } else if (fieldType === "textarea") {
             controlHtml = `<textarea class="form-control" id="${id}" rows="${field.rows || 3}" placeholder="${field.placeholder || ""}"${requiredAttr}${disabledAttr}></textarea>`;
           } else if (fieldType === "select") {
-            const opts = Array.isArray(field.options) ? field.options.map((o: any) => `  <option value="${o.value || o.label}">${o.label}</option>`).join("\n") : "";
+            const opts = Array.isArray(field.options) ? field.options.map((o: Record<string, unknown>) => `  <option value="${o.value || o.label}">${o.label}</option>`).join("\n") : "";
             controlHtml = `<select class="form-select" id="${id}"${requiredAttr}${disabledAttr}>\n<option value="" disabled selected>${field.placeholder || "Scegli..."}</option>\n${opts}\n</select>`;
           } else if (fieldType === "range") {
             controlHtml = `<input type="range" class="form-range" id="${id}" min="${field.min || 0}" max="${field.max || 100}" step="${field.step || 1}" value="${field.defaultValue || 50}"${disabledAttr}>`;
@@ -1013,7 +1013,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
             if (fieldLabel && !isInline) {
               html += indent(`<label class="form-label">${fieldLabel}${field.required ? ' <span class="text-danger">*</span>' : ""}</label>\n`, indentLevel);
             }
-            html += radioOpts.map((opt: any, ri: number) => {
+            html += radioOpts.map((opt: Record<string, unknown>, ri: number) => {
               const cls = "form-check" + (isInline ? " form-check-inline" : "");
               return indent(`<div class="${cls}">\n${indent(`<input class="form-check-input" type="radio" name="${radioName}" id="${id}-${ri}"${opt.checked ? " checked" : ""}${disabledAttr}>\n<label class="form-check-label" for="${id}-${ri}">${opt.label}</label>`, indentLevel + 1)}\n</div>`, indentLevel);
             }).join("\n");
@@ -1037,7 +1037,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         } else if (fieldType === "textarea") {
           html += indent(`<textarea class="form-control" id="${id}" rows="${field.rows || 3}" placeholder="${field.placeholder || ""}"${requiredAttr}${disabledAttr}></textarea>`, indentLevel);
         } else if (fieldType === "select") {
-          const opts = Array.isArray(field.options) ? field.options.map((o: any) => `  <option value="${o.value || o.label}">${o.label}</option>`).join("\n") : "";
+          const opts = Array.isArray(field.options) ? field.options.map((o: Record<string, unknown>) => `  <option value="${o.value || o.label}">${o.label}</option>`).join("\n") : "";
           html += indent(`<select class="form-select" id="${id}"${requiredAttr}${disabledAttr}>\n<option value="" disabled selected>${field.placeholder || "Scegli..."}</option>\n${opts}\n</select>`, indentLevel);
         } else if (fieldType === "range") {
           html += indent(`<input type="range" class="form-range" id="${id}" min="${field.min || 0}" max="${field.max || 100}" step="${field.step || 1}" value="${field.defaultValue || 50}"${disabledAttr}>`, indentLevel);
@@ -1049,7 +1049,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         return html;
       };
 
-      let fieldsHtml = formFields.map((field, idx) => generateFieldHTML(field, idx)).join("\n");
+      const fieldsHtml = formFields.map((field, idx) => generateFieldHTML(field, idx)).join("\n");
 
       // Buttons
       let submitHtml = indent(`<button type="submit" class="${submitBtnCls}">${p.submitText || "Invia"}</button>`, indentLevel + 1);
@@ -1060,7 +1060,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         ? submitHtml
         : "\n" + indent(wrap("div", "mt-3", submitHtml), indentLevel);
 
-      const formCls = isInline ? "row g-3 align-items-center" : "";
+      const _formCls = isInline ? "row g-3 align-items-center" : "";
       return indent(
         `<form${noValidateAttr ? " novalidate" : ""}${wrapExtraAttrs.id ? ` id="${wrapExtraAttrs.id}"` : ""} name="${formName}">\n${fieldsHtml}${buttonsHtml}\n</form>`,
         indentLevel
@@ -1079,7 +1079,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       const hasHeaderSlot = headerSlotChildren.length > 0;
       const hasBodySlot = bodySlotChildren.length > 0;
 
-      let headerHTML = hasHeaderSlot
+      const headerHTML = hasHeaderSlot
         ? headerSlotChildren.map(c => generateComponentHTML(c, indentLevel + 2, hiddenComponents)).join("\n")
         : indent(`<h5 class="offcanvas-title">${p.title || "Offcanvas"}</h5>`, indentLevel + 2);
 
@@ -1122,7 +1122,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
 
       const bodyHtml = tableRows
         .map(
-          (row, i) =>
+          (row, _i) =>
             indent(
               "<tr>" +
                 (row.children || [])
@@ -1134,7 +1134,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
                     const hasCellChildren = cell.children && cell.children.length > 0;
                     let cellContent = "";
                     if (hasCellChildren) {
-                      cellContent = cell.children!
+                      cellContent = (cell.children ?? [])
                         .map(c => generateComponentHTML(c, indentLevel + 3, hiddenComponents))
                         .join("\n");
                     } else {
@@ -1150,7 +1150,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
         )
         .join("\n");
 
-      let tableHtml = indent(wrap("thead", "", headerHtml), indentLevel + 1) + "\n" +
+      const tableHtml = indent(wrap("thead", "", headerHtml), indentLevel + 1) + "\n" +
         indent(wrap("tbody", "", bodyHtml), indentLevel + 1);
 
       const table = wrap("table", cls, tableHtml);
@@ -1201,9 +1201,9 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
 
     // ── UTILITIES ──
     case "divider": {
-      let cls = "";
-      if (p.variant) cls += ` text-${p.variant}`;
-      cls = cls.trim();
+      let _cls = "";
+      if (p.variant) _cls += ` text-${p.variant}`;
+      _cls = _cls.trim();
 
       if (p.text) {
         let textCls = "";
@@ -1310,8 +1310,8 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
     }
 
     case "embed-video": {
-      let ratioCls = `ratio ratio-${p.ratio}`;
-      let html = indent(`<iframe src="${p.url}" title="Video embed" allowfullscreen></iframe>`, indentLevel + 1);
+      const ratioCls = `ratio ratio-${p.ratio}`;
+      const html = indent(`<iframe src="${p.url}" title="Video embed" allowfullscreen></iframe>`, indentLevel + 1);
       return indent(wrap("div", ratioCls, html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
@@ -1327,7 +1327,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       });
       const activeIdx = Number(p.active) || 0;
       const style = String(p.style || "tabs");
-      const hasFade = !!p.fade;
+      const _hasFade = !!p.fade;
 
       // Build nav class
       let navCls = "nav";
@@ -1358,7 +1358,7 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
 
       const tabPanes = items.map((item, i) => {
         const isActive = i === activeIdx;
-        let paneCls = `tab-pane fade${isActive ? " show active" : ""}`;
+        const paneCls = `tab-pane fade${isActive ? " show active" : ""}`;
         // Get children for this tab pane
         const paneChildren = tabSlotChildren.filter(c => c.slot === `tab-${i}`);
         const paneContent = paneChildren.length > 0

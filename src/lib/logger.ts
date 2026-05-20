@@ -51,6 +51,7 @@ class Logger {
       [LogLevel.ERROR]: "error",
     }[level] as keyof typeof console;
 
+    // eslint-disable-next-line no-console
     console[method](`[${entry.timestamp}] ${entry.level}${context ? ` [${context}]` : ""}: ${message}`, data || "");
 
     // In production: inviare a error tracking service

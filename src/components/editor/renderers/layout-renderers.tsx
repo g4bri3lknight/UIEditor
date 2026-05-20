@@ -7,8 +7,8 @@ import { BS_BG, BS_TEXT, spacing, buildPaddingStyle, Wrapper } from "./shared";
 function renderContainer(
   component: CanvasComponent,
   renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -29,7 +29,7 @@ function renderContainer(
       textAlign: String(p.textAlign) as React.CSSProperties["textAlign"],
     }}>
       {renderChildren ?? (hasChildren ? (
-        component.children!.map((child) => (
+        component.children?.map((child) => (
           <React.Fragment key={child.id}>{renderComponent(child)}</React.Fragment>
         ))
       ) : (
@@ -45,8 +45,8 @@ function renderContainer(
 function renderRow(
   component: CanvasComponent,
   renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -54,7 +54,7 @@ function renderRow(
   return (
     <Wrapper customClass={customClass} style={{ display: "flex", gap: `${spacing(String(p.gutter || "3"))}`, minHeight: "50px", alignItems: p.verticalAlign === "center" ? "center" : p.verticalAlign === "end" ? "flex-end" : "flex-start" }}>
       {renderChildren ?? (hasChildren ? (
-        component.children!.map((child) => (
+        component.children?.map((child) => (
           <React.Fragment key={child.id}>{renderComponent(child)}</React.Fragment>
         ))
       ) : (
@@ -68,8 +68,8 @@ function renderRow(
 function renderCol(
   component: CanvasComponent,
   renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -95,7 +95,7 @@ function renderCol(
     }}>
       {responsiveClasses.length > 0 && <div style={{ position: "absolute", top: 2, right: 4, fontSize: "9px", color: "#0d6efd", opacity: 0.6, pointerEvents: "none" }}>{responsiveClasses.join(", ")}</div>}
       {renderChildren ?? (hasChildren ? (
-        component.children!.map((child) => (
+        component.children?.map((child) => (
           <React.Fragment key={child.id}>{renderComponent(child)}</React.Fragment>
         ))
       ) : (

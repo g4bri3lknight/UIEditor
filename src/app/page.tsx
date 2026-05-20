@@ -80,7 +80,7 @@ function EditorSkeleton() {
           <div className="w-24 h-5 bg-muted animate-pulse rounded" />
           <div className="space-y-2">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="h-8 bg-muted animate-pulse rounded" style={{ width: `${60 + Math.random() * 40}%` }} />
+              <div key={i} className="h-8 bg-muted animate-pulse rounded" style={{ width: `${60 + ((i * 7 + 3) % 40)}%` }} />
             ))}
           </div>
         </div>

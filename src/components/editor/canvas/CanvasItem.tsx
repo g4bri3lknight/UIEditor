@@ -54,48 +54,6 @@ interface CanvasItemProps {
   onShowPropPicker: (id: string, props: Array<{ key: string; label: string; multiline: boolean }>, rect: DOMRect) => void;
 }
 
-/**
- * PERF-3: Custom comparison for React.memo.
- * Compares props by value where references may change on immutable tree updates.
- * - component: compare by id + shallow props (references change on ancestor updates)
- * - siblings: not used in rendering, skip comparison
- * - other props: reference equality
- */
-function areCanvasItemPropsEqual(prev: CanvasItemProps, next: CanvasItemProps): boolean {
-  // Quick checks for primitive props
-  if (
-    prev.index !== next.index ||
-    prev.parentId !== next.parentId ||
-    prev.isDragging !== next.isDragging ||
-    prev.depth !== next.depth ||
-    prev.onStartInlineEdit !== next.onStartInlineEdit ||
-    prev.onShowPropPicker !== next.onShowPropPicker
-  ) {
-    return false;
-  }
-
-  // Component comparison — references change on ancestor updates even if data is the same
-  const pc = prev.component;
-  const nc = next.component;
-  if (pc === nc) return true; // Same reference → definitely equal
-  if (pc.id !== nc.id || pc.type !== nc.type || pc.label !== nc.label || pc.slot !== nc.slot) return false;
-
-  // Shallow compare props object
-  const pp = pc.props;
-  const np = nc.props;
-  if (pp === np) return true;
-  const prevKeys = Object.keys(pp);
-  const nextKeys = Object.keys(np);
-  if (prevKeys.length !== nextKeys.length) return false;
-  for (const key of prevKeys) {
-    if (pp[key] !== np[key]) return false;
-  }
-
-  // Compare children reference — if children changed, parent must re-render to pass new data
-  if (pc.children !== nc.children) return false;
-
-  return true;
-}
 
 function CanvasItemInner({
   component,
@@ -1076,8 +1034,9 @@ function ColumnResizeHandle({
       e.stopPropagation();
       e.preventDefault();
 
-      const colEl = (e.currentTarget as HTMLElement).parentElement!;
+      const colEl = (e.currentTarget as HTMLElement).parentElement;
       const startX = e.clientX;
+      if (!colEl) return;
       const startWidth = colEl.offsetWidth;
       const startSize = currentSize;
 

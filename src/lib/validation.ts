@@ -6,7 +6,7 @@ import { z } from "zod";
  */
 
 // Schema per CanvasComponent
-export const CanvasComponentSchema: z.ZodType<any> = z.lazy(() =>
+export const CanvasComponentSchema: z.ZodType<unknown> = z.lazy(() =>
   z.object({
     id: z.string().min(1),
     type: z.string().min(1),
@@ -50,6 +50,7 @@ export function validatePersistedState(data: unknown): PersistedState {
   try {
     return PersistedStateSchema.parse(data);
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.warn("Invalid persisted state, using defaults:", error);
     return PersistedStateSchema.parse({});
   }
@@ -59,6 +60,7 @@ export function validateSavedProject(data: unknown): SavedProject {
   try {
     return SavedProjectSchema.parse(data);
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.warn("Invalid saved project, using defaults:", error);
     return SavedProjectSchema.parse({
       id: "invalid",

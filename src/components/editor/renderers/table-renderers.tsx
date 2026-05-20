@@ -7,8 +7,8 @@ import { BS, Wrapper } from "./shared";
 function renderTable(
   component: CanvasComponent,
   renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -64,8 +64,8 @@ function renderTable(
 function renderTableRow(
   component: CanvasComponent,
   renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   return <>{renderChildren ?? null}</>;
 }
@@ -74,8 +74,8 @@ function renderTableRow(
 function renderTableCell(
   component: CanvasComponent,
   renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const cellText = String(p.text || "");

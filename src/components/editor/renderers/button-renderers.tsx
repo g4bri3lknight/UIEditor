@@ -1,14 +1,14 @@
 import React from "react";
 import { CanvasComponent } from "@/lib/editor/types";
 import { registerRenderer } from "./registry";
-import { BS, Wrapper, getButtonStyle } from "./shared";
+import { Wrapper, getButtonStyle } from "./shared";
 
 // ── Button ──
 function renderButton(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -38,9 +38,9 @@ function renderButton(
 // ── Button Group ──
 function renderButtonGroup(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");

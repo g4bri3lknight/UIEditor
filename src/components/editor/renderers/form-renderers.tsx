@@ -6,9 +6,9 @@ import { BS, Wrapper } from "./shared";
 // ── Input ──
 function renderInput(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -19,7 +19,7 @@ function renderInput(
 
   const formatEuro = (val: string | number | undefined) => {
     if (!val && val !== 0) return "";
-    const raw = String(val).replace(/[^\d.,\-]/g, "").replace(/\./g, "").replace(",", ".");
+    const raw = String(val).replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", ".");
     const num = parseFloat(raw);
     if (isNaN(num)) return "";
     return num.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
@@ -96,9 +96,9 @@ function renderInput(
 // ── Textarea ──
 function renderTextarea(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -134,9 +134,9 @@ function renderTextarea(
 // ── Select Input ──
 function renderSelectInput(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -168,9 +168,9 @@ function renderSelectInput(
 // ── Checkbox ──
 function renderCheckbox(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -188,9 +188,9 @@ function renderCheckbox(
 // ── Radio ──
 function renderRadio(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -208,9 +208,9 @@ function renderRadio(
 // ── Range ──
 function renderRange(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -229,9 +229,9 @@ function renderRange(
 // ── Switch ──
 function renderSwitch(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -259,9 +259,9 @@ function renderSwitch(
 // ── File Input ──
 function renderFileInput(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");
@@ -279,9 +279,9 @@ function renderFileInput(
 // ── Input Group ──
 function renderInputGroup(
   component: CanvasComponent,
-  renderChildren?: React.ReactNode,
-  slotChildren?: Record<string, React.ReactNode>,
-  isDragging?: boolean,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
 ): React.ReactNode {
   const p = component.props as Record<string, string | boolean | number>;
   const customClass = String(p.customClass || "");

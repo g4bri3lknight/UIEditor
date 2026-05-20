@@ -239,7 +239,7 @@ export function LayersPanel() {
   const removeComponent = useEditorStore((s) => s.removeComponent);
   const toggleComponentVisibility = useEditorStore((s) => s.toggleComponentVisibility);
 
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(() => {
+  const [expandedNodesRaw, setExpandedNodes] = useState<Set<string>>(() => {
     // Auto-expand root-level items with children
     const initial = new Set<string>();
     const expandWithChildren = (comps: CanvasComponent[]) => {
@@ -254,22 +254,21 @@ export function LayersPanel() {
     return initial;
   });
 
-  // Update expanded nodes when components change (keep existing, add new root items)
-  React.useEffect(() => {
-    setExpandedNodes((prev) => {
-      const next = new Set(prev);
-      const addNew = (comps: CanvasComponent[]) => {
-        for (const c of comps) {
-          if (c.children && c.children.length > 0) {
-            if (!prev.has(c.id)) next.add(c.id); // Auto-expand new containers
-            addNew(c.children);
-          }
+  // Compute expanded nodes from components — derive state instead of syncing via effect
+  const expandedNodes = React.useMemo(() => {
+    const prev = expandedNodesRaw;
+    const next = new Set(prev);
+    const addNew = (comps: CanvasComponent[]) => {
+      for (const c of comps) {
+        if (c.children && c.children.length > 0) {
+          if (!prev.has(c.id)) next.add(c.id); // Auto-expand new containers
+          addNew(c.children);
         }
-      };
-      addNew(components);
-      return next;
-    });
-  }, [components]);
+      }
+    };
+    addNew(components);
+    return next.size === prev.size && [...next].every(id => prev.has(id)) ? prev : next;
+  }, [components, expandedNodesRaw]);
 
   const toggleExpand = useCallback((id: string) => {
     setExpandedNodes((prev) => {

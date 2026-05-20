@@ -7,8 +7,6 @@ import { TEMPLATES } from "@/lib/editor/templates";
 import { getLayerIcon } from "./LayersPanel";
 import { Input } from "@/components/ui/input";
 import {
-  LayoutGrid, Type, FileInput, MousePointerClick, Navigation,
-  Layers, Table, Image, Wrench,
   Bookmark, Trash2, Pencil, Check, X, Plus,
   Download, Upload, LayoutTemplate,
 } from "lucide-react";

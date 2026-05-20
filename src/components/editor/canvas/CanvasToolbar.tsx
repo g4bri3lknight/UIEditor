@@ -2,7 +2,7 @@
 
 import React from "react";
 import { ZoomIn, ZoomOut, RotateCcw, Grid3x3, PanelLeft, PanelRight } from "lucide-react";
-import { MIN_ZOOM, MAX_ZOOM, ZOOM_LEVELS, type ViewportKey } from "./constants";
+import { MIN_ZOOM, MAX_ZOOM, ZOOM_LEVELS } from "./constants";
 import { useEditorStore } from "@/store/editor-store";
 import {
   Breadcrumb,

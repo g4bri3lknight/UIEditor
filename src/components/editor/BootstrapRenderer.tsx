@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { CanvasComponent } from "@/lib/editor/types";
 import { getRenderer, renderComponent } from "./renderers";
 import { RendererProps, Wrapper } from "./renderers/shared";
 

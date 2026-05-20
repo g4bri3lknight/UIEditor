@@ -339,14 +339,14 @@ let propHistoryTimer: ReturnType<typeof setTimeout> | null = null;
 // Add a corresponding migration in `runMigrations` below.
 const SCHEMA_VERSION = 3;
 
-type PersistedState = Record<string, any>;
+type PersistedState = Record<string, unknown>;
 
 /**
  * Run migrations on persisted state to bring it up to the current schema.
  * Each migration function receives the state and returns the migrated state.
  */
 function runMigrations(state: PersistedState): PersistedState {
-  const version = state._schemaVersion ?? 1;
+  const version = (state._schemaVersion as number) ?? 1;
 
   // v1 → v2: hiddenComponents was a Set<string> (not JSON-serializable).
   // If it's stored as an object (from Set), convert to array.
@@ -354,7 +354,7 @@ function runMigrations(state: PersistedState): PersistedState {
     if (state.hiddenComponents && !Array.isArray(state.hiddenComponents)) {
       try {
         // A serialized Set becomes an object like { "0": "id1", "1": "id2" } or null
-        state.hiddenComponents = Object.values(state.hiddenComponents);
+        state.hiddenComponents = Object.values(state.hiddenComponents as Record<string, unknown>);
       } catch {
         state.hiddenComponents = [];
       }
@@ -367,7 +367,7 @@ function runMigrations(state: PersistedState): PersistedState {
   // v2 → v3: Ensure savedSnippets have category and components fields.
   if (version < 3) {
     if (Array.isArray(state.savedSnippets)) {
-      state.savedSnippets = state.savedSnippets.map((s: PersistedState) => ({
+      state.savedSnippets = (state.savedSnippets as PersistedState[]).map((s) => ({
         ...s,
         category: s.category || "Generale",
         components: Array.isArray(s.components) ? s.components : [],
@@ -499,7 +499,7 @@ export const useEditorStore = create<EditorState>()(
       set({ clipboard: copied[0] });
     }
     // Store multi-clipboard in a global ref for paste operation
-    (get() as any)._multiClipboard = copied;
+    (get() as unknown as Record<string, unknown>)._multiClipboard = copied;
   },
 
   // ── Multi-page Support ──
@@ -831,7 +831,8 @@ export const useEditorStore = create<EditorState>()(
       for (let i = 0; i < comps.length; i++) {
         if (comps[i].id === id) return { parent, index: i };
         if (comps[i].children) {
-          const found = search(comps[i].children!, comps[i]);
+          const childComps = comps[i].children as CanvasComponent[];
+          const found = search(childComps, comps[i]);
           if (found) return found;
         }
       }
@@ -1078,14 +1079,14 @@ export const useEditorStore = create<EditorState>()(
     try {
       const parsed = JSON.parse(jsonString);
       if (!Array.isArray(parsed)) return 0;
-      const valid = parsed.filter((s: any) => s.id && s.name && Array.isArray(s.components));
+      const valid = parsed.filter((s: Record<string, unknown>) => s.id && s.name && Array.isArray(s.components));
       if (valid.length === 0) return 0;
       // Ensure each snippet has a category
-      const withCategory = valid.map((s: any) => ({
+      const withCategory = valid.map((s: Record<string, unknown>) => ({
         ...s,
-        category: s.category || "Importati",
-        id: `snippet-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, // Generate fresh IDs to avoid conflicts
-      }));
+        category: String(s.category || "Importati"),
+        id: `snippet-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      } as SavedSnippet));
       set({ savedSnippets: [...get().savedSnippets, ...withCategory] });
       return withCategory.length;
     } catch {
@@ -1093,11 +1094,11 @@ export const useEditorStore = create<EditorState>()(
     }
   },
 
-  insertSnippet: (snippetId, parentId, index, slot) => {
+  insertSnippet: (snippetId, parentId, index, _slot) => {
     const snippet = get().savedSnippets.find(s => s.id === snippetId);
     if (!snippet) return;
 
-    const now = Date.now();
+    const _now = Date.now();
     // Deep clone with fresh IDs for each component
     const cloned = snippet.components.map(comp => {
       const freshClone = deepCloneWithNewIds(comp);
@@ -1166,6 +1167,7 @@ export const useEditorStore = create<EditorState>()(
             state._lastSavedAt = Date.now();
           }
         } catch (err) {
+          // eslint-disable-next-line no-console
           console.error("[editor-store] Rehydration error:", err);
         } finally {
           // Always mark as hydrated so the UI doesn't get stuck on "Caricamento..."

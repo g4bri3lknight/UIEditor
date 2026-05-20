@@ -42,6 +42,7 @@ export function CodeDialog({ open, onOpenChange, htmlCode }: CodeDialogProps) {
         }
         document.body.removeChild(textarea);
       } catch (fallbackError) {
+        // eslint-disable-next-line no-console
         console.error("Copy fallback failed:", fallbackError);
         toast.error("Errore nel copia negli appunti");
         return;
