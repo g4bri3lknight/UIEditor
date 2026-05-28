@@ -238,7 +238,7 @@ export function ProjectMenu({ onOpenThemeDialog }: ProjectMenuProps) {
         <ChevronDown className={`w-3 h-3 transition-transform duration-150 ${menuOpen ? "rotate-180" : ""}`} />
       </Button>
       {menuOpen && (
-        <div className="absolute right-0 top-full mt-1 w-56 ios-satin-card border ios-border-subtle rounded-xl shadow-lg z-50 py-1 overflow-hidden">
+        <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-neutral-800 border ios-border-subtle rounded-xl shadow-lg z-50 py-1">
           <div className="px-3 py-1.5 border-b border-border">
             <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Progetto</span>
           </div>

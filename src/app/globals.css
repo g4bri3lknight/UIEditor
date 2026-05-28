@@ -256,11 +256,11 @@
 
   /* ── iOS selection highlight ── */
   .ios-selected {
-    box-shadow: 0 0 0 2px oklch(0.55 0.2 260 / 0.5), 0 0 12px oklch(0.55 0.2 260 / 0.12) !important;
+    box-shadow: 0 0 0 2px oklch(0.55 0.2 260 / 0.75), 0 0 16px oklch(0.55 0.2 260 / 0.2) !important;
   }
 
   :is(.dark .ios-selected) {
-    box-shadow: 0 0 0 2px oklch(0.65 0.22 260 / 0.5), 0 0 12px oklch(0.65 0.22 260 / 0.15) !important;
+    box-shadow: 0 0 0 2px oklch(0.65 0.22 260 / 0.75), 0 0 16px oklch(0.65 0.22 260 / 0.25) !important;
   }
 
   /* ── iOS hover lift ── */

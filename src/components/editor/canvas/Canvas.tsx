@@ -212,7 +212,9 @@ export function Canvas({
               transition: "max-width 200ms ease-out",
               border: viewport !== "xl" ? "1px solid rgba(0,0,0,0.06)" : "none",
               borderRadius: viewport !== "xl" ? "12px" : "0",
-              overflow: "hidden",
+              // NOTE: overflow is intentionally NOT set to "hidden" here.
+              // Using overflow:hidden clips the selection label badge (positioned -top-1.5)
+              // and the ios-selected box-shadow ring. Instead, we rely on padding + border-radius.
               // Theme CSS custom properties — cascade to all Bootstrap components in canvas
               "--bs-primary": bootstrapTheme.primaryColor,
               "--bs-secondary": bootstrapTheme.secondaryColor,
@@ -267,7 +269,7 @@ export function Canvas({
           {components.length === 0 ? (
             <EmptyCanvas isOver={isOver && isDragging} />
           ) : (
-            <div className="space-y-0">
+            <div className="space-y-0 pt-3">
               {/* PERF-2: Only render top/bottom DropIndicators when dragging */}
               {isDragging && (
                 <DropIndicator

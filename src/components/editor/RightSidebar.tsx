@@ -5,7 +5,6 @@ import { useEditorStore, isAutoManaged } from "@/store/editor-store";
 import { getComponentByType } from "@/lib/editor/bootstrap-components";
 import { PropertyDefinition, CanvasComponent } from "@/lib/editor/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
@@ -15,6 +14,11 @@ import { toast } from "sonner";
 
 import { IconPicker } from "./IconPicker";
 import { COMPONENT_PRESETS } from "@/lib/editor/component-presets";
+
+// Unified input style matching select fields
+const INPUT_CLASS = "w-full h-8 px-3 rounded-md border border-input bg-white dark:bg-neutral-800 text-xs text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+const SEARCH_INPUT_CLASS = "pl-8 h-8 text-xs bg-muted/80 border-0 rounded-lg focus-visible:ring-1 focus-visible:ring-primary/20";
+const LABEL_CLASS = "text-xs font-medium text-foreground/80";
 
 // Reusable input with local state for immediate visual feedback
 function ResponsiveInput({
@@ -48,14 +52,14 @@ function ResponsiveInput({
   }, [onChange]);
 
   return (
-    <Input
+    <input
       type={type}
       value={localValue}
       onChange={(e) => handleChange(e.target.value)}
       onFocus={() => setFocused(true)}
       onBlur={() => { setFocused(false); setLocalValue(value); }}
       placeholder={placeholder}
-      className={className}
+      className={className || INPUT_CLASS}
     />
   );
 }
@@ -96,7 +100,7 @@ function PropertyField({
     case "boolean":
       return (
         <div className="flex items-center justify-between py-1">
-          <Label className="text-xs font-normal text-muted-foreground cursor-pointer" htmlFor={`prop-${prop.key}`}>
+          <Label className={`${LABEL_CLASS} cursor-pointer`} htmlFor={`prop-${prop.key}`}>
             {prop.label}
           </Label>
           <Switch
@@ -111,13 +115,13 @@ function PropertyField({
     case "select":
       return (
         <div className="space-y-1.5">
-          <Label className="text-xs font-normal text-muted-foreground">
+          <Label className={LABEL_CLASS}>
             {prop.label}
           </Label>
           <select
             value={String(value)}
             onChange={(e) => onChange(e.target.value)}
-            className="w-full h-8 px-3 rounded-md border border-input bg-white dark:bg-neutral-800 text-xs text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer"
+            className={`${INPUT_CLASS} cursor-pointer`}
           >
             {prop.options?.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -131,7 +135,7 @@ function PropertyField({
     case "textarea":
       return (
         <div className="space-y-1.5">
-          <Label className="text-xs font-normal text-muted-foreground">
+          <Label className={LABEL_CLASS}>
             {prop.label}
           </Label>
           <textarea
@@ -141,10 +145,10 @@ function PropertyField({
             onBlur={() => { setFocused(false); setLocalValue(strValue); }}
             placeholder={prop.placeholder}
             rows={3}
-            className="w-full px-3 py-2 rounded-md border border-input bg-white dark:bg-neutral-800 text-xs text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y font-mono leading-relaxed"
+            className={`${INPUT_CLASS} resize-y font-mono leading-relaxed py-2`}
           />
           {prop.description && (
-            <p className="text-[10px] text-muted-foreground/60">{prop.description}</p>
+            <p className="text-[10px] text-muted-foreground">{prop.description}</p>
           )}
         </div>
       );
@@ -152,16 +156,16 @@ function PropertyField({
     case "number":
       return (
         <div className="space-y-1.5">
-          <Label className="text-xs font-normal text-muted-foreground">
+          <Label className={LABEL_CLASS}>
             {prop.label}
           </Label>
-          <Input
+          <input
             type="number"
             value={localValue}
             onChange={(e) => handleChange(e.target.value)}
             onFocus={() => setFocused(true)}
             onBlur={() => { setFocused(false); setLocalValue(strValue); }}
-            className="h-8 text-xs"
+            className={INPUT_CLASS}
           />
         </div>
       );
@@ -169,7 +173,7 @@ function PropertyField({
     case "color":
       return (
         <div className="space-y-1.5">
-          <Label className="text-xs font-normal text-muted-foreground">
+          <Label className={LABEL_CLASS}>
             {prop.label}
           </Label>
           <div className="flex items-center gap-2">
@@ -179,12 +183,12 @@ function PropertyField({
               onChange={(e) => { onChange(e.target.value); setLocalValue(e.target.value); }}
               className="w-8 h-8 rounded border border-input cursor-pointer"
             />
-            <Input
+            <input
               value={localValue}
               onChange={(e) => handleChange(e.target.value)}
               onFocus={() => setFocused(true)}
               onBlur={() => { setFocused(false); setLocalValue(strValue); }}
-              className="h-8 text-xs flex-1 font-mono"
+              className={`${INPUT_CLASS} flex-1 font-mono`}
             />
           </div>
         </div>
@@ -193,19 +197,20 @@ function PropertyField({
     default:
       return (
         <div className="space-y-1.5">
-          <Label className="text-xs font-normal text-muted-foreground">
+          <Label className={LABEL_CLASS}>
             {prop.label}
           </Label>
-          <Input
+          <input
+            type="text"
             value={localValue}
             onChange={(e) => handleChange(e.target.value)}
             onFocus={() => setFocused(true)}
             onBlur={() => { setFocused(false); setLocalValue(strValue); }}
             placeholder={prop.placeholder}
-            className="h-8 text-xs"
+            className={INPUT_CLASS}
           />
           {prop.description && (
-            <p className="text-[10px] text-muted-foreground/60">{prop.description}</p>
+            <p className="text-[10px] text-muted-foreground">{prop.description}</p>
           )}
         </div>
       );
@@ -284,25 +289,25 @@ export function RightSidebar({ width }: RightSidebarProps) {
         >
           <div className="p-3 border-b ios-border-subtle shrink-0">
             <div className="flex items-center justify-between mb-1">
-              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <h2 className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                 Selezione multipla
               </h2>
               <button
                 onClick={() => { selectComponent(null); clearSelection(); }}
                 className="p-1 rounded-md hover:bg-foreground/5 transition-colors"
               >
-                <X className="w-3.5 h-3.5 text-muted-foreground" />
+                <X className="w-3.5 h-3.5 text-foreground/60" />
               </button>
             </div>
             <div className="flex items-center gap-2">
               <Layers className="w-4 h-4 text-amber-500" />
-              <span className="text-sm font-medium">{multiSelectCount} componenti selezionati</span>
+              <span className="text-sm font-semibold text-foreground">{multiSelectCount} componenti selezionati</span>
             </div>
           </div>
 
           {/* Multi-selection actions */}
           <div className="p-3 space-y-2">
-            <p className="text-[10px] text-muted-foreground/70 mb-2">
+            <p className="text-[11px] text-foreground/60 mb-2">
               Le azioni verranno applicate a tutti i componenti selezionati.
             </p>
             <button
@@ -310,7 +315,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
                 duplicateSelectedComponents();
                 toast.success(`${multiSelectCount} componenti duplicati`);
               }}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-md border border-input bg-white dark:bg-neutral-800 text-xs text-foreground hover:bg-muted transition-colors"
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-md border border-input ${INPUT_CLASS.split(' ').filter(c => !c.startsWith('w-') && !c.startsWith('h-')).join(' ')} hover:bg-muted transition-colors`}
             >
               <Copy className="w-3.5 h-3.5" />
               Duplica tutti ({multiSelectCount})
@@ -320,11 +325,11 @@ export function RightSidebar({ width }: RightSidebarProps) {
                 copySelectedComponents();
                 toast.success(`${multiSelectCount} componenti copiati`);
               }}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-md border border-input bg-white dark:bg-neutral-800 text-xs text-foreground hover:bg-muted transition-colors"
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-md border border-input ${INPUT_CLASS.split(' ').filter(c => !c.startsWith('w-') && !c.startsWith('h-')).join(' ')} hover:bg-muted transition-colors`}
             >
               <Copy className="w-3.5 h-3.5" />
               Copia tutti ({multiSelectCount})
-              <span className="ml-auto text-[10px] text-muted-foreground">Ctrl+C</span>
+              <span className="ml-auto text-[10px] text-foreground/50">Ctrl+C</span>
             </button>
             <button
               onClick={() => {
@@ -342,7 +347,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
           {/* Selected items list */}
           <ScrollArea className="flex-1 min-h-0">
             <div className="p-3">
-              <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">
+              <p className="text-[10px] font-semibold text-foreground/60 uppercase tracking-wider mb-2">
                 Componenti selezionati
               </p>
               <div className="space-y-1">
@@ -365,9 +370,9 @@ export function RightSidebar({ width }: RightSidebarProps) {
                           e.stopPropagation();
                           useEditorStore.getState().removeFromSelection(id);
                         }}
-                        className="ml-auto p-0.5 rounded hover:bg-muted-foreground/10 transition-colors shrink-0"
+                        className="ml-auto p-0.5 rounded hover:bg-foreground/10 transition-colors shrink-0"
                       >
-                        <X className="w-3 h-3 text-muted-foreground" />
+                        <X className="w-3 h-3 text-foreground/50" />
                       </button>
                     </button>
                   );
@@ -378,7 +383,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
 
           {/* Shortcuts hint */}
           <div className="border-t border-border px-3 py-2 shrink-0">
-            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-muted-foreground/50">
+            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-foreground/50">
               <span><kbd className="px-1 py-0.5 bg-muted rounded border border-border font-mono">Ctrl+Click</kbd> Aggiungi/Rimuovi</span>
               <span><kbd className="px-1 py-0.5 bg-muted rounded border border-border font-mono">Shift+Click</kbd> Estendi</span>
               <span><kbd className="px-1 py-0.5 bg-muted rounded border border-border font-mono">Ctrl+A</kbd> Seleziona tutto</span>
@@ -395,18 +400,18 @@ export function RightSidebar({ width }: RightSidebarProps) {
         style={{ width: `${width}px` }}
       >
         <div className="p-3 border-b ios-border-subtle">
-          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <h2 className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">
             Proprietà
           </h2>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center p-6">
           <div className="w-12 h-12 rounded-xl bg-muted/80 flex items-center justify-center mb-3">
-            <svg className="w-6 h-6 text-muted-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-6 h-6 text-foreground/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                 d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
           </div>
-          <p className="text-sm text-muted-foreground text-center">
+          <p className="text-sm text-foreground/60 text-center">
             Seleziona un componente sulla canvas per modificarne le proprietà
           </p>
         </div>
@@ -430,21 +435,21 @@ export function RightSidebar({ width }: RightSidebarProps) {
       {/* Header */}
       <div className="p-3 border-b ios-border-subtle shrink-0">
         <div className="flex items-center justify-between mb-1">
-          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <h2 className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">
             Proprietà
           </h2>
           <button
             onClick={() => selectComponent(null)}
             className="p-1 rounded-md hover:bg-foreground/5 transition-colors"
           >
-            <X className="w-3.5 h-3.5 text-muted-foreground" />
+            <X className="w-3.5 h-3.5 text-foreground/60" />
           </button>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="secondary" className="text-[10px] px-2 py-0 font-normal">
             {componentDef.label}
           </Badge>
-          <span className="text-[10px] text-muted-foreground/50">
+          <span className="text-[10px] text-foreground/50">
             {componentDef.type}
           </span>
         </div>
@@ -453,7 +458,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
       {/* Variant Presets */}
       {COMPONENT_PRESETS[selectedComponent.type] && (
         <div className="px-3 py-2 border-b ios-border-subtle shrink-0">
-          <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-1.5">
+          <p className="text-[10px] font-semibold text-foreground/60 uppercase tracking-wider mb-1.5">
             Varianti rapide
           </p>
           <div className="flex flex-wrap gap-1">
@@ -471,7 +476,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
                   className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
                     isActive
                       ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/90 hover:text-foreground"
+                      : "bg-muted text-foreground/70 hover:bg-muted/90 hover:text-foreground"
                   }`}
                 >
                   {preset.name}
@@ -484,8 +489,8 @@ export function RightSidebar({ width }: RightSidebarProps) {
 
       {/* Auto-managed info for columns */}
       {managed && (
-        <div className="mx-3 mt-2 flex items-start gap-2 px-2.5 py-2 rounded-md bg-muted/80 text-[11px] text-muted-foreground">
-          <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-muted-foreground/70" />
+        <div className="mx-3 mt-2 flex items-start gap-2 px-2.5 py-2 rounded-md bg-muted/80 text-[11px] text-foreground/70">
+          <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-foreground/50" />
           <span>Questa colonna è gestita dalla Row genitore. Modifica il numero di colonne nelle proprietà della Row.</span>
         </div>
       )}
@@ -497,14 +502,14 @@ export function RightSidebar({ width }: RightSidebarProps) {
           className="p-1.5 rounded hover:bg-muted transition-colors"
           title="Sposta su"
         >
-          <ArrowUp className="w-3.5 h-3.5 text-muted-foreground" />
+          <ArrowUp className="w-3.5 h-3.5 text-foreground/60" />
         </button>
         <button
           onClick={() => moveDown(selectedComponent.id)}
           className="p-1.5 rounded hover:bg-muted transition-colors"
           title="Sposta giù"
         >
-          <ArrowDown className="w-3.5 h-3.5 text-muted-foreground" />
+          <ArrowDown className="w-3.5 h-3.5 text-foreground/60" />
         </button>
         {!managed && (
           <>
@@ -513,12 +518,12 @@ export function RightSidebar({ width }: RightSidebarProps) {
               className="p-1.5 rounded hover:bg-muted transition-colors"
               title="Duplica"
             >
-              <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+              <Copy className="w-3.5 h-3.5 text-foreground/60" />
             </button>
             <div className="flex-1" />
             <button
               onClick={() => toggleComponentVisibility(selectedComponent.id)}
-              className={`p-1.5 rounded transition-colors ${isHidden ? 'bg-muted text-muted-foreground' : 'hover:bg-muted text-muted-foreground'}`}
+              className={`p-1.5 rounded transition-colors ${isHidden ? 'bg-muted text-foreground/60' : 'hover:bg-muted text-foreground/60'}`}
               title={isHidden ? 'Mostra componente' : 'Nascondi componente'}
             >
               {isHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -539,35 +544,34 @@ export function RightSidebar({ width }: RightSidebarProps) {
         <div className="p-3 space-y-3">
           {/* Nome (rename label) */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-normal text-muted-foreground">Nome</Label>
+            <Label className={LABEL_CLASS}>Nome</Label>
             <ResponsiveInput
               value={selectedComponent.label}
               onChange={(val) => updateComponentLabel(selectedComponent.id, val)}
-              className="h-8 text-xs"
+              className={INPUT_CLASS}
             />
           </div>
 
           <Separator />
 
-          {/* Property Search */}
-          <div className="space-y-1.5">
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cerca proprietà..."
-                className="h-8 text-xs pl-7 pr-7"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted transition-colors"
-                >
-                  <X className="w-3 h-3 text-muted-foreground" />
-                </button>
-              )}
-            </div>
+          {/* Property Search — same style as component search */}
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-foreground/40" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cerca proprietà..."
+              className={SEARCH_INPUT_CLASS}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted transition-colors"
+              >
+                <X className="w-3 h-3 text-foreground/40" />
+              </button>
+            )}
           </div>
 
           {(() => {
@@ -580,7 +584,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
 
             if (filteredGroups.length === 0) {
               return (
-                <p className="text-xs text-muted-foreground text-center py-4">
+                <p className="text-xs text-foreground/50 text-center py-4">
                   Nessuna proprietà trovata
                 </p>
               );
@@ -589,7 +593,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
             return filteredGroups.map(({ groupName, props }) => (
               <div key={groupName}>
                 {Object.keys(propGroups).length > 1 && !searchQuery.trim() && (
-                  <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">
+                  <p className="text-[10px] font-semibold text-foreground/60 uppercase tracking-wider mb-2">
                     {groupName}
                   </p>
                 )}
@@ -597,7 +601,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
                   {props.map((prop) => (
                     prop.key === "iconLeft" ? (
                       <div key={prop.key} className="space-y-1.5">
-                        <Label className="text-xs font-normal text-muted-foreground">
+                        <Label className={LABEL_CLASS}>
                           {prop.label}
                         </Label>
                         <button
@@ -607,7 +611,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
                             setIconPickerValue(String(selectedComponent.props[prop.key] ?? ""));
                             setIconPickerOpen(true);
                           }}
-                          className="w-full flex items-center gap-2 h-8 px-3 rounded-md border border-input bg-white dark:bg-neutral-800 text-xs text-foreground cursor-pointer hover:bg-muted transition-colors"
+                          className={`${INPUT_CLASS} flex items-center gap-2 cursor-pointer hover:bg-muted transition-colors`}
                         >
                           {selectedComponent.props[prop.key] ? (
                             <>
@@ -615,7 +619,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
                               <span className="flex-1 text-left font-mono truncate">{String(selectedComponent.props[prop.key])}</span>
                             </>
                           ) : (
-                            <span className="text-muted-foreground">Clicca per selezionare...</span>
+                            <span className="text-foreground/40">Clicca per selezionare...</span>
                           )}
                         </button>
                       </div>
@@ -639,12 +643,12 @@ export function RightSidebar({ width }: RightSidebarProps) {
 
           {/* Avanzato (Advanced) */}
           <div>
-            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">
+            <p className="text-[10px] font-semibold text-foreground/60 uppercase tracking-wider mb-2">
               Avanzato
             </p>
             <div className="space-y-2.5">
               <div className="space-y-1.5">
-                <Label className="text-xs font-normal text-muted-foreground flex items-center gap-1.5">
+                <Label className={`${LABEL_CLASS} flex items-center gap-1.5`}>
                   <Tag className="w-3 h-3" />
                   Classi CSS
                 </Label>
@@ -656,12 +660,12 @@ export function RightSidebar({ width }: RightSidebarProps) {
                     })
                   }
                   placeholder="es. my-class custom-styling"
-                  className="h-8 text-xs font-mono"
+                  className={`${INPUT_CLASS} font-mono`}
                 />
-                <p className="text-[10px] text-muted-foreground/60">Classi CSS aggiuntive per il componente</p>
+                <p className="text-[10px] text-foreground/50">Classi CSS aggiuntive per il componente</p>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-normal text-muted-foreground flex items-center gap-1.5">
+                <Label className={`${LABEL_CLASS} flex items-center gap-1.5`}>
                   <Hash className="w-3 h-3" />
                   ID HTML
                 </Label>
@@ -673,9 +677,9 @@ export function RightSidebar({ width }: RightSidebarProps) {
                     })
                   }
                   placeholder="es. sezione-principale"
-                  className="h-8 text-xs font-mono"
+                  className={`${INPUT_CLASS} font-mono`}
                 />
-                <p className="text-[10px] text-muted-foreground/60">Attributo id personalizzato per il componente</p>
+                <p className="text-[10px] text-foreground/50">Attributo id personalizzato per il componente</p>
               </div>
             </div>
           </div>
@@ -684,8 +688,8 @@ export function RightSidebar({ width }: RightSidebarProps) {
       {/* CSS Personalizzato */}
       <div className="border-t ios-border-subtle px-3 py-3 shrink-0">
             <div className="flex items-center gap-1.5 mb-2">
-              <Paintbrush className="w-3 h-3 text-muted-foreground" />
-              <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+              <Paintbrush className="w-3 h-3 text-foreground/60" />
+              <p className="text-[10px] font-semibold text-foreground/60 uppercase tracking-wider">
                 CSS Personalizzato
               </p>
             </div>
@@ -694,9 +698,9 @@ export function RightSidebar({ width }: RightSidebarProps) {
               onChange={(e) => setCustomCSS(e.target.value)}
               placeholder={".mio-componente {\n  color: red;\n  font-size: 18px;\n}"}
               rows={4}
-              className="w-full px-3 py-2 rounded-md border border-input bg-white dark:bg-neutral-800 text-xs text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y font-mono leading-relaxed"
+              className={`${INPUT_CLASS} resize-y font-mono leading-relaxed py-2`}
             />
-            <p className="text-[10px] text-muted-foreground/60 mt-1">Regole CSS personalizzate per l'anteprima e l'esportazione</p>
+            <p className="text-[10px] text-foreground/50 mt-1">Regole CSS personalizzate per l'anteprima e l'esportazione</p>
           </div>
 
       {/* Icon Picker Dialog */}

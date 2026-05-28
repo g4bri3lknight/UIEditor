@@ -326,8 +326,12 @@ export function Editor() {
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
         }}
-      >        {/* Top Toolbar */}
-        <Toolbar
+      >        {/* Top Toolbar — logo only */}
+        <Toolbar />
+
+        {/* Page Tabs + Commands on the right */}
+        <PageTabs
+          onAddPage={() => { addPage(); toast.success("Nuova pagina creata"); }}
           canUndo={canUndo}
           canRedo={canRedo}
           onUndo={undo}
@@ -338,9 +342,6 @@ export function Editor() {
           onShortcuts={() => setShortcutsDialogOpen(true)}
           onThemeDialog={() => setThemeDialogOpen(true)}
         />
-
-        {/* Page Tabs */}
-        <PageTabs onAddPage={() => { addPage(); toast.success("Nuova pagina creata"); }} />
 
         {/* Main Content — Resizable Sidebars (desktop) / Overlay sidebars (mobile) */}
         <div className="flex-1 flex overflow-hidden relative">
@@ -358,7 +359,7 @@ export function Editor() {
             <LeftSidebar width={leftSidebar.width} />
             {/* Close button on mobile */}
             <button
-              className="lg:hidden absolute top-3 right-3 p-1.5 rounded-lg bg-white text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors z-10"
+              className="lg:hidden absolute top-3 right-3 p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors z-10"
               onClick={() => setLeftSidebarOpen(false)}
               aria-label="Chiudi pannello componenti"
             >
@@ -410,7 +411,7 @@ export function Editor() {
             <RightSidebar width={rightSidebar.width} />
             {/* Close button on mobile */}
             <button
-              className="lg:hidden absolute top-3 left-3 p-1.5 rounded-lg bg-white text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors z-10"
+              className="lg:hidden absolute top-3 left-3 p-1.5 rounded-lg bg-white dark:bg-neutral-800 text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors z-10"
               onClick={() => setRightSidebarOpen(false)}
               aria-label="Chiudi pannello proprietà"
             >

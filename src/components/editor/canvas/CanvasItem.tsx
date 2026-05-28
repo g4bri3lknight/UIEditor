@@ -162,7 +162,7 @@ function CanvasItemInner({
     // Default subtle border to make cells visible
     dragStyle.borderBottomWidth = "1px";
     dragStyle.borderBottomStyle = "solid";
-    dragStyle.borderBottomColor = "#e5e7eb";
+    dragStyle.borderBottomColor = "hsl(var(--border))";
     // Empty cells get a min-height for visibility
     const hasCellChildren = component.children && component.children.length > 0;
     if (!hasCellChildren) {
@@ -195,7 +195,7 @@ function CanvasItemInner({
     const bc = String(tableProps.borderColor || "");
     const bordered = !!tableProps.bordered;
     if (bordered && bc) {
-      const color = bc === "primary" ? "#0d6efd" : bc === "secondary" ? "#6c757d" : bc === "success" ? "#198754" : bc === "danger" ? "#dc3545" : bc === "warning" ? "#ffc107" : bc === "info" ? "#0dcaf0" : "#dee2e6";
+      const color = bc === "primary" ? "#0d6efd" : bc === "secondary" ? "#6c757d" : bc === "success" ? "#198754" : bc === "danger" ? "#dc3545" : bc === "warning" ? "#ffc107" : bc === "info" ? "#0dcaf0" : "hsl(var(--border))";
       dragStyle.borderTopWidth = "1px";
       dragStyle.borderTopStyle = "solid";
       dragStyle.borderTopColor = color;
@@ -226,11 +226,11 @@ function CanvasItemInner({
   if (isTableRow && tableProps && tableProps.striped) {
     const rowIdx = index;
     if (rowIdx % 2 === 1) {
-      dragStyle.background = "#f8f9fa";
+      dragStyle.background = "hsl(var(--muted))";
     } else {
-      dragStyle.background = "#ffffff";
+      dragStyle.background = "hsl(var(--card))";
     }
-    dragStyle.borderBottom = "1px solid #dee2e6";
+    dragStyle.borderBottom = "1px solid hsl(var(--border))";
     if (tableProps.hover) {
       dragStyle.cursor = "pointer";
     }
@@ -550,7 +550,7 @@ function CanvasItemInner({
               {...listeners}
             >
               {isSelected && (
-                <div className="absolute -top-1.5 left-2 bg-primary/90 backdrop-blur-sm text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-md z-10 leading-tight">
+                <div className="absolute -top-3 left-2 bg-primary text-primary-foreground text-[11px] font-bold px-2.5 py-0.5 rounded-md z-10 leading-tight shadow-sm">
                   {component.label}
                 </div>
               )}
@@ -766,15 +766,9 @@ function CanvasItemInner({
               ...dragStyle,
               ...(isHidden && !isDragging && !(isContainerOver && isDragging) && !isSelected ? { opacity: 0.3 } : {}),
               borderRadius: "8px",
-              // PERF-1: content-visibility auto — lets the browser skip paint/layout
-              // for off-screen components. contain-intrinsic-size provides a fallback
-              // height estimate so scroll position doesn't jump.
-              // NOTE: Disabled for col components because it interferes with flex layout
-              // recalculation during column resize (browser caches intrinsic size).
-              ...(component.type !== "col" ? {
-                contentVisibility: "auto" as React.CSSProperties["contentVisibility"],
-                containIntrinsicSize: "auto 80px",
-              } : {}),
+              // NOTE: content-visibility: auto is intentionally NOT used here.
+              // It implies contain:paint which clips the selection label badge
+              // (positioned -top-3, above the component boundary).
             }}
             // NOTE: For col components, avoid transitioning `flex` to prevent
             // animation delay during inline resize. Use specific transitions instead.
@@ -808,7 +802,7 @@ function CanvasItemInner({
 
             {/* Selection label */}
             {isSelected && (
-              <div className="absolute -top-1.5 left-2 bg-primary/90 backdrop-blur-sm text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-md z-10 leading-tight flex items-center gap-1">
+              <div className="absolute -top-3 left-2 bg-primary text-primary-foreground text-[11px] font-bold px-2.5 py-0.5 rounded-md z-10 leading-tight flex items-center gap-1 shadow-sm">
                 <span>{managed ? `Column ${index + 1}` : component.label}</span>
                 {isCollapsible && !isCollapsed && (
                   <button
@@ -827,7 +821,7 @@ function CanvasItemInner({
 
             {/* Multi-selection indicator — amber badge for secondary selection */}
             {isInMultiSelection && !isSelected && (
-              <div className="absolute -top-1.5 left-2 bg-amber-500/90 backdrop-blur-sm text-white text-[10px] font-semibold px-2 py-0.5 rounded-md z-10 leading-tight">
+              <div className="absolute -top-3 left-2 bg-amber-500 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-md z-10 leading-tight shadow-sm">
                 {managed ? `Col ${index + 1}` : component.label}
               </div>
             )}

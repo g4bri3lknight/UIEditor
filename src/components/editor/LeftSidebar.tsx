@@ -41,7 +41,7 @@ export function LeftSidebar({ width }: LeftSidebarProps) {
             onClick={() => setActiveTab("componenti")}
             className={`flex-1 text-xs font-medium py-1.5 px-2 rounded-md transition-all duration-200 ${
               activeTab === "componenti"
-                ? "bg-white shadow-sm"
+                ? "bg-white dark:bg-neutral-700 shadow-sm text-foreground"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -51,7 +51,7 @@ export function LeftSidebar({ width }: LeftSidebarProps) {
             onClick={() => setActiveTab("livelli")}
             className={`flex-1 text-xs font-medium py-1.5 px-2 rounded-md transition-all duration-200 ${
               activeTab === "livelli"
-                ? "bg-white shadow-sm"
+                ? "bg-white dark:bg-neutral-700 shadow-sm text-foreground"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -61,7 +61,7 @@ export function LeftSidebar({ width }: LeftSidebarProps) {
             onClick={() => setActiveTab("template")}
             className={`flex-1 text-xs font-medium py-1.5 px-2 rounded-md transition-all duration-200 relative ${
               activeTab === "template"
-                ? "bg-white shadow-sm"
+                ? "bg-white dark:bg-neutral-700 shadow-sm text-foreground"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
