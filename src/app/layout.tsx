@@ -19,13 +19,27 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="it" suppressHydrationWarning>
-      <head></head>
+      <head>
+        {/* Set dark + theme-ios classes immediately from localStorage to prevent flash */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            try {
+              var stored = localStorage.getItem('theme');
+              var t = stored || 'dark-ios';
+              if (t === 'dark' || t === 'dark-ios') document.documentElement.classList.add('dark');
+              if (t === 'light-ios' || t === 'dark-ios') document.documentElement.classList.add('theme-ios');
+              document.documentElement.setAttribute('data-theme', t);
+            } catch(e) {}
+          })();
+        `}} />
+      </head>
       <body className="antialiased bg-background text-foreground">
         <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
+          attribute="data-theme"
+          defaultTheme="dark-ios"
+          enableSystem={false}
           disableTransitionOnChange
+          themes={["light", "light-ios", "dark", "dark-ios"]}
         >
           {children}
           <Toaster />

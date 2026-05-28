@@ -130,25 +130,18 @@
   ║   ███████║███████╗██║  ██╗   ██║   ██║  ██║╚██████╗                 ║
   ║   ╚══════╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝                 ║
   ║                                                                      ║
-  ║              iOS SATIN EFFECT — EDIT VALUES HERE                     ║
+  ║          iOS SATIN EFFECT — 4 THEME VARIANTS                         ║
   ║                                                                      ║
-  ║   Modifica i valori qui sotto per personalizzare l'effetto.          ║
-  ║   Le modifiche si applicano in tempo reale con HMR.                  ║
+  ║   Temi disponibili:                                                  ║
+  ║     light      → Bianco semplice (sfondi solidi)                     ║
+  ║     light-ios  → Bianco iOS (sfondi trasparenti + blur)              ║
+  ║     dark       → Nero semplice (sfondi solidi)                       ║
+  ║     dark-ios   → Nero iOS (sfondi trasparenti + blur)                ║
   ║                                                                      ║
-  ║   GUIDA RAPIDA:                                                      ║
-  ║                                                                      ║
-  ║   background   → rgba(R, G, B, OPACITY)                             ║
-  ║                   OPACITY: 0 = invisibile, 1 = opaco                ║
-  ║                   0.78 = sfondo appena visibile + controlli leggibili║
-  ║                                                                      ║
-  ║   backdrop-filter → blur(Npx) saturate(N)                           ║
-  ║                   blur: 0 = nessuna sfocatura, 24 = molto sfocato   ║
-  ║                   saturate: 1 = normale, 1.2 = colori leggermente   ║
-  ║                            più vividi attraverso il vetro            ║
-  ║                                                                      ║
-  ║   background-image → linear-gradient(...)                           ║
-  ║                   Aggiungi per tinta colorata sul vetro              ║
-  ║                   Es: linear-gradient(0deg, #00f7ff9e 30%, #0072ff99)║
+  ║   Come funziona:                                                     ║
+  ║   - La classe "dark" su <html> attiva il tema nero                   ║
+  ║   - La classe "theme-ios" su <html> attiva gli effetti satin/blur    ║
+  ║   - Senza "theme-ios", gli sfondi sono solidi                        ║
   ║                                                                      ║
   ║   CLASSI USATE NEI COMPONENTI:                                       ║
   ║   .ios-satin           → drag overlay, resize handles               ║
@@ -161,16 +154,32 @@
 */
 @layer utilities {
 
+  /* ═══════════════════════════════════════════════════════════
+     ios-satin classes — ONLY active when .theme-ios is on <html>
+     Without .theme-ios, these use solid backgrounds instead
+     ═══════════════════════════════════════════════════════════ */
+
   /* ╔═══════════════════════════════════════════════════════════╗
      ║  ios-satin  —  drag overlay, resize handles             ║
      ╚═══════════════════════════════════════════════════════════╝ */
+
+  /* Simple mode: solid background */
   .ios-satin {
+    background: rgba(255, 255, 255, 1) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  :is(.dark .ios-satin) {
+    background: rgba(30, 30, 40, 1) !important;
+  }
+
+  /* iOS mode: frosted glass */
+  :is(.theme-ios .ios-satin) {
     background: rgba(255, 255, 255, 0.8) !important;
     -webkit-backdrop-filter: blur(20px) saturate(1.2) !important;
     backdrop-filter: blur(20px) saturate(1.2) !important;
   }
-
-  :is(.dark .ios-satin) {
+  :is(.dark.theme-ios .ios-satin) {
     background: rgba(30, 30, 40, 0.78) !important;
   }
 
@@ -178,12 +187,20 @@
      ║  ios-satin-toolbar  —  toolbar, page tabs, status bar   ║
      ╚═══════════════════════════════════════════════════════════╝ */
   .ios-satin-toolbar {
-   background: rgba(255, 255, 255, 0.8) !important;
+    background: rgba(255, 255, 255, 1) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  :is(.dark .ios-satin-toolbar) {
+    background: rgba(28, 28, 36, 1) !important;
+  }
+
+  :is(.theme-ios .ios-satin-toolbar) {
+    background: rgba(255, 255, 255, 0.8) !important;
     -webkit-backdrop-filter: blur(20px) saturate(1.2) !important;
     backdrop-filter: blur(20px) saturate(1.2) !important;
   }
-
-  :is(.dark .ios-satin-toolbar) {
+  :is(.dark.theme-ios .ios-satin-toolbar) {
     background: rgba(28, 28, 36, 0.78) !important;
   }
 
@@ -191,12 +208,20 @@
      ║  ios-satin-sidebar  —  sidebar sinistra e destra        ║
      ╚═══════════════════════════════════════════════════════════╝ */
   .ios-satin-sidebar {
+    background: rgba(255, 255, 255, 1) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  :is(.dark .ios-satin-sidebar) {
+    background: rgba(28, 28, 36, 1) !important;
+  }
+
+  :is(.theme-ios .ios-satin-sidebar) {
     background: rgba(255, 255, 255, 0.8) !important;
     -webkit-backdrop-filter: blur(20px) saturate(1.2) !important;
     backdrop-filter: blur(20px) saturate(1.2) !important;
   }
-
-  :is(.dark .ios-satin-sidebar) {
+  :is(.dark.theme-ios .ios-satin-sidebar) {
     background: rgba(28, 28, 36, 0.8) !important;
   }
 
@@ -204,12 +229,20 @@
      ║  ios-satin-canvas  —  area canvas principale            ║
      ╚═══════════════════════════════════════════════════════════╝ */
   .ios-satin-canvas {
+    background: rgba(255, 255, 255, 1) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  :is(.dark .ios-satin-canvas) {
+    background: rgba(22, 22, 30, 1) !important;
+  }
+
+  :is(.theme-ios .ios-satin-canvas) {
     background: rgba(255, 255, 255, 0.8) !important;
     -webkit-backdrop-filter: blur(20px) saturate(1.2) !important;
     backdrop-filter: blur(20px) saturate(1.2) !important;
   }
-
-  :is(.dark .ios-satin-canvas) {
+  :is(.dark.theme-ios .ios-satin-canvas) {
     background: rgba(22, 22, 30, 0.72) !important;
   }
 
@@ -217,39 +250,52 @@
      ║  ios-satin-card  —  card interne, dropdown, popup       ║
      ╚═══════════════════════════════════════════════════════════╝ */
   .ios-satin-card {
-   background: rgba(255, 255, 255, 0.8) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(1.2) !important;
-    backdrop-filter: blur(20px) saturate(1.2) !important;
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 1) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    border: 1px solid rgba(0, 0, 0, 0.10);
+  }
+  :is(.dark .ios-satin-card) {
+    background: rgba(40, 40, 48, 1) !important;
+    border-color: rgba(255, 255, 255, 0.10);
   }
 
-  :is(.dark .ios-satin-card) {
+  :is(.theme-ios .ios-satin-card) {
+    background: rgba(255, 255, 255, 0.8) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(1.2) !important;
+    backdrop-filter: blur(20px) saturate(1.2) !important;
+    border-color: rgba(255, 255, 255, 0.8);
+  }
+  :is(.dark.theme-ios .ios-satin-card) {
     background: rgba(40, 40, 48, 0.82) !important;
     border-color: rgba(255, 255, 255, 0.12);
   }
 
-  /* ── iOS-style subtle border for frosted panels ── */
+  /* ── iOS-style subtle border — only different in iOS mode ── */
   .ios-border-subtle {
     border-color: rgba(0, 0, 0, 0.10) !important;
   }
-
   :is(.dark .ios-border-subtle) {
+    border-color: rgba(255, 255, 255, 0.10) !important;
+  }
+  :is(.theme-ios .ios-border-subtle) {
+    border-color: rgba(0, 0, 0, 0.10) !important;
+  }
+  :is(.dark.theme-ios .ios-border-subtle) {
     border-color: rgba(255, 255, 255, 0.10) !important;
   }
 
    .ios-border-group-component {
     border-color: rgba(0, 0, 0, 0.15) !important;
   }
-
   :is(.dark .ios-border-group-component) {
     border-color: rgba(255, 255, 255, 0.15) !important;
-  } 
+  }
 
   /* ── iOS-style separator ── */
   .ios-separator {
     background: rgba(0, 0, 0, 0.10) !important;
   }
-
   :is(.dark .ios-separator) {
     background: rgba(255, 255, 255, 0.10) !important;
   }
@@ -258,7 +304,6 @@
   .ios-selected {
     box-shadow: 0 0 0 2px oklch(0.55 0.2 260 / 0.75), 0 0 16px oklch(0.55 0.2 260 / 0.2) !important;
   }
-
   :is(.dark .ios-selected) {
     box-shadow: 0 0 0 2px oklch(0.65 0.22 260 / 0.75), 0 0 16px oklch(0.65 0.22 260 / 0.25) !important;
   }
@@ -268,12 +313,10 @@
     transition: transform 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
       box-shadow 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
-
   .ios-hover-lift:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
   }
-
   :is(.dark .ios-hover-lift:hover) {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.15);
   }
@@ -284,7 +327,6 @@
     box-shadow: 0 0 0 3px oklch(0.55 0.2 260 / 0.3) !important;
     border-radius: 8px;
   }
-
   :is(.dark .ios-focus:focus-visible) {
     box-shadow: 0 0 0 3px oklch(0.65 0.22 260 / 0.3) !important;
   }
@@ -294,24 +336,19 @@
     width: 6px;
     height: 6px;
   }
-
   .ios-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
-
   .ios-scrollbar::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.15);
     border-radius: 3px;
   }
-
   .ios-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.25);
   }
-
   :is(.dark .ios-scrollbar::-webkit-scrollbar-thumb) {
     background: rgba(255, 255, 255, 0.12);
   }
-
   :is(.dark .ios-scrollbar::-webkit-scrollbar-thumb:hover) {
     background: rgba(255, 255, 255, 0.22);
   }

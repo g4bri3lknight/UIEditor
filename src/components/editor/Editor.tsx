@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -37,6 +37,33 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { isDarkTheme, isIosTheme } from "@/components/theme-provider";
+
+// ── Sync dark + theme-ios classes on <html> ──
+// next-themes stores the theme in data-theme attribute (e.g. data-theme="dark-ios").
+// We read that and set the CSS classes that Tailwind and our satin CSS need:
+//   "dark"      → Tailwind dark: variant + .dark CSS selectors
+//   "theme-ios" → frosted glass / blur effect in globals.css
+function useThemeClassSync() {
+  useEffect(() => {
+    const html = document.documentElement;
+
+    const sync = () => {
+      const t = html.getAttribute("data-theme") || "dark-ios";
+      html.classList.toggle("dark", isDarkTheme(t));
+      html.classList.toggle("theme-ios", isIosTheme(t));
+    };
+
+    // Sync immediately
+    sync();
+
+    // Watch for data-theme changes (MutationObserver is more reliable than React state)
+    const observer = new MutationObserver(sync);
+    observer.observe(html, { attributes: true, attributeFilter: ["data-theme"] });
+
+    return () => observer.disconnect();
+  }, []);
+}
 
 export function Editor() {
   const {
@@ -52,6 +79,9 @@ export function Editor() {
     bootstrapTheme,
     addPage,
   } = useEditorStore();
+
+  // ── Sync theme classes on <html> ──
+  useThemeClassSync();
 
   // ── Dialog states ──
   const [codeDialogOpen, setCodeDialogOpen] = useState(false);

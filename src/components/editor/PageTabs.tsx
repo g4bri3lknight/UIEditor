@@ -7,8 +7,10 @@ import { ProjectMenu } from "./ProjectMenu";
 import { Button } from "@/components/ui/button";
 import {
   FileText, Plus, X,
-  Undo2, Redo2, Eye, Code, Trash2, Moon, Sun, CircleHelp,
+  Undo2, Redo2, Eye, Code, Trash2, CircleHelp,
 } from "lucide-react";
+import { cycleTheme, isDarkTheme, isIosTheme, type EditorTheme } from "@/components/theme-provider";
+import { Sun, Moon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 interface PageTabsProps {
@@ -194,15 +196,23 @@ export function PageTabs({
 
         <div className="w-px h-4 ios-separator mx-1 rounded-full" />
 
-        {/* Dark Mode Toggle */}
+        {/* Theme Cycle — 4 variants: light → light-ios → dark-ios → dark */}
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          onClick={() => setTheme(cycleTheme(theme))}
           className="h-7 w-7 p-0 rounded-lg hover:bg-foreground/5 transition-colors"
-          title={theme === "dark" ? "Modalità chiara" : "Modalità scura"}
+          title={
+            !isDarkTheme(theme) && !isIosTheme(theme) ? "Bianco semplice → Bianco iOS"
+            : !isDarkTheme(theme) && isIosTheme(theme) ? "Bianco iOS → Nero iOS"
+            : isDarkTheme(theme) && isIosTheme(theme) ? "Nero iOS → Nero semplice"
+            : "Nero semplice → Bianco semplice"
+          }
         >
-          {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+          {!isDarkTheme(theme) && !isIosTheme(theme) && <Sun className="w-3.5 h-3.5" />}
+          {!isDarkTheme(theme) && isIosTheme(theme) && <Sparkles className="w-3.5 h-3.5 text-amber-500" />}
+          {isDarkTheme(theme) && isIosTheme(theme) && <Sparkles className="w-3.5 h-3.5 text-violet-400" />}
+          {isDarkTheme(theme) && !isIosTheme(theme) && <Moon className="w-3.5 h-3.5" />}
         </Button>
 
         {/* Shortcuts */}
