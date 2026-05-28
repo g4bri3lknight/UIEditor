@@ -7,20 +7,15 @@ export function DropIndicator({
   isActive,
   isDragging = false,
   dropHint,
-  disabled = false,
 }: {
   id: string;
   isActive: boolean;
   isDragging?: boolean;
   dropHint?: string;
-  /** PERF-2: When true, the droppable is not registered with @dnd-kit.
-   *  This significantly reduces collision detection overhead during idle state. */
-  disabled?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id,
     data: { type: "drop-indicator" },
-    disabled,
   });
 
   const active = isOver || isActive;
@@ -29,18 +24,18 @@ export function DropIndicator({
   return (
     <div
       ref={setNodeRef}
-      className={`transition-all duration-200 rounded-lg ${
+      className={`transition-all duration-200 rounded-xl ${
         active && !isLarge
-          ? "min-h-3 min-w-3 bg-primary/20 border-2 border-primary/40 border-dashed"
+          ? "min-h-3 min-w-3 bg-primary/15 border-2 border-primary/30 border-dashed"
           : isLarge
-            ? `min-h-[48px] border-2 border-dashed ${isOver ? "border-primary/60 bg-primary/10" : "border-primary/30 bg-primary/5"}`
+            ? `min-h-[48px] border-2 border-dashed rounded-xl ${isOver ? "border-primary/50 bg-primary/[0.06]" : "border-primary/20 bg-primary/[0.02]"}`
             : "min-h-1 min-w-[2px]"
       }`}
       style={{ flex: isLarge ? "1 1 100%" : "0 0 auto", width: isLarge ? "100%" : undefined }}
     >
       {isLarge && (
-        <div className={`flex items-center justify-center h-full py-2 transition-opacity ${isOver ? "opacity-100" : "opacity-70"}`}>
-          <span className="text-xs text-primary/60 font-medium">{dropHint}</span>
+        <div className={`flex items-center justify-center h-full py-2 transition-opacity ${isOver ? "opacity-100" : "opacity-60"}`}>
+          <span className="text-xs text-primary/50 font-medium">{dropHint}</span>
         </div>
       )}
     </div>

@@ -117,7 +117,7 @@ function PropertyField({
           <select
             value={String(value)}
             onChange={(e) => onChange(e.target.value)}
-            className="w-full h-8 px-3 rounded-md border border-input bg-background text-xs text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer"
+            className="w-full h-8 px-3 rounded-md border border-input bg-white dark:bg-neutral-800 text-xs text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer"
           >
             {prop.options?.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -141,7 +141,7 @@ function PropertyField({
             onBlur={() => { setFocused(false); setLocalValue(strValue); }}
             placeholder={prop.placeholder}
             rows={3}
-            className="w-full px-3 py-2 rounded-md border border-input bg-background text-xs text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y font-mono leading-relaxed"
+            className="w-full px-3 py-2 rounded-md border border-input bg-white dark:bg-neutral-800 text-xs text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y font-mono leading-relaxed"
           />
           {prop.description && (
             <p className="text-[10px] text-muted-foreground/60">{prop.description}</p>
@@ -279,17 +279,17 @@ export function RightSidebar({ width }: RightSidebarProps) {
     if (isMultiSelectMode) {
       return (
         <div
-          className="border-l border-border bg-card flex flex-col h-full shrink-0 overflow-hidden"
+          className="border-l ios-border-subtle ios-satin-sidebar flex flex-col h-full shrink-0 overflow-hidden"
           style={{ width: `${width}px` }}
         >
-          <div className="p-3 border-b border-border shrink-0">
+          <div className="p-3 border-b ios-border-subtle shrink-0">
             <div className="flex items-center justify-between mb-1">
               <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Selezione multipla
               </h2>
               <button
                 onClick={() => { selectComponent(null); clearSelection(); }}
-                className="p-1 rounded hover:bg-muted transition-colors"
+                className="p-1 rounded-md hover:bg-foreground/5 transition-colors"
               >
                 <X className="w-3.5 h-3.5 text-muted-foreground" />
               </button>
@@ -310,7 +310,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
                 duplicateSelectedComponents();
                 toast.success(`${multiSelectCount} componenti duplicati`);
               }}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-md border border-input bg-background text-xs text-foreground hover:bg-muted/50 transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-md border border-input bg-white dark:bg-neutral-800 text-xs text-foreground hover:bg-muted transition-colors"
             >
               <Copy className="w-3.5 h-3.5" />
               Duplica tutti ({multiSelectCount})
@@ -320,7 +320,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
                 copySelectedComponents();
                 toast.success(`${multiSelectCount} componenti copiati`);
               }}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-md border border-input bg-background text-xs text-foreground hover:bg-muted/50 transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-md border border-input bg-white dark:bg-neutral-800 text-xs text-foreground hover:bg-muted transition-colors"
             >
               <Copy className="w-3.5 h-3.5" />
               Copia tutti ({multiSelectCount})
@@ -391,16 +391,16 @@ export function RightSidebar({ width }: RightSidebarProps) {
 
     return (
       <div
-        className="border-l border-border bg-card flex flex-col h-full shrink-0 overflow-hidden"
+        className="border-l ios-border-subtle ios-satin-sidebar flex flex-col h-full shrink-0 overflow-hidden"
         style={{ width: `${width}px` }}
       >
-        <div className="p-3 border-b border-border">
+        <div className="p-3 border-b ios-border-subtle">
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Proprietà
           </h2>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center p-6">
-          <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-3">
+          <div className="w-12 h-12 rounded-xl bg-muted/80 flex items-center justify-center mb-3">
             <svg className="w-6 h-6 text-muted-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                 d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -424,18 +424,18 @@ export function RightSidebar({ width }: RightSidebarProps) {
 
   return (
     <div
-      className="border-l border-border bg-card flex flex-col h-full shrink-0 overflow-hidden"
+      className="border-l ios-border-subtle ios-satin-sidebar flex flex-col h-full shrink-0 overflow-hidden"
       style={{ width: `${width}px` }}
     >
       {/* Header */}
-      <div className="p-3 border-b border-border shrink-0">
+      <div className="p-3 border-b ios-border-subtle shrink-0">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Proprietà
           </h2>
           <button
             onClick={() => selectComponent(null)}
-            className="p-1 rounded hover:bg-muted transition-colors"
+            className="p-1 rounded-md hover:bg-foreground/5 transition-colors"
           >
             <X className="w-3.5 h-3.5 text-muted-foreground" />
           </button>
@@ -452,7 +452,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
 
       {/* Variant Presets */}
       {COMPONENT_PRESETS[selectedComponent.type] && (
-        <div className="px-3 py-2 border-b border-border shrink-0">
+        <div className="px-3 py-2 border-b ios-border-subtle shrink-0">
           <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-1.5">
             Varianti rapide
           </p>
@@ -471,7 +471,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
                   className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
                     isActive
                       ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/90 hover:text-foreground"
                   }`}
                 >
                   {preset.name}
@@ -484,14 +484,14 @@ export function RightSidebar({ width }: RightSidebarProps) {
 
       {/* Auto-managed info for columns */}
       {managed && (
-        <div className="mx-3 mt-2 flex items-start gap-2 px-2.5 py-2 rounded-md bg-muted/60 text-[11px] text-muted-foreground">
+        <div className="mx-3 mt-2 flex items-start gap-2 px-2.5 py-2 rounded-md bg-muted/80 text-[11px] text-muted-foreground">
           <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-muted-foreground/70" />
           <span>Questa colonna è gestita dalla Row genitore. Modifica il numero di colonne nelle proprietà della Row.</span>
         </div>
       )}
 
       {/* Actions — move buttons always visible, other actions only for non-managed */}
-      <div className="flex items-center gap-1 px-3 py-2 border-b border-border shrink-0">
+      <div className="flex items-center gap-1 px-3 py-2 border-b ios-border-subtle shrink-0">
         <button
           onClick={() => moveUp(selectedComponent.id)}
           className="p-1.5 rounded hover:bg-muted transition-colors"
@@ -607,7 +607,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
                             setIconPickerValue(String(selectedComponent.props[prop.key] ?? ""));
                             setIconPickerOpen(true);
                           }}
-                          className="w-full flex items-center gap-2 h-8 px-3 rounded-md border border-input bg-background text-xs text-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+                          className="w-full flex items-center gap-2 h-8 px-3 rounded-md border border-input bg-white dark:bg-neutral-800 text-xs text-foreground cursor-pointer hover:bg-muted transition-colors"
                         >
                           {selectedComponent.props[prop.key] ? (
                             <>
@@ -682,7 +682,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
         </div>
       </ScrollArea>
       {/* CSS Personalizzato */}
-      <div className="border-t border-border px-3 py-3 shrink-0">
+      <div className="border-t ios-border-subtle px-3 py-3 shrink-0">
             <div className="flex items-center gap-1.5 mb-2">
               <Paintbrush className="w-3 h-3 text-muted-foreground" />
               <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
@@ -694,7 +694,7 @@ export function RightSidebar({ width }: RightSidebarProps) {
               onChange={(e) => setCustomCSS(e.target.value)}
               placeholder={".mio-componente {\n  color: red;\n  font-size: 18px;\n}"}
               rows={4}
-              className="w-full px-3 py-2 rounded-md border border-input bg-background text-xs text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y font-mono leading-relaxed"
+              className="w-full px-3 py-2 rounded-md border border-input bg-white dark:bg-neutral-800 text-xs text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y font-mono leading-relaxed"
             />
             <p className="text-[10px] text-muted-foreground/60 mt-1">Regole CSS personalizzate per l'anteprima e l'esportazione</p>
           </div>

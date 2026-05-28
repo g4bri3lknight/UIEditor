@@ -31,50 +31,52 @@ export function LeftSidebar({ width }: LeftSidebarProps) {
 
   return (
     <div
-      className="border-r border-border bg-card flex flex-col h-full shrink-0 overflow-hidden"
+      className="border-r ios-border-subtle ios-satin-sidebar flex flex-col h-full shrink-0 overflow-hidden"
       style={{ width: `${width}px` }}
     >
-      {/* Tab Switcher */}
-      <div className="flex gap-1 p-2 border-b border-border shrink-0">
-        <button
-          onClick={() => setActiveTab("componenti")}
-          className={`flex-1 text-xs font-medium py-1.5 px-2 rounded-md transition-colors duration-150 ${
-            activeTab === "componenti"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted"
-          }`}
-        >
-          Componenti
-        </button>
-        <button
-          onClick={() => setActiveTab("livelli")}
-          className={`flex-1 text-xs font-medium py-1.5 px-2 rounded-md transition-colors duration-150 ${
-            activeTab === "livelli"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted"
-          }`}
-        >
-          Livelli
-        </button>
-        <button
-          onClick={() => setActiveTab("template")}
-          className={`flex-1 text-xs font-medium py-1.5 px-2 rounded-md transition-colors duration-150 relative ${
-            activeTab === "template"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted"
-          }`}
-        >
-          Template
-          {savedSnippetsCount > 0 && (
-            <span className={`ml-1 text-[9px] leading-none rounded-full px-1 py-0.5 font-bold ${
+      {/* Tab Switcher — iOS segmented control style */}
+      <div className="flex gap-0.5 p-2 border-b ios-border-subtle shrink-0">
+        <div className="flex gap-0.5 w-full bg-muted/90 rounded-lg p-0.5">
+          <button
+            onClick={() => setActiveTab("componenti")}
+            className={`flex-1 text-xs font-medium py-1.5 px-2 rounded-md transition-all duration-200 ${
+              activeTab === "componenti"
+                ? "bg-white shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Componenti
+          </button>
+          <button
+            onClick={() => setActiveTab("livelli")}
+            className={`flex-1 text-xs font-medium py-1.5 px-2 rounded-md transition-all duration-200 ${
+              activeTab === "livelli"
+                ? "bg-white shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Livelli
+          </button>
+          <button
+            onClick={() => setActiveTab("template")}
+            className={`flex-1 text-xs font-medium py-1.5 px-2 rounded-md transition-all duration-200 relative ${
               activeTab === "template"
-                ? "bg-primary-foreground/20 text-primary-foreground"
-                : "bg-primary text-primary-foreground"
-            }`}>
-              {savedSnippetsCount}
-            </span>
-          )}
-        </button>
+                ? "bg-white shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Template
+            {savedSnippetsCount > 0 && (
+              <span className={`ml-1 text-[9px] leading-none rounded-full px-1 py-0.5 font-bold ${
+                activeTab === "template"
+                  ? "bg-primary/15 text-primary"
+                  : "bg-primary/10 text-primary"
+              }`}>
+                {savedSnippetsCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Componenti Tab */}

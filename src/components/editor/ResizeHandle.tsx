@@ -82,7 +82,7 @@ export function useSidebarResize(
 }
 
 // ── Resize handle component ──
-// Full-height vertical strip that allows dragging anywhere along the sidebar edge
+// Full-height vertical strip — iOS satin style
 export function ResizeHandle({
   onMouseDown,
   side,
@@ -97,10 +97,11 @@ export function ResizeHandle({
       className={`
         group relative shrink-0 cursor-col-resize select-none
         w-[6px] h-full flex-none
-        ${side === "left" ? "border-r border-border" : "border-l border-border"}
-        hover:bg-primary/20 hover:border-primary/40
-        active:bg-primary/30
-        transition-colors duration-75
+        ios-satin
+        ${side === "left" ? "border-r ios-border-subtle" : "border-l ios-border-subtle"}
+        hover:bg-primary/15
+        active:bg-primary/25
+        transition-colors duration-100
       `}
       title="Trascina per ridimensionare"
     >
@@ -108,11 +109,11 @@ export function ResizeHandle({
       <div
         className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 pointer-events-none"
       >
-        <div className="flex flex-col gap-[2px] py-2">
-          {Array.from({ length: 5 }).map((_, i) => (
+        <div className="flex flex-col gap-[3px] py-2">
+          {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="w-[2px] h-[2px] rounded-full bg-border group-hover:bg-primary/60 transition-colors duration-75"
+              className="w-[3px] h-[3px] rounded-full bg-foreground/20 group-hover:bg-primary/60 transition-colors duration-100"
             />
           ))}
         </div>

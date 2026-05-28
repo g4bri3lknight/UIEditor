@@ -318,8 +318,15 @@ export function Editor() {
       onDragEnd={onDragEnd}
       onDragCancel={onDragCancel}
     >
-      <div className="h-screen flex flex-col bg-background">
-        {/* Top Toolbar */}
+      <div
+        className="h-screen flex flex-col relative"
+        style={{
+          backgroundImage: "url('/background-abstract.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >        {/* Top Toolbar */}
         <Toolbar
           canUndo={canUndo}
           canRedo={canRedo}
@@ -351,7 +358,7 @@ export function Editor() {
             <LeftSidebar width={leftSidebar.width} />
             {/* Close button on mobile */}
             <button
-              className="lg:hidden absolute top-3 right-3 p-1.5 rounded-md bg-muted/80 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors z-10"
+              className="lg:hidden absolute top-3 right-3 p-1.5 rounded-lg bg-white text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors z-10"
               onClick={() => setLeftSidebarOpen(false)}
               aria-label="Chiudi pannello componenti"
             >
@@ -403,7 +410,7 @@ export function Editor() {
             <RightSidebar width={rightSidebar.width} />
             {/* Close button on mobile */}
             <button
-              className="lg:hidden absolute top-3 left-3 p-1.5 rounded-md bg-muted/80 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors z-10"
+              className="lg:hidden absolute top-3 left-3 p-1.5 rounded-lg bg-white text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors z-10"
               onClick={() => setRightSidebarOpen(false)}
               aria-label="Chiudi pannello proprietà"
             >
@@ -427,7 +434,7 @@ export function Editor() {
       {/* Drag Overlay */}
       <DragOverlay dropAnimation={null}>
         {activeDragId && activeDragData && (
-          <div className="bg-card border border-primary/30 rounded-lg px-4 py-3 shadow-2xl shadow-primary/10 flex items-center gap-2 pointer-events-none">
+          <div className="ios-satin rounded-2xl px-4 py-3 shadow-2xl shadow-primary/10 flex items-center gap-2 pointer-events-none border ios-border-subtle">
             <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
             <span className="text-sm font-medium text-foreground">
               {activeDragData.label || "Componente"}

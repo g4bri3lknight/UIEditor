@@ -6,7 +6,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -43,73 +43,278 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* ═══════════════════════════════════════════════════════════
+   iOS Satin Theme — Light Mode
+   Warm whites, subtle frosted translucency, soft shadows
+   ═══════════════════════════════════════════════════════════ */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0.75rem;
+  --background: oklch(0.97 0.005 280);
+  --foreground: oklch(0.15 0.01 280);
+  --card: oklch(0.995 0.002 280);
+  --card-foreground: oklch(0.15 0.01 280);
+  --popover: oklch(0.995 0.002 280);
+  --popover-foreground: oklch(0.15 0.01 280);
+  --primary: oklch(0.55 0.2 260);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.94 0.005 280);
+  --secondary-foreground: oklch(0.25 0.01 280);
+  --muted: oklch(0.94 0.005 280);
+  --muted-foreground: oklch(0.5 0.01 280);
+  --accent: oklch(0.93 0.01 280);
+  --accent-foreground: oklch(0.25 0.01 280);
+  --destructive: oklch(0.58 0.22 25);
+  --border: oklch(0.88 0.005 280);
+  --input: oklch(0.91 0.005 280);
+  --ring: oklch(0.55 0.2 260);
+  --chart-1: oklch(0.55 0.2 260);
+  --chart-2: oklch(0.65 0.16 160);
+  --chart-3: oklch(0.55 0.18 310);
+  --chart-4: oklch(0.7 0.16 80);
+  --chart-5: oklch(0.6 0.22 20);
+  --sidebar: oklch(0.975 0.004 280);
+  --sidebar-foreground: oklch(0.15 0.01 280);
+  --sidebar-primary: oklch(0.55 0.2 260);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.94 0.005 280);
+  --sidebar-accent-foreground: oklch(0.25 0.01 280);
+  --sidebar-border: oklch(0.90 0.005 280);
+  --sidebar-ring: oklch(0.55 0.2 260);
 }
 
+/* ═══════════════════════════════════════════════════════════
+   iOS Satin Theme — Dark Mode
+   Warm dark grays, frosted translucency, saturated accents
+   ═══════════════════════════════════════════════════════════ */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: oklch(0.13 0.008 280);
+  --foreground: oklch(0.93 0.005 280);
+  --card: oklch(0.18 0.01 280);
+  --card-foreground: oklch(0.93 0.005 280);
+  --popover: oklch(0.18 0.01 280);
+  --popover-foreground: oklch(0.93 0.005 280);
+  --primary: oklch(0.65 0.22 260);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.22 0.01 280);
+  --secondary-foreground: oklch(0.93 0.005 280);
+  --muted: oklch(0.22 0.01 280);
+  --muted-foreground: oklch(0.6 0.01 280);
+  --accent: oklch(0.22 0.01 280);
+  --accent-foreground: oklch(0.93 0.005 280);
+  --destructive: oklch(0.65 0.2 25);
+  --border: oklch(0.26 0.01 280);
+  --input: oklch(0.24 0.01 280);
+  --ring: oklch(0.65 0.22 260);
+  --chart-1: oklch(0.65 0.22 260);
+  --chart-2: oklch(0.7 0.16 160);
+  --chart-3: oklch(0.65 0.18 310);
+  --chart-4: oklch(0.75 0.16 80);
+  --chart-5: oklch(0.7 0.22 20);
+  --sidebar: oklch(0.16 0.01 280);
+  --sidebar-foreground: oklch(0.93 0.005 280);
+  --sidebar-primary: oklch(0.65 0.22 260);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.22 0.01 280);
+  --sidebar-accent-foreground: oklch(0.93 0.005 280);
+  --sidebar-border: oklch(0.26 0.01 280);
+  --sidebar-ring: oklch(0.65 0.22 260);
+}
+
+/*
+  ╔══════════════════════════════════════════════════════════════════════╗
+  ║                                                                      ║
+  ║   ███████╗███████╗██╗  ██╗████████╗██████╗  ██████╗                 ║
+  ║   ██╔════╝██╔════╝██║ ██╔╝╚══██╔══╝██╔══██╗██╔════╝                 ║
+  ║   ███████╗█████╗  █████╔╝    ██║   ██████╔╝██║                      ║
+  ║   ╚════██║██╔══╝  ██╔═██╗    ██║   ██╔══██╗██║                      ║
+  ║   ███████║███████╗██║  ██╗   ██║   ██║  ██║╚██████╗                 ║
+  ║   ╚══════╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝                 ║
+  ║                                                                      ║
+  ║              iOS SATIN EFFECT — EDIT VALUES HERE                     ║
+  ║                                                                      ║
+  ║   Modifica i valori qui sotto per personalizzare l'effetto.          ║
+  ║   Le modifiche si applicano in tempo reale con HMR.                  ║
+  ║                                                                      ║
+  ║   GUIDA RAPIDA:                                                      ║
+  ║                                                                      ║
+  ║   background   → rgba(R, G, B, OPACITY)                             ║
+  ║                   OPACITY: 0 = invisibile, 1 = opaco                ║
+  ║                   0.78 = sfondo appena visibile + controlli leggibili║
+  ║                                                                      ║
+  ║   backdrop-filter → blur(Npx) saturate(N)                           ║
+  ║                   blur: 0 = nessuna sfocatura, 24 = molto sfocato   ║
+  ║                   saturate: 1 = normale, 1.2 = colori leggermente   ║
+  ║                            più vividi attraverso il vetro            ║
+  ║                                                                      ║
+  ║   background-image → linear-gradient(...)                           ║
+  ║                   Aggiungi per tinta colorata sul vetro              ║
+  ║                   Es: linear-gradient(0deg, #00f7ff9e 30%, #0072ff99)║
+  ║                                                                      ║
+  ║   CLASSI USATE NEI COMPONENTI:                                       ║
+  ║   .ios-satin           → drag overlay, resize handles               ║
+  ║   .ios-satin-toolbar   → toolbar, page tabs, status bar             ║
+  ║   .ios-satin-sidebar   → sidebar sinistra e destra                  ║
+  ║   .ios-satin-canvas    → area canvas principale                     ║
+  ║   .ios-satin-card      → card interne, dropdown, popup              ║
+  ║                                                                      ║
+  ╚══════════════════════════════════════════════════════════════════════╝
+*/
+@layer utilities {
+
+  /* ╔═══════════════════════════════════════════════════════════╗
+     ║  ios-satin  —  drag overlay, resize handles             ║
+     ╚═══════════════════════════════════════════════════════════╝ */
+  .ios-satin {
+    background: rgba(255, 255, 255, 0.8) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(1.2) !important;
+    backdrop-filter: blur(20px) saturate(1.2) !important;
+  }
+
+  :is(.dark .ios-satin) {
+    background: rgba(30, 30, 40, 0.78) !important;
+  }
+
+  /* ╔═══════════════════════════════════════════════════════════╗
+     ║  ios-satin-toolbar  —  toolbar, page tabs, status bar   ║
+     ╚═══════════════════════════════════════════════════════════╝ */
+  .ios-satin-toolbar {
+   background: rgba(255, 255, 255, 0.8) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(1.2) !important;
+    backdrop-filter: blur(20px) saturate(1.2) !important;
+  }
+
+  :is(.dark .ios-satin-toolbar) {
+    background: rgba(28, 28, 36, 0.78) !important;
+  }
+
+  /* ╔═══════════════════════════════════════════════════════════╗
+     ║  ios-satin-sidebar  —  sidebar sinistra e destra        ║
+     ╚═══════════════════════════════════════════════════════════╝ */
+  .ios-satin-sidebar {
+    background: rgba(255, 255, 255, 0.8) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(1.2) !important;
+    backdrop-filter: blur(20px) saturate(1.2) !important;
+  }
+
+  :is(.dark .ios-satin-sidebar) {
+    background: rgba(28, 28, 36, 0.8) !important;
+  }
+
+  /* ╔═══════════════════════════════════════════════════════════╗
+     ║  ios-satin-canvas  —  area canvas principale            ║
+     ╚═══════════════════════════════════════════════════════════╝ */
+  .ios-satin-canvas {
+    background: rgba(255, 255, 255, 0.8) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(1.2) !important;
+    backdrop-filter: blur(20px) saturate(1.2) !important;
+  }
+
+  :is(.dark .ios-satin-canvas) {
+    background: rgba(22, 22, 30, 0.72) !important;
+  }
+
+  /* ╔═══════════════════════════════════════════════════════════╗
+     ║  ios-satin-card  —  card interne, dropdown, popup       ║
+     ╚═══════════════════════════════════════════════════════════╝ */
+  .ios-satin-card {
+   background: rgba(255, 255, 255, 0.8) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(1.2) !important;
+    backdrop-filter: blur(20px) saturate(1.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+  }
+
+  :is(.dark .ios-satin-card) {
+    background: rgba(40, 40, 48, 0.82) !important;
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  /* ── iOS-style subtle border for frosted panels ── */
+  .ios-border-subtle {
+    border-color: rgba(0, 0, 0, 0.10) !important;
+  }
+
+  :is(.dark .ios-border-subtle) {
+    border-color: rgba(255, 255, 255, 0.10) !important;
+  }
+
+   .ios-border-group-component {
+    border-color: rgba(0, 0, 0, 0.15) !important;
+  }
+
+  :is(.dark .ios-border-group-component) {
+    border-color: rgba(255, 255, 255, 0.15) !important;
+  } 
+
+  /* ── iOS-style separator ── */
+  .ios-separator {
+    background: rgba(0, 0, 0, 0.10) !important;
+  }
+
+  :is(.dark .ios-separator) {
+    background: rgba(255, 255, 255, 0.10) !important;
+  }
+
+  /* ── iOS selection highlight ── */
+  .ios-selected {
+    box-shadow: 0 0 0 2px oklch(0.55 0.2 260 / 0.5), 0 0 12px oklch(0.55 0.2 260 / 0.12) !important;
+  }
+
+  :is(.dark .ios-selected) {
+    box-shadow: 0 0 0 2px oklch(0.65 0.22 260 / 0.5), 0 0 12px oklch(0.65 0.22 260 / 0.15) !important;
+  }
+
+  /* ── iOS hover lift ── */
+  .ios-hover-lift {
+    transition: transform 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      box-shadow 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  .ios-hover-lift:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  :is(.dark .ios-hover-lift:hover) {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.15);
+  }
+
+  /* ── iOS-style focus ring ── */
+  .ios-focus:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px oklch(0.55 0.2 260 / 0.3) !important;
+    border-radius: 8px;
+  }
+
+  :is(.dark .ios-focus:focus-visible) {
+    box-shadow: 0 0 0 3px oklch(0.65 0.22 260 / 0.3) !important;
+  }
+
+  /* ── iOS scrollbar styling ── */
+  .ios-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .ios-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .ios-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+  }
+
+  .ios-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25);
+  }
+
+  :is(.dark .ios-scrollbar::-webkit-scrollbar-thumb) {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  :is(.dark .ios-scrollbar::-webkit-scrollbar-thumb:hover) {
+    background: rgba(255, 255, 255, 0.22);
+  }
 }
 
 /* Ensure Bootstrap Icons pseudo-elements work with Tailwind v4 */
@@ -132,7 +337,11 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 }

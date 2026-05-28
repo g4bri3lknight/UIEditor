@@ -17,11 +17,11 @@ function EmptyCanvas({ isOver }: { isOver: boolean }) {
     <div
       className={`flex flex-col items-center justify-center py-32 rounded-2xl border-2 border-dashed transition-all duration-300 ${
         isOver
-          ? "border-primary bg-primary/5 scale-[1.01] shadow-lg shadow-primary/10"
-          : "border-border/60 hover:border-border"
+          ? "border-primary/40 bg-primary/[0.03] scale-[1.005] shadow-lg shadow-primary/5"
+          : "ios-border-subtle hover:border-border/60"
       }`}
     >
-      <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+      <div className="w-16 h-16 rounded-2xl bg-muted/80 flex items-center justify-center mb-4">
         <svg
           className="w-8 h-8 text-muted-foreground/50"
           fill="none"
@@ -106,8 +106,7 @@ export function Canvas({
   // ── Property picker state (for components with multiple editable props) ──
   const [propPicker, setPropPicker] = useState<PropPickerState | null>(null);
 
-  // PERF-2: Disable canvas root droppable when not dragging
-  const { setNodeRef, isOver } = useDroppable({ id: "canvas-root", disabled: !isDragging });
+  const { setNodeRef, isOver } = useDroppable({ id: "canvas-root" });
 
   const handleStartInlineEdit = useCallback(
     (id: string, propKey: string, rect: DOMRect, currentValue: string, multiline: boolean) => {
@@ -168,7 +167,7 @@ export function Canvas({
   }, []);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-muted/30 overflow-hidden">
+    <div className="flex-1 flex flex-col h-full ios-satin-canvas overflow-hidden">
       {/* Canvas Toolbar — breadcrumb + zoom + grid */}
       <CanvasToolbar
         zoom={zoom}
@@ -193,10 +192,9 @@ export function Canvas({
         }}
         onClick={handleCanvasClick}
         onWheel={handleWheel}
-        className={`flex-1 overflow-auto transition-colors duration-200 ${
-          isOver && isDragging ? "bg-primary/5" : ""
+        className={`flex-1 overflow-auto transition-colors duration-200 ios-scrollbar ${
+          isOver && isDragging ? "bg-primary/[0.02]" : ""
         }`}
-        style={{ backgroundColor: "#f8f9fa" }}
       >
         <div
           className="w-[95%] mx-auto p-6 origin-top"
@@ -212,8 +210,8 @@ export function Canvas({
               maxWidth: viewport === "xl" ? "100%" : `${VIEWPORT_BREAKPOINTS.find(bp => bp.key === viewport)?.width || "100%"}px`,
               margin: "0 auto",
               transition: "max-width 200ms ease-out",
-              border: viewport !== "xl" ? "1px solid #e5e7eb" : "none",
-              borderRadius: viewport !== "xl" ? "8px" : "0",
+              border: viewport !== "xl" ? "1px solid rgba(0,0,0,0.06)" : "none",
+              borderRadius: viewport !== "xl" ? "12px" : "0",
               overflow: "hidden",
               // Theme CSS custom properties — cascade to all Bootstrap components in canvas
               "--bs-primary": bootstrapTheme.primaryColor,
@@ -277,7 +275,6 @@ export function Canvas({
                   isActive={false}
                   isDragging={isDragging}
                   dropHint="Rilascia all'inizio"
-                  disabled={!isDragging}
                 />
               )}
 
@@ -302,7 +299,6 @@ export function Canvas({
                   isActive={false}
                   isDragging={isDragging}
                   dropHint="Rilascia alla fine"
-                  disabled={!isDragging}
                 />
               )}
               {/* Extra spacer at bottom to ensure the drop zone has room */}

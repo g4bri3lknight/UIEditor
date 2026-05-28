@@ -130,14 +130,13 @@ function CanvasItemInner({
     disabled: managed,
   });
 
-  // ── PERF-2: Droppable — disable when not dragging to reduce collision detection overhead ──
   const {
     setNodeRef: setDropRef,
     isOver: isContainerOver,
   } = useDroppable({
     id: `container-${component.id}`,
     data: { type: "container-drop", componentId: component.id },
-    disabled: !canContain || component.type === "table" || component.type === "table-row" || !isDragging,
+    disabled: !canContain || component.type === "table" || component.type === "table-row",
   });
 
   const dragStyle: React.CSSProperties = {
@@ -354,7 +353,6 @@ function CanvasItemInner({
               <DropIndicator
                 id={`before::${child.id}::${component.id}`}
                 isActive={false}
-                disabled={!isDragging}
               />
             )}
             <CanvasItem
@@ -371,7 +369,6 @@ function CanvasItemInner({
               <DropIndicator
                 id={`after::${child.id}::${component.id}`}
                 isActive={false}
-                disabled={!isDragging}
               />
             )}
           </React.Fragment>
@@ -380,7 +377,6 @@ function CanvasItemInner({
           <DropIndicator
             id={`bottom-slot-${component.id}-${slotChildren[0]?.slot || "body"}`}
             isActive={false}
-            disabled={!isDragging}
           />
         )}
       </>
@@ -483,7 +479,6 @@ function CanvasItemInner({
               <DropIndicator
                 id={`before::${child.id}::${component.id}`}
                 isActive={false}
-                disabled={!isDragging}
               />
             )}
             <CanvasItem
@@ -500,7 +495,6 @@ function CanvasItemInner({
               <DropIndicator
                 id={`after::${child.id}::${component.id}`}
                 isActive={false}
-                disabled={!isDragging}
               />
             )}
           </React.Fragment>
@@ -511,7 +505,7 @@ function CanvasItemInner({
             isActive={false}
             isDragging={isDragging}
             dropHint="Rilascia qui"
-            disabled={!isDragging}
+
           />
         )}
       </>
@@ -535,7 +529,6 @@ function CanvasItemInner({
           <DropIndicator
             id={parentId ? `before::${component.id}::${parentId}` : `before::${component.id}`}
             isActive={false}
-            disabled={!isDragging}
           />
         )}
         <ContextMenu>
@@ -548,8 +541,8 @@ function CanvasItemInner({
               }}
               className={`relative group/canvas-item transition-all duration-150 ${
                 isSelected
-                  ? "ring-2 ring-primary/50 bg-primary/5 rounded-lg"
-                  : "hover:ring-1 hover:ring-border rounded-lg"
+                  ? "ios-selected rounded-lg bg-primary/[0.04]"
+                  : "hover:ring-1 hover:ring-border/60 rounded-lg"
               }`}
               onClick={handleSelect}
               onDoubleClick={handleDoubleClick}
@@ -557,7 +550,7 @@ function CanvasItemInner({
               {...listeners}
             >
               {isSelected && (
-                <div className="absolute -top-1.5 left-2 bg-primary text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-t-md z-10 leading-tight">
+                <div className="absolute -top-1.5 left-2 bg-primary/90 backdrop-blur-sm text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-md z-10 leading-tight">
                   {component.label}
                 </div>
               )}
@@ -635,7 +628,6 @@ function CanvasItemInner({
           <DropIndicator
             id={parentId ? `after::${component.id}::${parentId}` : `after::${component.id}`}
             isActive={false}
-            disabled={!isDragging}
           />
         )}
       </>
@@ -648,7 +640,6 @@ function CanvasItemInner({
         <DropIndicator
           id={parentId ? `before::${component.id}::${parentId}` : `before::${component.id}`}
           isActive={false}
-          disabled={!isDragging}
         />
       )}
 
@@ -663,7 +654,7 @@ function CanvasItemInner({
               ...tableBaseStyle,
               ...(isSelected ? { outline: "2px solid hsl(var(--primary) / 0.6)", outlineOffset: "-2px" } : {}),
             }}
-            className="group/canvas-item transition-all duration-150 hover:bg-muted/20"
+            className="group/canvas-item transition-all duration-150 hover:bg-muted/60"
             onClick={handleSelect}
             onDoubleClick={handleDoubleClick}
             {...attributes}
@@ -688,7 +679,7 @@ function CanvasItemInner({
                   ...(isSelected ? { outline: "2px solid hsl(var(--primary) / 0.6)", outlineOffset: "-2px" } : {}),
                   ...(isContainerOver && isDragging ? { outline: "2px solid hsl(var(--primary) / 0.4)", outlineOffset: "-2px" } : {}),
                 }}
-                className="group/canvas-item transition-all duration-150 hover:bg-muted/30"
+                className="group/canvas-item transition-all duration-150 hover:bg-muted/60"
                 onClick={handleSelect}
                 onDoubleClick={handleDoubleClick}
                 {...attributes}
@@ -787,16 +778,16 @@ function CanvasItemInner({
             }}
             // NOTE: For col components, avoid transitioning `flex` to prevent
             // animation delay during inline resize. Use specific transitions instead.
-            className={`relative group/canvas-item ${component.type === "col" ? "transition-[outline,box-shadow,background-color,opacity] duration-150" : "transition-all duration-150"} ${
+            className={`relative group/canvas-item ${component.type === "col" ? "transition-[outline,box-shadow,background-color,opacity] duration-200" : "transition-all duration-200"} ${
               isDragging && isSelected
-                ? "opacity-30 ring-2 ring-primary/40 rounded-lg"
+                ? "opacity-30 ios-selected rounded-lg"
                 : isContainerOver && isDragging
-                  ? "ring-2 ring-primary/40 bg-primary/5 rounded-lg"
+                  ? "ring-2 ring-primary/30 bg-primary/[0.03] rounded-lg"
                   : isSelected
-                    ? "ring-2 ring-primary/50 bg-primary/5 rounded-lg"
+                    ? "ios-selected rounded-lg bg-primary/[0.03]"
                     : isInMultiSelection
-                      ? "ring-2 ring-amber-400/60 bg-amber-50/30 dark:bg-amber-900/10 rounded-lg"
-                      : "hover:ring-1 hover:ring-border rounded-lg"
+                      ? "ring-2 ring-amber-400/50 bg-amber-50/20 dark:bg-amber-900/10 rounded-lg"
+                      : "hover:ring-1 hover:ring-border/50 rounded-lg"
             }${isInline ? " inline-flex" : ""}`}
             onClick={handleSelect}
             onDoubleClick={handleDoubleClick}
@@ -805,8 +796,8 @@ function CanvasItemInner({
           >
             {/* Inline edit hover indicator */}
             {isEditable && !isSelected && (
-              <div className="absolute top-1.5 right-1.5 opacity-0 group-hover/canvas-item:opacity-100 transition-opacity duration-150 z-20 pointer-events-none">
-                <div className="flex items-center gap-1 bg-background/90 backdrop-blur-sm border border-border rounded px-1.5 py-0.5 shadow-sm">
+              <div className="absolute top-1.5 right-1.5 opacity-0 group-hover/canvas-item:opacity-100 transition-opacity duration-200 z-20 pointer-events-none">
+                <div className="flex items-center gap-1 ios-satin border ios-border-subtle rounded-lg px-1.5 py-0.5 shadow-sm">
                   <Pencil className="w-2.5 h-2.5 text-muted-foreground" />
                   <span className="text-[9px] text-muted-foreground font-medium">
                     {allEditableProps && allEditableProps.length > 1 ? "2× click → modifica" : "2× click"}
@@ -817,7 +808,7 @@ function CanvasItemInner({
 
             {/* Selection label */}
             {isSelected && (
-              <div className="absolute -top-1.5 left-2 bg-primary text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-t-md z-10 leading-tight flex items-center gap-1">
+              <div className="absolute -top-1.5 left-2 bg-primary/90 backdrop-blur-sm text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-md z-10 leading-tight flex items-center gap-1">
                 <span>{managed ? `Column ${index + 1}` : component.label}</span>
                 {isCollapsible && !isCollapsed && (
                   <button
@@ -836,7 +827,7 @@ function CanvasItemInner({
 
             {/* Multi-selection indicator — amber badge for secondary selection */}
             {isInMultiSelection && !isSelected && (
-              <div className="absolute -top-1.5 left-2 bg-amber-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-t-md z-10 leading-tight">
+              <div className="absolute -top-1.5 left-2 bg-amber-500/90 backdrop-blur-sm text-white text-[10px] font-semibold px-2 py-0.5 rounded-md z-10 leading-tight">
                 {managed ? `Col ${index + 1}` : component.label}
               </div>
             )}
@@ -1007,7 +998,6 @@ function CanvasItemInner({
         <DropIndicator
           id={parentId ? `after::${component.id}::${parentId}` : `after::${component.id}`}
           isActive={false}
-          disabled={!isDragging}
         />
       )}
     </>

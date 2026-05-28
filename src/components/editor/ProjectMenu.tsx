@@ -238,14 +238,14 @@ export function ProjectMenu({ onOpenThemeDialog }: ProjectMenuProps) {
         <ChevronDown className={`w-3 h-3 transition-transform duration-150 ${menuOpen ? "rotate-180" : ""}`} />
       </Button>
       {menuOpen && (
-        <div className="absolute right-0 top-full mt-1 w-56 bg-popover border border-border rounded-lg shadow-lg z-50 py-1 overflow-hidden">
+        <div className="absolute right-0 top-full mt-1 w-56 ios-satin-card border ios-border-subtle rounded-xl shadow-lg z-50 py-1 overflow-hidden">
           <div className="px-3 py-1.5 border-b border-border">
             <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Progetto</span>
           </div>
           <button
             onClick={() => { handleSave(); setMenuOpen(false); }}
             disabled={components.length === 0}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/80 transition-colors duration-100 cursor-pointer disabled:opacity-50 disabled:cursor-default"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted transition-colors duration-100 cursor-pointer disabled:opacity-50 disabled:cursor-default"
           >
             <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
               <Save className="w-3.5 h-3.5 text-primary" />
@@ -257,7 +257,7 @@ export function ProjectMenu({ onOpenThemeDialog }: ProjectMenuProps) {
           </button>
           <button
             onClick={() => { handleLoad(); setMenuOpen(false); }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/80 transition-colors duration-100 cursor-pointer"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted transition-colors duration-100 cursor-pointer"
           >
             <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
               <FolderOpen className="w-3.5 h-3.5 text-primary" />
@@ -270,7 +270,7 @@ export function ProjectMenu({ onOpenThemeDialog }: ProjectMenuProps) {
           <div className="mx-3 my-1 border-t border-border" />
           <button
             onClick={() => { handleImportClick(); setMenuOpen(false); }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/80 transition-colors duration-100 cursor-pointer"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted transition-colors duration-100 cursor-pointer"
           >
             <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
               <Upload className="w-3.5 h-3.5 text-primary" />
@@ -283,7 +283,7 @@ export function ProjectMenu({ onOpenThemeDialog }: ProjectMenuProps) {
           <button
             onClick={() => { handleExport(); setMenuOpen(false); }}
             disabled={components.length === 0}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/80 transition-colors duration-100 cursor-pointer disabled:opacity-50 disabled:cursor-default"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted transition-colors duration-100 cursor-pointer disabled:opacity-50 disabled:cursor-default"
           >
             <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
               <Download className="w-3.5 h-3.5 text-primary" />
@@ -299,7 +299,7 @@ export function ProjectMenu({ onOpenThemeDialog }: ProjectMenuProps) {
           </div>
           <button
             onClick={() => { onOpenThemeDialog(); setMenuOpen(false); }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/80 transition-colors duration-100 cursor-pointer"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted transition-colors duration-100 cursor-pointer"
           >
             <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
               <Palette className="w-3.5 h-3.5 text-primary" />
@@ -315,7 +315,7 @@ export function ProjectMenu({ onOpenThemeDialog }: ProjectMenuProps) {
           </div>
           <button
             onClick={() => { addPage(); setMenuOpen(false); toast.success("Nuova pagina creata"); }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/80 transition-colors duration-100 cursor-pointer"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted transition-colors duration-100 cursor-pointer"
           >
             <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
               <Plus className="w-3.5 h-3.5 text-primary" />
@@ -332,7 +332,7 @@ export function ProjectMenu({ onOpenThemeDialog }: ProjectMenuProps) {
               setMenuOpen(false);
             }}
             disabled={pages.length <= 1}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/80 transition-colors duration-100 cursor-pointer disabled:opacity-50 disabled:cursor-default"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted transition-colors duration-100 cursor-pointer disabled:opacity-50 disabled:cursor-default"
           >
             <div className="w-7 h-7 rounded-md bg-destructive/10 flex items-center justify-center shrink-0">
               <Trash2 className="w-3.5 h-3.5 text-destructive" />

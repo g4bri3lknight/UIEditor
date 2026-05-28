@@ -115,7 +115,7 @@ function LayerTreeItem({
         className={`group flex items-center gap-0.5 py-0.5 pr-1 rounded-md transition-colors duration-100 ${
           isSelected
             ? "bg-primary/10"
-            : "hover:bg-muted/50"
+            : "hover:bg-muted/80"
         } ${autoManaged ? "opacity-60" : ""} ${isHidden && !isSelected ? "opacity-40" : ""}`}
         style={{ paddingLeft: `${depth * 16 + 4}px` }}
       >
@@ -344,14 +344,14 @@ export function LayersPanel() {
   return (
     <div className="flex flex-col h-full">
       {/* Component count summary */}
-      <div className="shrink-0 px-2 pt-2 pb-1 border-b border-border/50">
+      <div className="shrink-0 px-2 pt-2 pb-1 border-b ios-border-subtle">
         <div className="flex flex-wrap gap-1">
           {Object.entries(typeCounts).map(([type, count]) => {
             const icon = getLayerIcon(type);
             return (
               <span
                 key={type}
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground"
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-muted/80 text-muted-foreground"
               >
                 {React.createElement(icon, { className: "w-3 h-3" })}
                 <span className="text-[10px] font-medium leading-none">{count}</span>

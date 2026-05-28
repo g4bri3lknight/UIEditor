@@ -47,7 +47,7 @@ function DraggablePaletteItem({ type, label, icon }: { type: string; label: stri
         opacity: isDragging ? 0.4 : 1,
         transform: transform ? `translate(${transform.x}px, ${transform.y}px)` : undefined,
       }}
-      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border border-border/30 bg-background cursor-grab active:cursor-grabbing transition-all duration-150 hover:border-primary/30 hover:bg-primary/[0.03] ${
+      className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border ios-border-subtle bg-white dark:bg-neutral-800 cursor-grab active:cursor-grabbing transition-all duration-200 hover:border-primary/25 hover:bg-white hover:dark:bg-neutral-750 ios-hover-lift ${
         isDragging ? "shadow-xl ring-2 ring-primary/30 scale-105" : "hover:shadow-sm"
       }`}
     >
@@ -87,14 +87,14 @@ export function ComponentPalette({ search, onSearchChange, expandedCategories, o
 
   return (
     <>
-      <div className="p-3 border-b border-border shrink-0">
+      <div className="p-3 border-b ios-border-subtle shrink-0">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
             placeholder="Cerca componenti..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-8 h-8 text-xs bg-background"
+            className="pl-8 h-8 text-xs bg-muted/80 border-0 rounded-lg focus-visible:ring-1 focus-visible:ring-primary/20"
           />
         </div>
       </div>
@@ -111,17 +111,17 @@ export function ComponentPalette({ search, onSearchChange, expandedCategories, o
             return (
               <div
                 key={category.id}
-                className={`rounded-lg border transition-colors duration-150 ${
+                className={`rounded-xl border transition-colors duration-200 ${
                   isExpanded
-                    ? "border-primary/15 bg-primary/[0.02]"
-                    : "border-border/50 bg-background/50"
+                    ? "ios-border-group-component"
+                    : "ios-border-subtle"
                 }`}
               >
                 {/* Group header */}
                 <button
                   onClick={() => onToggleCategory(category.id)}
-                  className={`flex items-center gap-2 w-full px-2.5 py-2 rounded-t-lg transition-colors text-left group hover:bg-primary/[0.05] ${
-                    !isExpanded ? "rounded-b-lg" : ""
+                  className={`flex items-center gap-2 w-full px-2.5 py-2 rounded-t-xl transition-colors text-left group hover:bg-primary/[0.04] ${
+                    !isExpanded ? "rounded-b-xl" : ""
                   }`}
                 >
                   <CatIcon className={`w-3.5 h-3.5 transition-colors ${isExpanded ? "text-primary" : "text-primary/60"}`} />
@@ -131,7 +131,7 @@ export function ComponentPalette({ search, onSearchChange, expandedCategories, o
                   <span className={`text-[10px] rounded-full px-1.5 py-0.5 font-medium ${
                     isExpanded
                       ? "text-primary bg-primary/10"
-                      : "text-muted-foreground/60 bg-muted"
+                      : "text-muted-foreground/60 bg-muted/50"
                   }`}>
                     {components.length}
                   </span>

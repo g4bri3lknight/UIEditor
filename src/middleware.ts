@@ -7,11 +7,11 @@ export function middleware(request: NextRequest) {
   // Content Security Policy - Previene XSS e injection attacks
   response.headers.set(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-ancestors 'self' http: https:; base-uri 'self'; form-action 'self';"
   );
 
-  // X-Frame-Options - Clickjacking protection
-  response.headers.set("X-Frame-Options", "DENY");
+  // X-Frame-Options - Allow sandbox preview iframe while protecting against clickjacking
+  response.headers.set("X-Frame-Options", "SAMEORIGIN");
 
   // X-Content-Type-Options - MIME sniffing prevention
   response.headers.set("X-Content-Type-Options", "nosniff");

@@ -51,13 +51,13 @@ export function CanvasToolbar({
   const ancestors = selectedComponent ? getAncestors(selectedComponent.id) : [];
 
   return (
-    <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card shrink-0 h-10">
+    <div className="flex items-center justify-between px-4 py-2 border-b ios-border-subtle ios-satin-toolbar shrink-0 h-10 z-10">
       <div className="flex items-center gap-2 min-w-0 flex-1">
         {/* Mobile sidebar toggles */}
         {onToggleLeftSidebar && (
           <button
             onClick={onToggleLeftSidebar}
-            className={`lg:hidden p-1.5 rounded transition-colors shrink-0 ${leftSidebarOpen ? "text-foreground bg-muted" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+            className={`lg:hidden p-1.5 rounded-lg transition-colors shrink-0 ${leftSidebarOpen ? "text-foreground bg-foreground/5" : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"}`}
             title="Componenti"
             aria-label="Attiva/disattiva pannello componenti"
           >
@@ -67,7 +67,7 @@ export function CanvasToolbar({
         {onToggleRightSidebar && (
           <button
             onClick={onToggleRightSidebar}
-            className={`lg:hidden p-1.5 rounded transition-colors shrink-0 ${rightSidebarOpen ? "text-foreground bg-muted" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+            className={`lg:hidden p-1.5 rounded-lg transition-colors shrink-0 ${rightSidebarOpen ? "text-foreground bg-foreground/5" : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"}`}
             title="Proprietà"
             aria-label="Attiva/disattiva pannello proprietà"
           >
@@ -108,7 +108,7 @@ export function CanvasToolbar({
         ) : (
           <div
             className={`w-2 h-2 rounded-full transition-colors shrink-0 ${
-              isDragging ? "bg-primary animate-pulse" : "bg-muted-foreground/30"
+              isDragging ? "bg-primary animate-pulse" : "bg-muted-foreground/20"
             }`}
           />
         )}
@@ -116,11 +116,11 @@ export function CanvasToolbar({
 
       <div className="flex items-center gap-2">
         {/* Zoom controls */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 bg-muted/90 rounded-lg p-0.5">
           <button
             onClick={onZoomOut}
             disabled={zoom <= MIN_ZOOM}
-            className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-1 rounded-md hover:bg-foreground/5 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
             title="Riduci zoom (Ctrl+Scroll)"
           >
             <ZoomOut className="w-3.5 h-3.5" />
@@ -128,7 +128,7 @@ export function CanvasToolbar({
           <select
             value={zoom}
             onChange={(e) => onZoomChange(Number(e.target.value))}
-            className="h-6 w-[58px] text-[11px] text-center bg-muted border-0 rounded px-1 text-muted-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary/30 appearance-none"
+            className="h-6 w-[58px] text-[11px] text-center bg-transparent border-0 rounded px-1 text-muted-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary/20 appearance-none"
           >
             {ZOOM_LEVELS.map((level) => (
               <option key={level} value={level}>{level}%</option>
@@ -137,7 +137,7 @@ export function CanvasToolbar({
           <button
             onClick={onZoomIn}
             disabled={zoom >= MAX_ZOOM}
-            className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-1 rounded-md hover:bg-foreground/5 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
             title="Aumenta zoom (Ctrl+Scroll)"
           >
             <ZoomIn className="w-3.5 h-3.5" />
@@ -145,7 +145,7 @@ export function CanvasToolbar({
           {zoom !== 100 && (
             <button
               onClick={onZoomReset}
-              className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              className="p-1 rounded-md hover:bg-foreground/5 transition-colors text-muted-foreground hover:text-foreground"
               title="Resetta zoom (100%)"
             >
               <RotateCcw className="w-3 h-3" />
@@ -153,16 +153,14 @@ export function CanvasToolbar({
           )}
         </div>
 
-        <div className="w-px h-4 bg-border" />
-
         {/* Grid toggle */}
         {onToggleGrid !== undefined && (
           <button
             onClick={onToggleGrid}
-            className={`p-1.5 rounded transition-colors ${
+            className={`p-1.5 rounded-lg transition-all duration-200 ${
               showGrid
-                ? "bg-primary/15 text-primary"
-                : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                ? "bg-primary/12 text-primary"
+                : "hover:bg-foreground/5 text-muted-foreground hover:text-foreground"
             }`}
             title={showGrid ? "Nascondi griglia" : "Mostra griglia Bootstrap"}
           >

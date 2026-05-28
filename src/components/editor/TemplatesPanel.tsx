@@ -102,7 +102,7 @@ function SnippetCard({ snippet }: { snippet: SavedSnippet }) {
   }, [categoryValue, updateSnippetCategory, snippet.id]);
 
   return (
-    <div className="rounded-lg border border-border/50 bg-background/50 overflow-hidden transition-colors hover:border-primary/20">
+    <div className="rounded-xl border ios-border-subtle bg-white/80 dark:bg-neutral-800/60 overflow-hidden transition-colors hover:border-primary/15">
       {/* Header */}
       <div className="flex items-start gap-2 px-2.5 py-2">
         {/* Mini visual preview */}
@@ -183,7 +183,7 @@ function SnippetCard({ snippet }: { snippet: SavedSnippet }) {
       <div className="px-2.5 pb-1">
         <div className="flex gap-0.5 flex-wrap">
           {allTypes.slice(0, 8).map((type, i) => (
-            <span key={i} className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-muted/40">
+            <span key={i} className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-muted/80">
               {React.createElement(getLayerIcon(type), { className: "w-2.5 h-2.5 text-muted-foreground" })}
             </span>
           ))}
@@ -233,7 +233,7 @@ function SnippetCard({ snippet }: { snippet: SavedSnippet }) {
       {/* Expanded: show component tree */}
       {isExpanded && (
         <div className="px-2.5 pb-2 pt-0">
-          <div className="rounded-md bg-muted/50 p-1.5 space-y-0.5">
+          <div className="rounded-md bg-muted/90 p-1.5 space-y-0.5">
             {snippet.components.map((comp, i) => (
               <div key={i} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 {React.createElement(getLayerIcon(comp.type), { className: "w-3 h-3 shrink-0" })}
@@ -339,7 +339,7 @@ export function TemplatesPanel() {
   if (!hydrated) {
     return (
       <div className="flex flex-col items-center justify-center h-full px-6 py-12">
-        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-3">
+        <div className="w-12 h-12 rounded-xl bg-muted/80 flex items-center justify-center mb-3">
           <LayoutTemplate className="w-5 h-5 text-muted-foreground/50" />
         </div>
         <p className="text-xs text-muted-foreground text-center leading-relaxed">
@@ -354,10 +354,10 @@ export function TemplatesPanel() {
       <ScrollArea className="flex-1 min-h-0">
         <div className="p-2 space-y-2 pb-4">
           {/* ── Template Predefiniti ── */}
-          <div className="rounded-lg border border-border/50 bg-background/50 overflow-hidden">
+          <div className="rounded-xl border ios-border-subtle bg-white/80 dark:bg-neutral-800/50 overflow-hidden">
             <button
               onClick={() => toggleSection("predefiniti")}
-              className="flex items-center gap-2 w-full px-3 py-2.5 hover:bg-muted/50 transition-colors text-left"
+              className="flex items-center gap-2 w-full px-3 py-2.5 hover:bg-muted/80 transition-colors text-left"
             >
               <svg
                 className={`w-3 h-3 text-muted-foreground/60 transition-transform duration-200 ${expandedSection === "predefiniti" ? "rotate-90" : ""}`}
@@ -367,7 +367,7 @@ export function TemplatesPanel() {
               </svg>
               <LayoutTemplate className="w-3.5 h-3.5 text-primary/70" />
               <span className="text-xs font-semibold text-foreground flex-1">Template Predefiniti</span>
-              <span className="text-[10px] rounded-full px-1.5 py-0.5 font-medium bg-muted text-muted-foreground">
+              <span className="text-[10px] rounded-full px-1.5 py-0.5 font-medium bg-muted/80 text-muted-foreground">
                 {TEMPLATES.length}
               </span>
             </button>
@@ -379,7 +379,7 @@ export function TemplatesPanel() {
                     <button
                       key={tpl.id}
                       onClick={() => handleLoadBuiltinTemplate(tpl.id)}
-                      className="w-full flex items-start gap-2 px-2.5 py-2 rounded-md hover:bg-muted/60 transition-colors cursor-pointer text-left"
+                      className="w-full flex items-start gap-2 px-2.5 py-2 rounded-md hover:bg-muted/80 transition-colors cursor-pointer text-left"
                     >
                       <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
                         <IconComp className="w-3.5 h-3.5 text-primary" />
@@ -396,10 +396,10 @@ export function TemplatesPanel() {
           </div>
 
           {/* ── Template Custom ── */}
-          <div className="rounded-lg border border-border/50 bg-background/50 overflow-hidden">
+          <div className="rounded-xl border ios-border-subtle bg-white/80 dark:bg-neutral-800/50 overflow-hidden">
             <button
               onClick={() => toggleSection("custom")}
-              className="flex items-center gap-2 w-full px-3 py-2.5 hover:bg-muted/50 transition-colors text-left"
+              className="flex items-center gap-2 w-full px-3 py-2.5 hover:bg-muted/80 transition-colors text-left"
             >
               <svg
                 className={`w-3 h-3 text-muted-foreground/60 transition-transform duration-200 ${expandedSection === "custom" ? "rotate-90" : ""}`}
@@ -409,7 +409,7 @@ export function TemplatesPanel() {
               </svg>
               <Bookmark className="w-3.5 h-3.5 text-primary/70" />
               <span className="text-xs font-semibold text-foreground flex-1">Template Custom</span>
-              <span className="text-[10px] rounded-full px-1.5 py-0.5 font-medium bg-muted text-muted-foreground">
+              <span className="text-[10px] rounded-full px-1.5 py-0.5 font-medium bg-muted/80 text-muted-foreground">
                 {savedSnippets.length}
               </span>
             </button>
@@ -424,7 +424,7 @@ export function TemplatesPanel() {
                       className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
                         !filterCategory
                           ? "bg-primary text-primary-foreground"
-                          : "bg-muted/60 text-muted-foreground hover:bg-muted"
+                          : "bg-muted/80 text-muted-foreground hover:bg-muted"
                       }`}
                     >
                       Tutti
@@ -436,7 +436,7 @@ export function TemplatesPanel() {
                         className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
                           filterCategory === cat
                             ? "bg-primary text-primary-foreground"
-                            : "bg-muted/60 text-muted-foreground hover:bg-muted"
+                            : "bg-muted/80 text-muted-foreground hover:bg-muted"
                         }`}
                       >
                         {cat}
@@ -473,7 +473,7 @@ export function TemplatesPanel() {
                 )}
 
                 {/* Export/Import actions */}
-                <div className="px-3 pt-2 border-t border-border/50 flex items-center justify-between">
+                <div className="px-3 pt-2 border-t ios-border-subtle flex items-center justify-between">
                   <span className="text-[10px] text-muted-foreground">
                     {savedSnippets.length} template{savedSnippets.length !== 1 ? "s" : ""}
                   </span>

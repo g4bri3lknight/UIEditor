@@ -20,14 +20,14 @@ export function PageTabs({ onAddPage }: PageTabsProps) {
   const [renamingPageName, setRenamingPageName] = useState("");
 
   return (
-    <div className="border-b border-border bg-card flex items-center gap-0 px-2 h-9 shrink-0 overflow-x-auto">
+    <div className="border-b ios-border-subtle ios-satin-toolbar flex items-center gap-0 px-2 h-9 shrink-0 overflow-x-auto z-10">
       {pages.map((page) => (
         <div
           key={page.id}
-          className={`group flex items-center gap-1 px-3 h-full text-xs font-medium cursor-pointer border-b-2 transition-colors shrink-0 ${
+          className={`group flex items-center gap-1.5 px-3 h-full text-xs font-medium cursor-pointer border-b-2 transition-all duration-200 shrink-0 ${
             page.id === activePageId
               ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+              : "border-transparent text-muted-foreground hover:text-foreground hover:border-border/50"
           }`}
           onClick={() => switchPage(page.id)}
           onDoubleClick={(e) => {
@@ -58,12 +58,12 @@ export function PageTabs({ onAddPage }: PageTabsProps) {
                   setRenamingPageId(null);
                 }
               }}
-              className="w-20 h-5 text-xs bg-transparent border border-primary rounded px-1 outline-none"
+              className="w-20 h-5 text-xs bg-transparent border border-primary/40 rounded-md px-1 outline-none focus:ring-1 focus:ring-primary/30"
               onClick={(e) => e.stopPropagation()}
             />
           ) : (
             <>
-              <FileText className="w-3 h-3 shrink-0" />
+              <FileText className="w-3 h-3 shrink-0 opacity-60" />
               <span className="max-w-[120px] truncate">{page.name}</span>
             </>
           )}
@@ -75,7 +75,7 @@ export function PageTabs({ onAddPage }: PageTabsProps) {
                 deletePage(page.id);
                 toast.success(`Pagina "${page.name}" eliminata`);
               }}
-              className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-muted transition-all"
+              className="opacity-0 group-hover:opacity-100 p-0.5 rounded-md hover:bg-foreground/5 transition-all"
               title="Elimina pagina"
             >
               <X className="w-3 h-3" />
@@ -85,7 +85,7 @@ export function PageTabs({ onAddPage }: PageTabsProps) {
       ))}
       <button
         onClick={onAddPage}
-        className="flex items-center gap-1 px-2 h-full text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
+        className="flex items-center gap-1 px-2 h-full text-xs text-muted-foreground hover:text-primary transition-colors shrink-0"
         title="Aggiungi pagina"
       >
         <Plus className="w-3 h-3" />
