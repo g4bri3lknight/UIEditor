@@ -45,12 +45,20 @@ function renderParagraph(
   const customClass = String(p.customClass || "");
   const pBg = BS_BG[String(p.bgColor)];
   const isDarkBg = ["primary", "secondary", "success", "danger", "info", "dark"].includes(String(p.bgColor));
+  // Determine if lead style should apply: either via textSize="lead" or legacy boolean lead prop
+  const isLead = p.textSize === "lead" || (p.lead && !p.textSize);
+  const sizeMap: Record<string, string> = {
+    "fs-1": "2.5rem", "fs-2": "2rem", "fs-3": "1.75rem",
+    "fs-4": "1.5rem", "fs-5": "1.25rem", "fs-6": "0.875rem",
+    "lead": "1.25rem",
+  };
+  const fontSize = sizeMap[String(p.textSize)] || (isLead ? "1.25rem" : "1rem");
   return (
     <Wrapper customClass={customClass} style={{ padding: "4px" }}>
       <p data-prop="text" style={{
-        fontSize: p.textSize === "fs-6" ? "1rem" : p.textSize === "fs-4" ? "1.5rem" : p.textSize === "fs-2" ? "2rem" : "1rem",
-        fontWeight: p.lead ? 300 : 400,
-        lineHeight: p.lead ? 1.7 : 1.6,
+        fontSize,
+        fontWeight: isLead ? 300 : 400,
+        lineHeight: isLead ? 1.7 : 1.6,
         color: isDarkBg ? BS.white : (BS_TEXT[String(p.textColor)] || BS.body),
         textAlign: String(p.textAlign) as React.CSSProperties["textAlign"],
         margin: 0,
@@ -60,6 +68,30 @@ function renderParagraph(
       }}>
         {p.text || "Paragraph text"}
       </p>
+    </Wrapper>
+  );
+}
+
+// ── Simple Text ──
+function renderText(
+  component: CanvasComponent,
+  _renderChildren?: React.ReactNode,
+  _slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
+): React.ReactNode {
+  const p = component.props as Record<string, string | boolean | number>;
+  const customClass = String(p.customClass || "");
+  return (
+    <Wrapper customClass={customClass} style={{ padding: "4px" }}>
+      <span data-prop="text" style={{
+        fontSize: String(p.textSize || "1rem"),
+        fontWeight: Number(p.fontWeight) || 400,
+        color: BS_TEXT[String(p.textColor)] || BS.body,
+        textAlign: String(p.textAlign) as React.CSSProperties["textAlign"],
+        lineHeight: 1.5,
+      }}>
+        {p.text || "Testo semplice"}
+      </span>
     </Wrapper>
   );
 }
@@ -148,6 +180,7 @@ function renderCodeBlock(
 // ── Register all typography renderers ──
 registerRenderer("heading", renderHeading);
 registerRenderer("paragraph", renderParagraph);
+registerRenderer("text", renderText);
 registerRenderer("blockquote", renderBlockquote);
 registerRenderer("list", renderList);
 registerRenderer("code-block", renderCodeBlock);

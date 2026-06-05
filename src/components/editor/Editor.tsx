@@ -4,7 +4,8 @@ import React, { useState, useCallback, useMemo, useEffect } from "react";
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
@@ -113,10 +114,20 @@ export function Editor() {
   );
 
   // ── DnD sensors ──
+  // MouseSensor + TouchSensor instead of PointerSensor:
+  // PointerSensor captures pointerdown and can block click events,
+  // requiring a "2x click" to select components. MouseSensor only
+  // activates on mousedown, so regular clicks pass through correctly.
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 3,
+        distance: 5,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 5,
       },
     })
   );
@@ -368,7 +379,6 @@ export function Editor() {
           onRedo={redo}
           onPreview={() => setPreviewDialogOpen(true)}
           onCode={() => setCodeDialogOpen(true)}
-          onClear={() => setClearDialogOpen(true)}
           onShortcuts={() => setShortcutsDialogOpen(true)}
           onThemeDialog={() => setThemeDialogOpen(true)}
         />
@@ -420,6 +430,7 @@ export function Editor() {
             onToggleRightSidebar={() => setRightSidebarOpen((v) => !v)}
             leftSidebarOpen={leftSidebarOpen}
             rightSidebarOpen={rightSidebarOpen}
+            onClearCanvas={() => setClearDialogOpen(true)}
           />
 
           {/* Right resize handle — desktop only */}

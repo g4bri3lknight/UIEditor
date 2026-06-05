@@ -52,12 +52,14 @@ export function Canvas({
   onToggleRightSidebar,
   leftSidebarOpen,
   rightSidebarOpen,
+  onClearCanvas,
 }: {
   activeDragId: string | null;
   onToggleLeftSidebar?: () => void;
   onToggleRightSidebar?: () => void;
   leftSidebarOpen?: boolean;
   rightSidebarOpen?: boolean;
+  onClearCanvas?: () => void;
 }) {
   const { components, selectComponent, updateComponentProps } = useEditorStore();
   const bootstrapTheme = useEditorStore(s => s.bootstrapTheme);
@@ -182,6 +184,8 @@ export function Canvas({
         onToggleRightSidebar={onToggleRightSidebar}
         leftSidebarOpen={leftSidebarOpen}
         rightSidebarOpen={rightSidebarOpen}
+        onClearCanvas={onClearCanvas}
+        componentCount={components.length}
       />
 
       {/* Drop Zone */}

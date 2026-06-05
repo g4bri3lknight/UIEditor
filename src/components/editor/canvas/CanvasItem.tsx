@@ -30,7 +30,6 @@ import {
   ClipboardCopy,
   Plus,
   BookmarkPlus,
-  Pencil,
   Eye,
   EyeOff,
 } from "lucide-react";
@@ -788,18 +787,6 @@ function CanvasItemInner({
             {...attributes}
             {...listeners}
           >
-            {/* Inline edit hover indicator */}
-            {isEditable && !isSelected && (
-              <div className="absolute top-1.5 right-1.5 opacity-0 group-hover/canvas-item:opacity-100 transition-opacity duration-200 z-20 pointer-events-none">
-                <div className="flex items-center gap-1 ios-satin border ios-border-subtle rounded-lg px-1.5 py-0.5 shadow-sm">
-                  <Pencil className="w-2.5 h-2.5 text-muted-foreground" />
-                  <span className="text-[9px] text-muted-foreground font-medium">
-                    {allEditableProps && allEditableProps.length > 1 ? "2× click → modifica" : "2× click"}
-                  </span>
-                </div>
-              </div>
-            )}
-
             {/* Selection label */}
             {isSelected && (
               <div className="absolute -top-3 left-2 bg-primary text-primary-foreground text-[11px] font-bold px-2.5 py-0.5 rounded-md z-10 leading-tight flex items-center gap-1 shadow-sm">

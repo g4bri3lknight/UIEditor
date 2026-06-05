@@ -405,7 +405,6 @@ export function PreviewDialog({ open, onOpenChange }: PreviewDialogProps) {
                   display: "block",
                 }}
                 title="Bootstrap Preview"
-                sandbox="allow-scripts allow-same-origin"
               />
             </div>
           </div>

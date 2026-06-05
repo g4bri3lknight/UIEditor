@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ZoomIn, ZoomOut, RotateCcw, Grid3x3, PanelLeft, PanelRight } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCcw, Grid3x3, PanelLeft, PanelRight, Trash2 } from "lucide-react";
 import { MIN_ZOOM, MAX_ZOOM, ZOOM_LEVELS } from "./constants";
 import { useEditorStore } from "@/store/editor-store";
 import {
@@ -26,6 +26,8 @@ interface CanvasToolbarProps {
   onToggleRightSidebar?: () => void;
   leftSidebarOpen?: boolean;
   rightSidebarOpen?: boolean;
+  onClearCanvas?: () => void;
+  componentCount?: number;
 }
 
 export function CanvasToolbar({
@@ -41,6 +43,8 @@ export function CanvasToolbar({
   onToggleRightSidebar,
   leftSidebarOpen,
   rightSidebarOpen,
+  onClearCanvas,
+  componentCount,
 }: CanvasToolbarProps) {
   const selectedId = useEditorStore(s => s.selectedId);
   const findComponent = useEditorStore(s => s.findComponent);
@@ -165,6 +169,18 @@ export function CanvasToolbar({
             title={showGrid ? "Nascondi griglia" : "Mostra griglia Bootstrap"}
           >
             <Grid3x3 className="w-3.5 h-3.5" />
+          </button>
+        )}
+
+        {/* Clear canvas */}
+        {onClearCanvas && (
+          <button
+            onClick={onClearCanvas}
+            disabled={!componentCount || componentCount === 0}
+            className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Svuota canvas"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
         )}
       </div>

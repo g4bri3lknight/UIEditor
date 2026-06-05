@@ -7,10 +7,10 @@ import { ProjectMenu } from "./ProjectMenu";
 import { Button } from "@/components/ui/button";
 import {
   FileText, Plus, X,
-  Undo2, Redo2, Eye, Code, Trash2, CircleHelp,
+  Undo2, Redo2, Eye, Code, CircleHelp,
+  Sun, Moon, Sparkles,
 } from "lucide-react";
 import { cycleTheme, isDarkTheme, isIosTheme, type EditorTheme } from "@/components/theme-provider";
-import { Sun, Moon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 interface PageTabsProps {
@@ -21,7 +21,6 @@ interface PageTabsProps {
   onRedo: () => void;
   onPreview: () => void;
   onCode: () => void;
-  onClear: () => void;
   onShortcuts: () => void;
   onThemeDialog: () => void;
 }
@@ -34,7 +33,6 @@ export function PageTabs({
   onRedo,
   onPreview,
   onCode,
-  onClear,
   onShortcuts,
   onThemeDialog,
 }: PageTabsProps) {
@@ -179,20 +177,6 @@ export function PageTabs({
 
         {/* Project menu */}
         <ProjectMenu onOpenThemeDialog={onThemeDialog} />
-
-        <div className="w-px h-4 ios-separator mx-1 rounded-full" />
-
-        {/* Clear canvas */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClear}
-          disabled={components.length === 0}
-          className="h-7 w-7 p-0 rounded-lg hover:bg-destructive/10 text-destructive hover:text-destructive transition-colors"
-          title="Svuota canvas"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </Button>
 
         <div className="w-px h-4 ios-separator mx-1 rounded-full" />
 

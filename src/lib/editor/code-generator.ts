@@ -182,7 +182,9 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
 
     case "paragraph": {
       let cls = "";
-      if (p.lead) cls = "lead";
+      // Handle lead: either via textSize="lead" or legacy boolean lead prop
+      const isLead = p.textSize === "lead" || (p.lead && !p.textSize);
+      if (isLead) cls = "lead";
       if (p.textColor) cls += ` text-${p.textColor}`;
       if (p.textAlign && p.textAlign !== "start") cls += ` text-${p.textAlign}`;
       if (p.textSize && p.textSize !== "lead") cls += ` ${p.textSize}`;
@@ -205,6 +207,20 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       cls = cls.trim();
       const text = (p.text as string).replace(/\n/g, "<br>\n");
       return indent(wrap("p", cls, text, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
+    }
+
+    case "text": {
+      let cls = "";
+      if (p.textColor) cls += ` text-${p.textColor}`;
+      if (p.textAlign && p.textAlign !== "start") cls += ` text-${p.textAlign}`;
+      const customSize = String(p.textSize || "");
+      const customWeight = String(p.fontWeight || "400");
+      const inlineStyles: string[] = [];
+      if (customSize) inlineStyles.push(`font-size: ${customSize}`);
+      if (customWeight !== "400") inlineStyles.push(`font-weight: ${customWeight}`);
+      const styleAttr = inlineStyles.length > 0 ? ` style="${inlineStyles.join("; ")}"` : "";
+      cls = cls.trim();
+      return indent(`<span${cls ? ` class="${cls}"` : ""}${styleAttr}>${p.text as string}</span>`, indentLevel);
     }
 
     case "blockquote": {

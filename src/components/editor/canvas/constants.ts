@@ -36,6 +36,7 @@ export const EDITABLE_TEXT_PROPS: Record<string, Array<{ key: string; label: str
   "tooltip": [{ key: "text", label: "Testo trigger", multiline: false }, { key: "tooltipText", label: "Testo tooltip", multiline: false }],
   "popover": [{ key: "text", label: "Testo trigger", multiline: false }, { key: "title", label: "Titolo", multiline: false }, { key: "body", label: "Contenuto", multiline: true }],
   "table-cell": [{ key: "text", label: "Testo", multiline: false }],
+  "text": [{ key: "text", label: "Testo", multiline: false }],
 };
 
 export function getFirstEditableProp(type: string): { key: string; multiline: boolean } | null {
@@ -48,7 +49,7 @@ export function hasEditableProps(type: string): boolean {
 }
 
 // ── Inline component types (should not stretch to full width) ──
-export const INLINE_TYPES = new Set(["button", "badge", "spinner", "progress", "checkbox", "radio", "switch", "range"]);
+export const INLINE_TYPES = new Set(["button", "badge", "spinner", "progress", "checkbox", "radio", "switch", "range", "text"]);
 
 // ── Zoom constants ──
 export const MIN_ZOOM = 25;

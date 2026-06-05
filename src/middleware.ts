@@ -5,9 +5,12 @@ export function middleware(request: NextRequest) {
   const response = NextResponse.next();
 
   // Content Security Policy - Previene XSS e injection attacks
+  // NOTE: cdn.jsdelivr.net is allowed because the preview iframe (srcDoc)
+  // needs to load Bootstrap CSS/JS and Bootstrap Icons from CDN.
+  // Without this, the preview would render without any Bootstrap styles.
   response.headers.set(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-ancestors 'self' http: https:; base-uri 'self'; form-action 'self';"
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self'; frame-ancestors 'self' http: https:; base-uri 'self'; form-action 'self';"
   );
 
   // X-Frame-Options - Allow sandbox preview iframe while protecting against clickjacking
