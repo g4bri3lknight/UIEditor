@@ -229,11 +229,62 @@ export function PreviewDialog({ open, onOpenChange }: PreviewDialogProps) {
         "  display: block !important;",
         "  flex-direction: initial !important;",
         "}",
+        // ── <select> rendering fix ──
+        // modern-screenshot clones the DOM into an SVG <foreignObject>.
+        // Native <select> widgets are partly rendered by the OS, and the
+        // clone loses the live `.value` (it's a runtime property, not an
+        // attribute). Two counter-measures:
+        //  1) Force native appearance so the dropdown arrow / chrome is
+        //     drawn by the browser inside the foreignObject (Bootstrap's
+        //     `appearance: none` + background-image arrow often gets
+        //     dropped during the SVG serialization).
+        //  2) The `selected` attribute on <option> elements is synced to
+        //     match the live value below, BEFORE the clone happens.
+        "select {",
+        "  appearance: auto !important;",
+        "  -webkit-appearance: auto !important;",
+        "  -moz-appearance: auto !important;",
+        "}",
+        "select.form-select {",
+        "  background-image: none !important;",
+        "}",
       ].join("\n");
       tempDoc.head.appendChild(overrideStyle);
 
       // Let the override CSS reflow the document.
       await new Promise((r) => setTimeout(r, 150));
+
+      // ── <select> value-preservation fix ──
+      // A <select>'s current value is a RUNTIME property, not an HTML
+      // attribute. When modern-screenshot clones the DOM (cloneNode) the
+      // clone's <select> falls back to the <option selected> found in the
+      // source HTML — which, for our generated markup, is always the FIRST
+      // option. The captured PNG would therefore show the first option
+      // instead of the one the user actually chose (or the component's
+      // configured default). We walk every <select> and set the `selected`
+      // attribute on the matching <option> so the clone preserves the
+      // live value.
+      const liveSelects = tempDoc.querySelectorAll("select");
+      liveSelects.forEach((selNode) => {
+        const sel = selNode as HTMLSelectElement;
+        const liveValue = sel.value;
+        const liveIndex = sel.selectedIndex;
+        const opts = sel.querySelectorAll("option");
+        opts.forEach((optNode, i) => {
+          const opt = optNode as HTMLOptionElement;
+          // Match by value first; fall back to text content for options
+          // without an explicit value attribute; last resort: index.
+          const matches =
+            opt.value === liveValue ||
+            (opt.value === "" && opt.textContent === liveValue) ||
+            i === liveIndex;
+          if (matches) {
+            opt.setAttribute("selected", "selected");
+          } else {
+            opt.removeAttribute("selected");
+          }
+        });
+      });
 
       // Measure the TRUE full content dimensions now that the height
       // constraints are removed.
