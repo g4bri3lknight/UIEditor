@@ -40,7 +40,7 @@ const SELECTION_SHORTCUTS = [
 ];
 
 const PROJECT_SHORTCUTS = [
-  { keys: "Ctrl + S", desc: "Salva progetto" },
+  { keys: "Ctrl + S", desc: "Salva progetto come file JSON" },
 ];
 
 function ShortcutRow({ keys, desc }: { keys: string; desc: string }) {

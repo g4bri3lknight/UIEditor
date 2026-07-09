@@ -1,7 +1,7 @@
 import React from "react";
 import { CanvasComponent } from "@/lib/editor/types";
 import { registerRenderer } from "./registry";
-import { BS, Wrapper } from "./shared";
+import { BS, BS_BG, Wrapper } from "./shared";
 
 // ── Table ──
 function renderTable(
@@ -27,7 +27,9 @@ function renderTable(
         }}>
           <thead>
             <tr style={{
-              background: BS.light, borderBottom: `2px solid ${BS.borderColor}`,
+              background: p.headerColor ? BS_BG[String(p.headerColor)] : BS.light,
+              borderBottom: `2px solid ${BS.borderColor}`,
+              color: p.headerColor && ["primary", "secondary", "success", "danger", "dark"].includes(String(p.headerColor)) ? BS.white : BS.body,
             }}>
               {headers.map((h, i) => (
                 <th key={i} style={{
@@ -43,7 +45,10 @@ function renderTable(
                   borderBottomWidth: "2px",
                   borderBottomStyle: "solid",
                   borderBottomColor: BS.borderColor,
-                  fontWeight: 600, textAlign: "left", color: BS.body,
+                  fontWeight: 600, textAlign: "left",
+                  // Header cells inherit text color from the <tr> above; only
+                  // set an explicit color when no headerColor is chosen.
+                  color: p.headerColor ? undefined : BS.body,
                   borderColor: p.borderColor ? BS[String(p.borderColor)] : (p.bordered ? BS.borderColor : undefined),
                 }}>
                   {h}

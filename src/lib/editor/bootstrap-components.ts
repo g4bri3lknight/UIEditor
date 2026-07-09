@@ -2607,6 +2607,22 @@ export const COMPONENTS: BootstrapComponentDefinition[] = [
         ],
       },
       {
+        key: "headerColor",
+        label: "Header Color",
+        type: "select",
+        defaultValue: "",
+        options: [
+          { label: "Default (light)", value: "" },
+          { label: "Primary", value: "primary" },
+          { label: "Secondary", value: "secondary" },
+          { label: "Success", value: "success" },
+          { label: "Danger", value: "danger" },
+          { label: "Warning", value: "warning" },
+          { label: "Info", value: "info" },
+          { label: "Dark", value: "dark" },
+        ],
+      },
+      {
         key: "stripedColumns",
         label: "Striped Columns",
         type: "boolean",

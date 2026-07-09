@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import {
   LayoutGrid, Type, FileInput, MousePointerClick, Navigation,
   Layers, Table, Image, Wrench, Search,
+  ChevronsDownUp, ChevronsUpDown,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -47,12 +48,12 @@ function DraggablePaletteItem({ type, label, icon }: { type: string; label: stri
         opacity: isDragging ? 0.4 : 1,
         transform: transform ? `translate(${transform.x}px, ${transform.y}px)` : undefined,
       }}
-      className={`flex items-center gap-2.5 px-3 py-2 rounded-xl border ios-border-subtle bg-white dark:bg-neutral-800 cursor-grab active:cursor-grabbing transition-all duration-200 hover:border-primary/25 hover:bg-white hover:dark:bg-neutral-750 ios-hover-lift ${
-        isDragging ? "shadow-xl ring-2 ring-primary/30 scale-105" : "hover:shadow-sm"
+      className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg cursor-grab active:cursor-grabbing transition-all duration-200 hover:bg-foreground/[0.05] ${
+        isDragging ? "shadow-xl ring-2 ring-primary/30 scale-105 bg-background" : ""
       }`}
     >
-      <IconComp className="w-4 h-4 text-muted-foreground shrink-0" />
-      <span className="text-sm font-medium text-foreground truncate">{label}</span>
+      <IconComp className="w-3.5 h-3.5 text-muted-foreground/70 shrink-0" />
+      <span className="text-[13px] font-normal text-foreground/90 truncate">{label}</span>
     </div>
   );
 }
@@ -62,9 +63,11 @@ interface ComponentPaletteProps {
   onSearchChange: (s: string) => void;
   expandedCategories: Set<string>;
   onToggleCategory: (id: string) => void;
+  onExpandAll: () => void;
+  onCollapseAll: () => void;
 }
 
-export function ComponentPalette({ search, onSearchChange, expandedCategories, onToggleCategory }: ComponentPaletteProps) {
+export function ComponentPalette({ search, onSearchChange, expandedCategories, onToggleCategory, onExpandAll, onCollapseAll }: ComponentPaletteProps) {
   const filteredComponents = search
     ? VISIBLE_COMPONENTS.filter(
         (c) =>
@@ -85,10 +88,16 @@ export function ComponentPalette({ search, onSearchChange, expandedCategories, o
     navigation: Navigation, content: Layers, tables: Table, images: Image, utilities: Wrench,
   };
 
+  // Whether every category is already expanded / collapsed — used to
+  // disable the corresponding bulk button so the user gets feedback that
+  // there's nothing more to toggle.
+  const allExpanded = expandedCategories.size >= CATEGORIES.length;
+  const allCollapsed = expandedCategories.size === 0;
+
   return (
     <>
-      <div className="p-3 border-b ios-border-subtle shrink-0">
-        <div className="relative">
+      <div className="p-3 border-b ios-border-subtle shrink-0 flex items-center gap-1.5">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
             placeholder="Cerca componenti..."
@@ -97,6 +106,28 @@ export function ComponentPalette({ search, onSearchChange, expandedCategories, o
             className="pl-8 h-8 text-xs bg-muted/80 border-0 rounded-lg focus-visible:ring-1 focus-visible:ring-primary/20"
           />
         </div>
+        {/* Bulk expand / collapse controls — kept OUTSIDE the search field
+            so they read as separate actions, not part of the text input. */}
+        <button
+          type="button"
+          onClick={onExpandAll}
+          disabled={allExpanded}
+          title="Espandi tutte le categorie"
+          aria-label="Espandi tutte le categorie"
+          className="flex items-center justify-center w-8 h-8 rounded-lg border ios-border-subtle bg-muted/60 text-foreground/60 hover:text-primary hover:border-primary/30 hover:bg-primary/5 disabled:opacity-30 disabled:hover:bg-muted/60 disabled:hover:text-foreground/60 disabled:hover:border-transparent transition-colors"
+        >
+          <ChevronsUpDown className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          onClick={onCollapseAll}
+          disabled={allCollapsed}
+          title="Collassa tutte le categorie"
+          aria-label="Collassa tutte le categorie"
+          className="flex items-center justify-center w-8 h-8 rounded-lg border ios-border-subtle bg-muted/60 text-foreground/60 hover:text-primary hover:border-primary/30 hover:bg-primary/5 disabled:opacity-30 disabled:hover:bg-muted/60 disabled:hover:text-foreground/60 disabled:hover:border-transparent transition-colors"
+        >
+          <ChevronsDownUp className="w-4 h-4" />
+        </button>
       </div>
 
       <ScrollArea className="flex-1 min-h-0">
@@ -106,48 +137,59 @@ export function ComponentPalette({ search, onSearchChange, expandedCategories, o
             const components = filteredComponents.filter(
               (c) => c.category === category.id
             );
-            const isExpanded = expandedCategories.has(category.id);
+            // Auto-expand every category while a search is active, so the
+            // user immediately sees the matching components without having
+            // to click each header.
+            const isExpanded = !!search || expandedCategories.has(category.id);
 
             return (
               <div
                 key={category.id}
-                className={`rounded-xl border transition-colors duration-200 ${
+                className={`rounded-xl overflow-hidden transition-colors duration-200 ${
                   isExpanded
-                    ? "ios-border-group-component"
-                    : "ios-border-subtle"
+                    ? "border ios-border-group-component bg-muted/30"
+                    : "border ios-border-subtle bg-muted/40 hover:bg-muted/60"
                 }`}
               >
-                {/* Group header */}
+                {/* Group header — visually prominent so it reads as a
+                    container rather than as another component. */}
                 <button
                   onClick={() => onToggleCategory(category.id)}
-                  className={`flex items-center gap-2 w-full px-2.5 py-2 rounded-t-xl transition-colors text-left group hover:bg-primary/[0.04] ${
-                    !isExpanded ? "rounded-b-xl" : ""
-                  }`}
+                  className={`flex items-center gap-2 w-full px-3 py-2.5 transition-colors text-left group ${
+                    isExpanded ? "rounded-t-xl" : "rounded-xl"
+                  } hover:bg-primary/[0.06]`}
                 >
-                  <CatIcon className={`w-3.5 h-3.5 transition-colors ${isExpanded ? "text-primary" : "text-primary/60"}`} />
-                  <span className={`text-xs font-semibold flex-1 ${isExpanded ? "text-foreground" : "text-muted-foreground"}`}>
+                  <span className={`flex items-center justify-center w-6 h-6 rounded-lg shrink-0 transition-colors ${
+                    isExpanded ? "bg-primary/15 text-primary" : "bg-foreground/5 text-foreground/60"
+                  }`}>
+                    <CatIcon className="w-3.5 h-3.5" />
+                  </span>
+                  <span className={`text-[13px] font-bold tracking-tight flex-1 truncate ${
+                    isExpanded ? "text-foreground" : "text-foreground/80"
+                  }`}>
                     {category.label}
                   </span>
-                  <span className={`text-[10px] rounded-full px-1.5 py-0.5 font-medium ${
+                  <span className={`text-[10px] rounded-full px-1.5 py-0.5 font-semibold tabular-nums ${
                     isExpanded
                       ? "text-primary bg-primary/10"
-                      : "text-muted-foreground/60 bg-muted/50"
+                      : "text-foreground/50 bg-foreground/5"
                   }`}>
                     {components.length}
                   </span>
                   <svg
-                    className={`w-3 h-3 transition-transform duration-200 ${
-                      isExpanded ? "text-primary/60 rotate-90" : "text-muted-foreground/40"
+                    className={`w-3.5 h-3.5 transition-transform duration-200 shrink-0 ${
+                      isExpanded ? "text-primary rotate-90" : "text-foreground/40"
                     }`}
                     fill="none" viewBox="0 0 24 24" stroke="currentColor"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
 
-                {/* Group content */}
+                {/* Group content — flatter, more subdued than the header so
+                    the container hierarchy stays clear. */}
                 {isExpanded && (
-                  <div className="px-1.5 pb-1.5 pt-0.5 space-y-1">
+                  <div className="px-1.5 pb-1.5 pt-0.5 space-y-0.5">
                     {components.map((comp) => (
                       <DraggablePaletteItem
                         key={comp.type}

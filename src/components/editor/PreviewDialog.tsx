@@ -32,6 +32,43 @@ const VIEWPORT_PRESETS = {
   desktop: { w: 1280, h: 800 },
 } as const;
 
+/**
+ * Convert a data-URL (e.g. "data:image/png;base64,....") into a Blob.
+ *
+ * This is used instead of `fetch(dataUrl)` because a data-URL fetch is
+ * governed by the page's CSP `connect-src` directive. With
+ * `connect-src 'self'` the browser blocks the fetch and throws
+ * "TypeError: Failed to fetch". A manual atob() + ArrayBuffer conversion
+ * is not subject to `connect-src`, so it works in every environment
+ * (sandbox, production, custom CSP, etc.).
+ */
+function dataUrlToBlob(dataUrl: string): Blob {
+  const commaIdx = dataUrl.indexOf(",");
+  if (commaIdx === -1) {
+    throw new Error("Data URL non valido");
+  }
+  const header = dataUrl.slice(0, commaIdx);
+  const base64Data = dataUrl.slice(commaIdx + 1);
+
+  const mimeMatch = header.match(/^data:([^;,]+)/);
+  const mime = mimeMatch ? mimeMatch[1] : "image/png";
+
+  const isBase64 = header.includes(";base64");
+
+  if (isBase64) {
+    const byteString = atob(base64Data);
+    const len = byteString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([bytes], { type: mime });
+  }
+
+  // Fallback: URL-encoded payload
+  return new Blob([decodeURIComponent(base64Data)], { type: mime });
+}
+
 type ViewportPreset = keyof typeof VIEWPORT_PRESETS;
 
 export function PreviewDialog({ open, onOpenChange }: PreviewDialogProps) {
@@ -138,13 +175,17 @@ export function PreviewDialog({ open, onOpenChange }: PreviewDialogProps) {
       toast.info("Generazione screenshot in corso...");
 
       const captureWidth = previewSizeRef.current.w;
+      // Base viewport height used so that `vh` units (e.g. 100vh hero
+      // sections) render at a sensible size. This matches the preview
+      // dialog height rather than the tiny initial iframe height.
+      const baseViewportHeight = previewSizeRef.current.h;
 
       tempIframe = document.createElement("iframe");
       tempIframe.style.position = "fixed";
       tempIframe.style.left = "-99999px";
       tempIframe.style.top = "0";
       tempIframe.style.width = `${captureWidth}px`;
-      tempIframe.style.height = "100px";
+      tempIframe.style.height = `${baseViewportHeight}px`;
       tempIframe.style.border = "none";
       tempIframe.style.background = "white";
       tempIframe.style.overflow = "hidden";
@@ -156,6 +197,7 @@ export function PreviewDialog({ open, onOpenChange }: PreviewDialogProps) {
         if (tempIframe) tempIframe.srcdoc = htmlCode;
       });
 
+      // Wait for Bootstrap JS, fonts and images to settle.
       await new Promise((r) => setTimeout(r, 1500));
 
       const tempDoc = tempIframe?.contentDocument;
@@ -165,52 +207,84 @@ export function PreviewDialog({ open, onOpenChange }: PreviewDialogProps) {
         throw new Error("Impossibile accedere al contenuto dell'iframe temporaneo");
       }
 
-      const measureContentHeight = (): number => {
-        if (tempIframe) {
-          tempIframe.style.height = "auto";
-          tempIframe.style.overflow = "visible";
-        }
+      // ── KEY FIX: override the height constraints injected by the
+      // generated HTML. `generateFullHTML` emits:
+      //   <html style="height:100%">
+      //   <style>html,body{height:100%;margin:0}</style>
+      //   <body style="display:flex;flex-direction:column;min-height:100%">
+      // These force `html`/`body` to the iframe viewport height, so
+      // `scrollHeight` reports only the visible viewport and the
+      // screenshot is clipped to the preview-dialog size. By resetting
+      // height/min-height/max-height to auto and overflow to hidden,
+      // the elements flow to their natural full content height and the
+      // capture covers the ENTIRE page, not just the visible part.
+      const overrideStyle = tempDoc.createElement("style");
+      overrideStyle.id = "__screenshot_override";
+      overrideStyle.textContent = [
+        "html, body {",
+        "  height: auto !important;",
+        "  min-height: 0 !important;",
+        "  max-height: none !important;",
+        "  overflow: hidden !important;",
+        "  display: block !important;",
+        "  flex-direction: initial !important;",
+        "}",
+      ].join("\n");
+      tempDoc.head.appendChild(overrideStyle);
 
-        const bodyH = tempBody?.scrollHeight ?? 0;
-        const htmlH = tempHtml?.scrollHeight ?? 0;
+      // Let the override CSS reflow the document.
+      await new Promise((r) => setTimeout(r, 150));
 
-        let lastChildBottom = 0;
-        const children = tempBody?.children;
-        if (children && children.length > 0) {
-          const lastChild = children[children.length - 1];
-          const rect = lastChild.getBoundingClientRect();
-          const bodyRect = tempBody?.getBoundingClientRect();
-          lastChildBottom = bodyRect ? rect.bottom - bodyRect.top : 0;
-        }
-
-        return Math.max(bodyH, htmlH, lastChildBottom);
-      };
-
-      const fullHeight = measureContentHeight();
-      const fullWidth = Math.max(tempBody.scrollWidth, tempHtml.scrollWidth, captureWidth);
-
-      const finalHeight = Math.max(fullHeight, 50);
+      // Measure the TRUE full content dimensions now that the height
+      // constraints are removed.
+      const fullWidth = Math.max(
+        tempBody.scrollWidth,
+        tempHtml.scrollWidth,
+        captureWidth
+      );
       const finalWidth = Math.max(fullWidth, 200);
 
+      // Set the iframe to the full width so layout is correct.
       tempIframe.style.width = `${finalWidth}px`;
-      tempIframe.style.height = `${finalHeight + 4}px`;
-      tempIframe.style.overflow = "hidden";
-
-      await new Promise((r) => setTimeout(r, 200));
-
-      tempIframe.style.height = "auto";
-      tempIframe.style.overflow = "visible";
-      await new Promise((r) => setTimeout(r, 100));
-      const adjustedHeight = Math.max(tempBody.scrollHeight, tempHtml.scrollHeight, finalHeight);
-      tempIframe.style.height = `${adjustedHeight + 4}px`;
-      tempIframe.style.overflow = "hidden";
-
       await new Promise((r) => setTimeout(r, 100));
 
-      const dataUrl = await domToPng(tempBody, {
+      // Measure the natural content height. We compute the max bottom
+      // edge across the body and ALL of its descendants — this is
+      // independent of the iframe viewport size and of any height /
+      // overflow constraints, so it reliably reflects the full page
+      // height even when `100vh` sections or nested overflow are
+      // involved. We also take the body/html scrollHeight as a lower
+      // bound.
+      let maxBottom = tempBody.getBoundingClientRect().height;
+      {
+        const all = tempBody.getElementsByTagName("*");
+        for (let i = 0; i < all.length; i++) {
+          const r = (all[i] as HTMLElement).getBoundingClientRect();
+          if (r.bottom > maxBottom) maxBottom = r.bottom;
+        }
+      }
+      let contentHeight = Math.max(
+        maxBottom,
+        tempBody.scrollHeight,
+        tempHtml.scrollHeight
+      );
+
+      // Now set the iframe to the exact full content height so every
+      // part of the page is actually rendered for the capture.
+      contentHeight = Math.max(contentHeight, 50);
+      tempIframe.style.height = `${contentHeight + 32}px`;
+      await new Promise((r) => setTimeout(r, 250));
+
+      const captureHeight = Math.max(contentHeight, 50);
+
+      // Capture the entire <html> document (documentElement) — this
+      // includes the body plus any html-level background/styling, i.e.
+      // the whole page. Passing the measured full height guarantees the
+      // rendered PNG is not clipped to the viewport.
+      const dataUrl = await domToPng(tempHtml, {
         scale: 2,
         width: finalWidth,
-        height: adjustedHeight + 4,
+        height: captureHeight + 32,
         backgroundColor: "#ffffff",
         fetchOptions: {
           requestInit: {
@@ -219,8 +293,13 @@ export function PreviewDialog({ open, onOpenChange }: PreviewDialogProps) {
         },
       });
 
-      const response = await fetch(dataUrl);
-      const blob = await response.blob();
+      // Convert the data-URL (base64) directly to a Blob in JS.
+      // Using fetch(dataUrl) here would be blocked by the page's
+      // Content-Security-Policy (connect-src 'self' does not allow
+      // data: URLs), producing "TypeError: Failed to fetch".
+      // A direct base64 → Blob conversion is CSP-independent and
+      // works in every environment (sandbox, production, etc.).
+      const blob = dataUrlToBlob(dataUrl);
 
       const fileName = `bootstrap-preview-${new Date().toISOString().slice(0, 19).replace(/[:.]/g, "-")}.png`;
       if (typeof window !== "undefined" && "showSaveFilePicker" in window) {

@@ -313,6 +313,20 @@ interface EditorState {
   reorderPages: (fromIndex: number, toIndex: number) => void;
   _syncCurrentPage: () => void;
 
+  // ── Project file (manual save/load) ──
+  // Name of the .json file the project was last saved to or loaded
+  // from. Shown under the app title. Not persisted: resets on reload
+  // (the file handle cannot survive a reload anyway).
+  currentProjectFileName: string | null;
+  setCurrentProjectFileName: (name: string | null) => void;
+
+  // ── Project name (user-editable, distinct from file name) ──
+  // A human-friendly title the user can set for the whole project
+  // (e.g. "Sito Azienda ACME"). Shown in the editor toolbar, editable
+  // in place like page names. Saved inside the .json payload.
+  projectName: string;
+  setProjectName: (name: string) => void;
+
   // ── Saved Snippets (reusable templates) ──
   savedSnippets: SavedSnippet[];
   _schemaVersion: number;
@@ -408,6 +422,14 @@ export const useEditorStore = create<EditorState>()(
   // ── Canvas Grid Overlay (FEAT-6) ──
   showGrid: false,
   toggleGrid: () => set(s => ({ showGrid: !s.showGrid })),
+
+  // ── Project file name (manual save/load) ──
+  currentProjectFileName: null,
+  setCurrentProjectFileName: (name) => set({ currentProjectFileName: name }),
+
+  // ── Project name (user-editable) ──
+  projectName: "Progetto senza nome",
+  setProjectName: (name) => set({ projectName: name || "Progetto senza nome" }),
 
   // ── Multi-selection (FEAT-7) ──
   selectedIds: [],
@@ -1119,16 +1141,13 @@ export const useEditorStore = create<EditorState>()(
     {
       name: "bootstrap-editor-saved-snippets",
       storage: createJSONStorage(() => localStorage),
+      // Only persist user preferences / reusable assets, NOT the
+      // project content. Save/load of the project is now manual via
+      // .json files (Salva / Salva con nome / Carica). This disables
+      // the previous auto-save-to-localStorage behaviour.
       partialize: (state) => ({
         savedSnippets: state.savedSnippets,
         bootstrapTheme: state.bootstrapTheme,
-        pages: state.pages,
-        activePageId: state.activePageId,
-        components: state.components,
-        history: state.history,
-        historyIndex: state.historyIndex,
-        hiddenComponents: state.hiddenComponents,
-        collapsedComponents: state.collapsedComponents,
         customCSS: state.customCSS,
         _schemaVersion: state._schemaVersion,
         showGrid: state.showGrid,
@@ -1151,16 +1170,22 @@ export const useEditorStore = create<EditorState>()(
                 state.historyIndex = activePage.historyIndex;
               }
             } else {
-              // First-time hydration: create a default "Home" page from current components
+              // First-time hydration (or project content no longer
+              // persisted): create a default "Home" page with an empty
+              // canvas. The user loads their project via "Carica".
+              const emptyComps: CanvasComponent[] = state.components || [];
               const defaultPage: EditorPage = {
                 id: `page-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
                 name: "Home",
-                components: state.components,
-                history: state.history,
-                historyIndex: state.historyIndex,
+                components: emptyComps,
+                history: [[]],
+                historyIndex: 0,
               };
               state.pages = [defaultPage];
               state.activePageId = defaultPage.id;
+              state.components = emptyComps;
+              state.history = [[]];
+              state.historyIndex = 0;
             }
             // Mark as freshly loaded (not dirty)
             state._isDirty = false;

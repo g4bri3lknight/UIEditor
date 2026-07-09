@@ -65,6 +65,10 @@ export function Canvas({
   const bootstrapTheme = useEditorStore(s => s.bootstrapTheme);
   const customCSS = useEditorStore(s => s.customCSS);
   const showGrid = useEditorStore(s => s.showGrid);
+  const undo = useEditorStore(s => s.undo);
+  const redo = useEditorStore(s => s.redo);
+  const history = useEditorStore(s => s.history);
+  const historyIndex = useEditorStore(s => s.historyIndex);
   const isDragging = !!activeDragId;
 
   // ── Zoom state ──
@@ -186,6 +190,10 @@ export function Canvas({
         rightSidebarOpen={rightSidebarOpen}
         onClearCanvas={onClearCanvas}
         componentCount={components.length}
+        canUndo={historyIndex > 0}
+        canRedo={historyIndex < history.length - 1}
+        onUndo={undo}
+        onRedo={redo}
       />
 
       {/* Drop Zone */}

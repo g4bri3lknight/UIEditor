@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ZoomIn, ZoomOut, RotateCcw, Grid3x3, PanelLeft, PanelRight, Trash2 } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCcw, Grid3x3, PanelLeft, PanelRight, Trash2, Undo2, Redo2 } from "lucide-react";
 import { MIN_ZOOM, MAX_ZOOM, ZOOM_LEVELS } from "./constants";
 import { useEditorStore } from "@/store/editor-store";
 import {
@@ -28,6 +28,10 @@ interface CanvasToolbarProps {
   rightSidebarOpen?: boolean;
   onClearCanvas?: () => void;
   componentCount?: number;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
 }
 
 export function CanvasToolbar({
@@ -45,6 +49,10 @@ export function CanvasToolbar({
   rightSidebarOpen,
   onClearCanvas,
   componentCount,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
 }: CanvasToolbarProps) {
   const selectedId = useEditorStore(s => s.selectedId);
   const findComponent = useEditorStore(s => s.findComponent);
@@ -119,6 +127,31 @@ export function CanvasToolbar({
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Undo / Redo — positioned right before the zoom controls */}
+        {onUndo && onRedo && (
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={onUndo}
+              disabled={!canUndo}
+              className="p-1.5 rounded-lg hover:bg-foreground/5 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Annulla (Ctrl+Z)"
+              aria-label="Annulla"
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={onRedo}
+              disabled={!canRedo}
+              className="p-1.5 rounded-lg hover:bg-foreground/5 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Ripristina (Ctrl+Y)"
+              aria-label="Ripristina"
+            >
+              <Redo2 className="w-3.5 h-3.5" />
+            </button>
+            <div className="w-px h-4 ios-separator mx-1 rounded-full" />
+          </div>
+        )}
+
         {/* Zoom controls */}
         <div className="flex items-center gap-0.5 bg-muted/90 rounded-lg p-0.5">
           <button

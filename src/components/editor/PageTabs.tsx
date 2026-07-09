@@ -2,48 +2,31 @@
 
 import { useState } from "react";
 import { useEditorStore } from "@/store/editor-store";
-import { useTheme } from "next-themes";
-import { ProjectMenu } from "./ProjectMenu";
-import { Button } from "@/components/ui/button";
 import {
   FileText, Plus, X,
-  Undo2, Redo2, Eye, Code, CircleHelp,
-  Sun, Moon, Sparkles,
 } from "lucide-react";
-import { cycleTheme, isDarkTheme, isIosTheme, type EditorTheme } from "@/components/theme-provider";
 import { toast } from "sonner";
 
 interface PageTabsProps {
   onAddPage: () => void;
-  canUndo: boolean;
-  canRedo: boolean;
-  onUndo: () => void;
-  onRedo: () => void;
-  onPreview: () => void;
-  onCode: () => void;
-  onShortcuts: () => void;
-  onThemeDialog: () => void;
 }
 
-export function PageTabs({
-  onAddPage,
-  canUndo,
-  canRedo,
-  onUndo,
-  onRedo,
-  onPreview,
-  onCode,
-  onShortcuts,
-  onThemeDialog,
-}: PageTabsProps) {
+/**
+ * Page tabs bar (below the EditorToolbar).
+ *
+ * Left side: page tabs (click to switch, double-click to rename) +
+ *   "Nuova" button.
+ *
+ * Project menu, Anteprima, HTML and Scorciatoie live in the
+ * EditorToolbar above. Undo/Redo live in the canvas toolbar.
+ * Theme cycle lives in the header (Toolbar).
+ */
+export function PageTabs({ onAddPage }: PageTabsProps) {
   const pages = useEditorStore((s) => s.pages);
   const activePageId = useEditorStore((s) => s.activePageId);
-  const components = useEditorStore((s) => s.components);
   const switchPage = useEditorStore((s) => s.switchPage);
   const deletePage = useEditorStore((s) => s.deletePage);
   const renamePage = useEditorStore((s) => s.renamePage);
-
-  const { theme, setTheme } = useTheme();
 
   const [renamingPageId, setRenamingPageId] = useState<string | null>(null);
   const [renamingPageName, setRenamingPageName] = useState("");
@@ -122,93 +105,6 @@ export function PageTabs({
           <Plus className="w-3 h-3" />
           <span className="hidden sm:inline">Nuova</span>
         </button>
-      </div>
-
-      {/* Spacer */}
-      <div className="flex-1" />
-
-      {/* Commands — right side */}
-      <div className="flex items-center gap-0.5 shrink-0">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onUndo}
-          disabled={!canUndo}
-          className="h-7 w-7 p-0 rounded-lg hover:bg-foreground/5 transition-colors"
-          title="Annulla (Ctrl+Z)"
-        >
-          <Undo2 className="w-3.5 h-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onRedo}
-          disabled={!canRedo}
-          className="h-7 w-7 p-0 rounded-lg hover:bg-foreground/5 transition-colors"
-          title="Ripristina (Ctrl+Y)"
-        >
-          <Redo2 className="w-3.5 h-3.5" />
-        </Button>
-
-        <div className="w-px h-4 ios-separator mx-1 rounded-full" />
-
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onPreview}
-          disabled={components.length === 0}
-          className="h-7 px-2 gap-1 rounded-lg hover:bg-foreground/5 transition-colors"
-        >
-          <Eye className="w-3.5 h-3.5" />
-          <span className="text-[11px]">Anteprima</span>
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onCode}
-          disabled={components.length === 0}
-          className="h-7 px-2 gap-1 rounded-lg hover:bg-foreground/5 transition-colors"
-        >
-          <Code className="w-3.5 h-3.5" />
-          <span className="text-[11px]">HTML</span>
-        </Button>
-
-        <div className="w-px h-4 ios-separator mx-1 rounded-full" />
-
-        {/* Project menu */}
-        <ProjectMenu onOpenThemeDialog={onThemeDialog} />
-
-        <div className="w-px h-4 ios-separator mx-1 rounded-full" />
-
-        {/* Theme Cycle — 4 variants: light → light-ios → dark-ios → dark */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setTheme(cycleTheme(theme))}
-          className="h-7 w-7 p-0 rounded-lg hover:bg-foreground/5 transition-colors"
-          title={
-            !isDarkTheme(theme) && !isIosTheme(theme) ? "Bianco semplice → Bianco iOS"
-            : !isDarkTheme(theme) && isIosTheme(theme) ? "Bianco iOS → Nero iOS"
-            : isDarkTheme(theme) && isIosTheme(theme) ? "Nero iOS → Nero semplice"
-            : "Nero semplice → Bianco semplice"
-          }
-        >
-          {!isDarkTheme(theme) && !isIosTheme(theme) && <Sun className="w-3.5 h-3.5" />}
-          {!isDarkTheme(theme) && isIosTheme(theme) && <Sparkles className="w-3.5 h-3.5 text-amber-500" />}
-          {isDarkTheme(theme) && isIosTheme(theme) && <Sparkles className="w-3.5 h-3.5 text-violet-400" />}
-          {isDarkTheme(theme) && !isIosTheme(theme) && <Moon className="w-3.5 h-3.5" />}
-        </Button>
-
-        {/* Shortcuts */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onShortcuts}
-          className="h-7 w-7 p-0 rounded-lg hover:bg-foreground/5 transition-colors"
-          title="Scorciatoie da tastiera"
-        >
-          <CircleHelp className="w-3.5 h-3.5" />
-        </Button>
       </div>
     </div>
   );

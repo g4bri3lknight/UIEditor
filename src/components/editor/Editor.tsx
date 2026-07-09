@@ -14,7 +14,9 @@ import { Canvas } from "./canvas/Canvas";
 import { RightSidebar } from "./RightSidebar";
 import { useEditorStore } from "@/store/editor-store";
 import { Toolbar } from "./Toolbar";
+import { EditorToolbar } from "./EditorToolbar";
 import { PageTabs } from "./PageTabs";
+import { SaveReminderBanner } from "./SaveReminderBanner";
 import { CodeDialog } from "./CodeDialog";
 import { PreviewDialog } from "./PreviewDialog";
 import { ThemeDialog } from "./ThemeDialog";
@@ -71,8 +73,6 @@ export function Editor() {
     components,
     undo,
     redo,
-    history,
-    historyIndex,
     removeComponent,
     clearCanvas,
     hiddenComponents,
@@ -151,25 +151,22 @@ export function Editor() {
   }, []);
 
   // ── History state ──
-  const canUndo = historyIndex > 0;
-  const canRedo = historyIndex < history.length - 1;
+  // (canUndo/canRedo are computed inside the CanvasToolbar where the
+  // Undo/Redo buttons now live.)
 
   // ── Keyboard shortcuts ──
-  const handleSave = useCallback(() => {
-    // Sync current page into pages array before saving
-    useEditorStore.getState()._syncCurrentPage();
-    const { components, bootstrapTheme, pages, activePageId, customCSS } = useEditorStore.getState();
-    const project = {
-      version: 2,
-      savedAt: new Date().toISOString(),
-      components,
-      bootstrapTheme,
-      pages,
-      activePageId,
-      customCSS,
-    };
-    localStorage.setItem("bootstrap-editor-project", JSON.stringify(project));
-    toast.success("Progetto salvato!");
+  const handleSave = useCallback(async () => {
+    // "Salva": overwrite the current file, or Save As if none open yet.
+    const { saveProject } = await import("@/lib/editor/project-file");
+    try {
+      const fileName = await saveProject();
+      if (fileName === null) return; // user cancelled Save As
+      useEditorStore.getState().setCurrentProjectFileName(fileName);
+      toast.success(`Progetto salvato in "${fileName}"`);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Errore sconosciuto";
+      toast.error(`Errore nel salvataggio: ${msg}`);
+    }
   }, []);
 
   React.useEffect(() => {
@@ -296,7 +293,7 @@ export function Editor() {
       }
       if (e.key === "s" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
         e.preventDefault();
-        handleSave();
+        void handleSave();
       }
       if (e.key === "d" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
         const { selectedId, selectedIds } = useEditorStore.getState();
@@ -367,20 +364,24 @@ export function Editor() {
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
         }}
-      >        {/* Top Toolbar — logo only */}
+      >
+        {/* Non-blocking save reminder — appears every 5 minutes */}
+        <SaveReminderBanner />
+
+        {/* Top Toolbar — logo only */}
         <Toolbar />
 
-        {/* Page Tabs + Commands on the right */}
-        <PageTabs
-          onAddPage={() => { addPage(); toast.success("Nuova pagina creata"); }}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          onUndo={undo}
-          onRedo={redo}
+        {/* Editor toolbar — project name + project menu + preview/html/shortcuts */}
+        <EditorToolbar
           onPreview={() => setPreviewDialogOpen(true)}
           onCode={() => setCodeDialogOpen(true)}
           onShortcuts={() => setShortcutsDialogOpen(true)}
           onThemeDialog={() => setThemeDialogOpen(true)}
+        />
+
+        {/* Page Tabs + theme cycle */}
+        <PageTabs
+          onAddPage={() => { addPage(); toast.success("Nuova pagina creata"); }}
         />
 
         {/* Main Content — Resizable Sidebars (desktop) / Overlay sidebars (mobile) */}

@@ -1127,12 +1127,42 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       if (p.bordered) cls += " table-bordered";
       if (p.hover) cls += " table-hover";
       if (p.condensed) cls += " table-sm";
-      if (p.borderColor) cls += ` table-${p.borderColor}`;
+      // NOTE: borderColor is applied via inline `border-color` on cells below —
+      // we deliberately do NOT use `table-${color}` here, because in Bootstrap
+      // `table-{color}` is a contextual BACKGROUND class (it colors the whole
+      // cell background), not a border class.
       if (p.stripedColumns) cls += " table-striped-columns";
       if (customClass) cls += ` ${customClass}`;
 
+      // Border color (only visible when `bordered` is on, since that's what
+      // adds the border widths). Applied to every cell so the whole table
+      // border uses the chosen color.
+      const borderColorHex = p.borderColor
+        ? BS_COLORS[String(p.borderColor)]
+        : null;
+      const cellBorderCss = borderColorHex ? `border-color: ${borderColorHex}` : "";
+
+      // Header color — background of the header cells (<th> in <thead>).
+      // Dark backgrounds get white text for contrast; light ones stay dark.
+      const headerColorHex = p.headerColor
+        ? BS_COLORS[String(p.headerColor)]
+        : null;
+      const darkHeaderColors = ["primary", "secondary", "success", "danger", "dark"];
+      const headerIsDark = p.headerColor
+        ? darkHeaderColors.includes(String(p.headerColor))
+        : false;
+      const headerStyleParts: string[] = [];
+      if (headerColorHex) {
+        headerStyleParts.push(`background: ${headerColorHex}`);
+        headerStyleParts.push(`color: ${headerIsDark ? "#ffffff" : "#212529"}`);
+      }
+      if (cellBorderCss) headerStyleParts.push(cellBorderCss);
+      const headerStyleAttr = headerStyleParts.length
+        ? ` style="${headerStyleParts.join("; ")}"`
+        : "";
+
       const headerHtml = indent(
-        "<tr>" + headers.map((h) => `<th scope="col">${h}</th>`).join("") + "</tr>",
+        "<tr>" + headers.map((h) => `<th scope="col"${headerStyleAttr}>${h}</th>`).join("") + "</tr>",
         indentLevel + 2
       );
 
@@ -1146,7 +1176,6 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
                     const cellP = cell.props as Record<string, string | boolean | number>;
                     const cellText = String(cellP.text || "");
                     const cellAlign = String(cellP.align || "left");
-                    const alignAttr = cellAlign !== "left" ? ` style="text-align: ${cellAlign}"` : "";
                     const hasCellChildren = cell.children && cell.children.length > 0;
                     let cellContent = "";
                     if (hasCellChildren) {
@@ -1156,8 +1185,15 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
                     } else {
                       cellContent = cellText;
                     }
-                    if (ci === 0) return `<th scope="row"${alignAttr}>${cellContent}</th>`;
-                    return `<td${alignAttr}>${cellContent}</td>`;
+                    // Merge text-align + border-color into a single style attr.
+                    const cellStyleParts: string[] = [];
+                    if (cellAlign !== "left") cellStyleParts.push(`text-align: ${cellAlign}`);
+                    if (cellBorderCss) cellStyleParts.push(cellBorderCss);
+                    const cellStyleAttr = cellStyleParts.length
+                      ? ` style="${cellStyleParts.join("; ")}"`
+                      : "";
+                    if (ci === 0) return `<th scope="row"${cellStyleAttr}>${cellContent}</th>`;
+                    return `<td${cellStyleAttr}>${cellContent}</td>`;
                   })
                   .join("\n") +
                 "</tr>",

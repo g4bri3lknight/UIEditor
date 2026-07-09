@@ -14,8 +14,9 @@ interface LeftSidebarProps {
 export function LeftSidebar({ width }: LeftSidebarProps) {
   const [activeTab, setActiveTab] = useState<"componenti" | "livelli" | "template">("componenti");
   const [search, setSearch] = useState("");
+  // All categories collapsed by default — the user expands the ones they need.
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(CATEGORIES.map((c) => c.id))
+    new Set()
   );
 
   const savedSnippetsCount = useEditorStore((s) => s.savedSnippets.length);
@@ -27,6 +28,15 @@ export function LeftSidebar({ width }: LeftSidebarProps) {
       else next.add(id);
       return next;
     });
+  };
+
+  // Bulk expand / collapse — wired to the two buttons next to the search
+  // field in ComponentPalette.
+  const expandAll = () => {
+    setExpandedCategories(new Set(CATEGORIES.map((c) => c.id)));
+  };
+  const collapseAll = () => {
+    setExpandedCategories(new Set());
   };
 
   return (
@@ -86,6 +96,8 @@ export function LeftSidebar({ width }: LeftSidebarProps) {
           onSearchChange={setSearch}
           expandedCategories={expandedCategories}
           onToggleCategory={toggleCategory}
+          onExpandAll={expandAll}
+          onCollapseAll={collapseAll}
         />
       )}
 
