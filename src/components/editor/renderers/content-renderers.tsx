@@ -884,6 +884,196 @@ const FormBuilderRenderer = React.memo(
   }
 );
 
+// @ts-nocheck
+// ── Stepper / Goal Tracker ──
+function renderStepper(
+  component: CanvasComponent,
+  _renderChildren?: React.ReactNode,
+  slotChildren?: Record<string, React.ReactNode>,
+  _isDragging?: boolean,
+): React.ReactNode {
+  const p = component.props as Record<string, string | boolean | number>;
+  const customClass = String(p.customClass || "");
+  const goalTitle = String(p.goalTitle || "");
+  const orientation = String(p.orientation || "horizontal");
+  const variant = String(p.variant || "number");
+  const size = String(p.size || "md");
+  const colorScheme = String(p.colorScheme || "");
+  const active = Number(p.active) || 0;
+
+  const rawItems = String(p.items || "").split("\n").filter(Boolean);
+  const items = rawItems.map((item) => {
+    const parts = item.split("|");
+    return { label: parts[0] || "Step", desc: parts[1] || "" };
+  });
+
+  // Size maps
+  const circleSize: Record<string, number> = { sm: 28, md: 36, lg: 44 };
+  const fontSize: Record<string, string> = { sm: "0.75rem", md: "0.875rem", lg: "1rem" };
+  const titleFontSize: Record<string, string> = { sm: "0.8rem", md: "0.9rem", lg: "1rem" };
+  const descFontSize: Record<string, string> = { sm: "0.7rem", md: "0.8rem", lg: "0.85rem" };
+  const radius = circleSize[size] / 2;
+
+  // Color scheme maps
+  const colorMap: Record<string, { active: string; completed: string; line: string; text: string }> = {
+    "": { active: BS.primary, completed: BS.success, line: BS.borderColor, text: BS.body },
+    success: { active: BS.success, completed: BS.success, line: BS.borderColor, text: BS.body },
+    info: { active: BS.info, completed: BS.info, line: BS.borderColor, text: BS.body },
+    warning: { active: BS.warning, completed: BS.warning, line: BS.borderColor, text: BS.body },
+    danger: { active: BS.danger, completed: BS.danger, line: BS.borderColor, text: BS.body },
+  };
+  const colors = colorMap[colorScheme] || colorMap[""];
+
+  const renderIndicator = (i: number, isActive: boolean, isCompleted: boolean) => {
+    const bgColor = isCompleted ? colors.completed : isActive ? colors.active : BS.borderColor;
+    const fgColor = isCompleted || isActive ? BS.white : BS.muted;
+    const borderValue = (!isCompleted && !isActive) ? `2px solid ${BS.borderColor}` : "none";
+    const shadow = isActive ? `0 0 0 4px ${bgColor}33` : "none";
+
+    if (variant === "dot") {
+      return (
+        <div style={{
+          width: size === "sm" ? 10 : size === "lg" ? 16 : 12,
+          height: size === "sm" ? 10 : size === "lg" ? 16 : 12,
+          borderRadius: "50%",
+          background: bgColor,
+          ...(isActive ? { boxShadow: `0 0 0 3px ${bgColor}33` } : {}),
+          flexShrink: 0,
+        }} />
+      );
+    }
+    if (variant === "icon") {
+      const icon = isCompleted ? "V" : isActive ? "●" : (i + 1).toString();
+      return (
+        <div style={{
+          width: circleSize[size], height: circleSize[size],
+          borderRadius: "50%", background: bgColor, color: fgColor,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: fontSize[size], fontWeight: isCompleted ? 700 : 400,
+          border: borderValue, boxShadow: shadow, flexShrink: 0,
+        }}>
+          {icon}
+        </div>
+      );
+    }
+    // default: number
+    return (
+      <div style={{
+        width: circleSize[size], height: circleSize[size],
+        borderRadius: "50%", background: bgColor, color: fgColor,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: fontSize[size], fontWeight: isCompleted ? 700 : 600,
+        border: borderValue, boxShadow: shadow, flexShrink: 0,
+      }}>
+        {isCompleted ? "V" : i + 1}
+      </div>
+    );
+  };
+
+  const renderStep = (item: { label: string; desc: string }, i: number) => {
+    const isActive = i === active;
+    const isCompleted = i < active;
+    const slotKey = `step-${i}`;
+    const stepContent = slotChildren?.[slotKey];
+
+    const labelColor = isActive ? colors.active : isCompleted ? colors.completed : BS.muted;
+    const labelWeight = isActive ? 600 : isCompleted ? 500 : 400;
+
+    if (orientation === "vertical") {
+      return (
+        <div key={slotKey} style={{ display: "flex", gap: "12px", position: "relative" }}>
+          {/* Vertical line + indicator column */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+            {renderIndicator(i, isActive, isCompleted)}
+            {i < items.length - 1 && (
+              <div style={{
+                width: 2, flex: 1, minHeight: 20,
+                background: i < active
+                  ? `linear-gradient(to bottom, ${colors.completed}, ${colors.completed})`
+                  : `linear-gradient(to bottom, ${BS.borderColor}, ${BS.borderColor})`,
+                marginTop: 4,
+              }} />
+            )}
+          </div>
+          {/* Content column */}
+          <div style={{ flex: 1, paddingBottom: i < items.length - 1 ? 16 : 0 }}>
+            <div style={{
+              fontSize: titleFontSize[size], fontWeight: labelWeight,
+              color: labelColor, marginBottom: item.desc ? 2 : 0,
+            }}>
+              {item.label}
+            </div>
+            {item.desc && (
+              <div style={{ fontSize: descFontSize[size], color: BS.muted, lineHeight: 1.4 }}>
+                {item.desc}
+              </div>
+            )}
+            {/* Slot content for this step */}
+            {stepContent}
+          </div>
+        </div>
+      );
+    }
+
+    // Horizontal
+    return (
+      <div key={slotKey} style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, position: "relative" }}>
+        {/* Connector line behind indicator (for horizontal) */}
+        {i > 0 && (
+          <div style={{
+            position: "absolute", top: radius,
+            left: "-50%",
+            width: "100%",
+            height: 2, zIndex: 0,
+            background: i <= active ? colors.completed : BS.borderColor,
+          }} />
+        )}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", zIndex: 1, width: "100%" }}>
+          {renderIndicator(i, isActive, isCompleted)}
+          <div style={{
+            fontSize: titleFontSize[size], fontWeight: labelWeight,
+            color: labelColor, marginTop: 6, textAlign: "center",
+          }}>
+            {item.label}
+          </div>
+          {item.desc && (
+            <div style={{ fontSize: descFontSize[size], color: BS.muted, textAlign: "center", marginTop: 2, maxWidth: 120 }}>
+              {item.desc}
+            </div>
+          )}
+          {stepContent}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <Wrapper customClass={customClass} style={{ padding: "8px 4px" }}>
+      <div style={{ color: BS.body }}>
+        {goalTitle && (
+          <div data-prop="goalTitle" style={{
+            fontSize: "1rem", fontWeight: 600, marginBottom: 16,
+            display: "flex", alignItems: "center", gap: 8,
+          }}>
+            <span style={{ fontSize: "1.1rem" }}>🎯</span>
+            {goalTitle}
+          </div>
+        )}
+        <div style={{
+          display: orientation === "horizontal" ? "flex" : "flex",
+          flexDirection: orientation === "horizontal" ? "row" : "column",
+          gap: orientation === "horizontal" ? 0 : 0,
+          alignItems: orientation === "horizontal" ? "flex-start" : "stretch",
+          position: "relative",
+          padding: orientation === "horizontal" ? `0 ${radius}px` : 0,
+        }}>
+          {items.map((item, i) => renderStep(item, i))}
+        </div>
+      </div>
+    </Wrapper>
+  );
+}
+
 // ── Register all content renderers ──
 registerRenderer("card", (component, renderChildren, slotChildren, isDragging) =>
   React.createElement(CardRenderer, { component, renderChildren, slotChildren, isDragging })
@@ -906,3 +1096,4 @@ registerRenderer("form-builder", (component, renderChildren, slotChildren, isDra
   React.createElement(FormBuilderRenderer, { component, renderChildren, slotChildren, isDragging })
 );
 registerRenderer("offcanvas", renderOffcanvas);
+registerRenderer("stepper", renderStepper);

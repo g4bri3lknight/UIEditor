@@ -153,7 +153,6 @@ function renderTabContent(
   const style = String(p.style || "tabs");
 
   const _hasSlotChildren = slotChildren && Object.keys(slotChildren).length > 0;
-  const hasDirectChildren = component.children && component.children.length > 0;
 
   return (
     <Wrapper customClass={customClass} style={{ padding: "4px" }}>
@@ -203,11 +202,11 @@ function renderTabContent(
         borderRadius: style === "pills" ? "8px" : "0 0 8px 8px",
         minHeight: "60px",
       }}>
-        {hasDirectChildren && items.map((_, tabIndex) => {
+        {slotChildren && items.map((_, tabIndex) => {
           const slotKey = `tab-${tabIndex}`;
           return <React.Fragment key={slotKey}>{slotChildren?.[slotKey] || null}</React.Fragment>;
         })}
-        {(!hasDirectChildren) && active >= 0 && active < items.length && (
+        {(!slotChildren) && active >= 0 && active < items.length && (
           <div style={{ fontSize: "0.9375rem", color: BS.body }}>
             {items[active].content}
           </div>

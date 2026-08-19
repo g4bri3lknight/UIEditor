@@ -2546,6 +2546,83 @@ export const COMPONENTS: BootstrapComponentDefinition[] = [
     ],
   },
 
+  // ──────────────── STEPPER / GOAL TRACKER ────────────────
+  {
+    type: "stepper",
+    label: "Stepper",
+    category: "content",
+    icon: "Goal",
+    description: "Obiettivo suddiviso in step/traguardi (orizzontale o verticale)",
+    properties: [
+      {
+        key: "goalTitle",
+        label: "Titolo obiettivo",
+        type: "text",
+        defaultValue: "",
+        placeholder: "es. Completa il tuo profilo",
+      },
+      {
+        key: "items",
+        label: "Step (etichetta|descrizione)",
+        type: "textarea",
+        defaultValue: "Registrazione|Crea il tuo account personale\nProfilo|Compila i dati del profilo\nVerifica|Conferma la tua identit\u00e0\nCompletamento|Tutto pronto!",
+        placeholder: "Etichetta|Descrizione (una per riga)",
+      },
+      {
+        key: "active",
+        label: "Step attivo",
+        type: "number",
+        defaultValue: 1,
+        description: "Indice dello step attualmente in corso (base 0)",
+      },
+      {
+        key: "orientation",
+        label: "Orientamento",
+        type: "select",
+        defaultValue: "horizontal",
+        options: [
+          { label: "Orizzontale", value: "horizontal" },
+          { label: "Verticale", value: "vertical" },
+        ],
+      },
+      {
+        key: "variant",
+        label: "Stile indicatore",
+        type: "select",
+        defaultValue: "number",
+        options: [
+          { label: "Numeri", value: "number" },
+          { label: "Punti", value: "dot" },
+          { label: "Icone", value: "icon" },
+        ],
+      },
+      {
+        key: "size",
+        label: "Dimensione",
+        type: "select",
+        defaultValue: "md",
+        options: [
+          { label: "Piccolo", value: "sm" },
+          { label: "Medio", value: "md" },
+          { label: "Grande", value: "lg" },
+        ],
+      },
+      {
+        key: "colorScheme",
+        label: "Schema colori",
+        type: "select",
+        defaultValue: "",
+        options: [
+          { label: "Predefinito (primario)", value: "" },
+          { label: "Success (verde)", value: "success" },
+          { label: "Info (blu)", value: "info" },
+          { label: "Warning (arancione)", value: "warning" },
+          { label: "Danger (rosso)", value: "danger" },
+        ],
+      },
+    ],
+  },
+
   // ──────────────── TABLES ────────────────
   {
     type: "table",

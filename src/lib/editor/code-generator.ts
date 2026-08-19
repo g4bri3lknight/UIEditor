@@ -1431,22 +1431,112 @@ function generateComponentHTML(component: CanvasComponent, indentLevel: number =
       return indent(wrap("div", "", html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
     }
 
+    case "stepper": {
+      const children = component.children || [];
+      const hasChildren = children && children.length > 0;
+      const rawItems = ((p.items as string) || "").split("\n").filter(Boolean);
+      const items = rawItems.map((item, i) => {
+        const parts = item.split("|");
+        return { label: parts[0] || `Step ${i + 1}`, desc: parts[1] || "" };
+      });
+      const activeIdx = Number(p.active) || 0;
+      const orientation = String(p.orientation || "horizontal");
+      const colorScheme = String(p.colorScheme || "primary");
+      const goalTitle = String(p.goalTitle || "");
+
+      // Color classes
+      const colorClsMap: Record<string, string> = { "": "primary", success: "success", info: "info", warning: "warning", danger: "danger" };
+      const colorCls = colorClsMap[colorScheme] || "primary";
+
+      let html = "";
+
+      // Goal title
+      if (goalTitle) {
+        html += indent(`<h6 class="mb-3"><span>🎯</span> ${goalTitle}</h6>`, indentLevel + 1);
+      }
+
+      // Stepper container
+      const wrapperCls = orientation === "horizontal"
+        ? `d-flex align-items-start position-relative px-4`
+        : `d-flex flex-column gap-0`;
+      html += indent(`<div class="${wrapperCls}">`, indentLevel + 1);
+
+      // Steps
+      items.forEach((item, i) => {
+        const isActive = i === activeIdx;
+        const isCompleted = i < activeIdx;
+        const stepSlotChildren = hasChildren ? children.filter(c => c.slot === `step-${i}`) : [];
+
+        // State class
+        let stateCls = "";
+        let iconContent = i + 1;
+        if (isCompleted) { stateCls = `bg-${colorCls} text-white`; iconContent = "V"; }
+        else if (isActive) { stateCls = `bg-${colorCls} text-white ring ring ring-${colorCls} ring-opacity-25`; }
+        else { stateCls = "bg-light text-secondary border"; }
+
+        // Orientation-specific rendering
+        if (orientation === "vertical") {
+          html += indent(`<div class="d-flex gap-3 position-relative">`, indentLevel + 2);
+          html += indent(`<div class="d-flex flex-column align-items-center flex-shrink-0">`, indentLevel + 3);
+          html += indent(`<div class="rounded-circle d-flex align-items-center justify-content-center ${stateCls}" style="width:32px;height:32px;font-size:0.875rem;font-weight:600;">${iconContent}</div>`, indentLevel + 4);
+          if (i < items.length - 1) {
+            const lineCls = i < activeIdx ? `bg-${colorCls}` : "bg-light";
+            html += indent(`<div class="${lineCls}" style="width:2px;flex:1;min-height:20px;margin-top:4px;"></div>`, indentLevel + 4);
+          }
+          html += indent("</div>", indentLevel + 3);
+          html += indent(`<div class="flex-grow-1 ${i < items.length - 1 ? 'pb-3' : ''}">`, indentLevel + 3);
+          html += indent(`<div class="fw-semibold ${isActive ? `text-${colorCls}` : isCompleted ? `text-${colorCls}` : 'text-secondary'}" style="font-size:0.9rem;">${item.label}</div>`, indentLevel + 4);
+          if (item.desc && stepSlotChildren.length === 0) {
+            html += indent(`<div class="text-muted" style="font-size:0.8rem;">${item.desc}</div>`, indentLevel + 4);
+          }
+          if (stepSlotChildren.length > 0) {
+            stepSlotChildren.forEach(c => {
+              html += "\n" + generateComponentHTML(c, indentLevel + 4, hiddenComponents);
+            });
+          }
+          html += indent("</div>", indentLevel + 3);
+          html += indent("</div>", indentLevel + 2);
+        } else {
+          // Horizontal step
+          html += indent(`<div class="d-flex flex-column align-items-center flex-grow-1 position-relative">`, indentLevel + 2);
+          if (i > 0) {
+            const lineBg = i <= activeIdx ? `bg-${colorCls}` : "bg-light";
+            html += indent(`<div class="${lineBg} position-absolute" style="top:16px;right:50%;left:-50%;height:2px;z-index:0;"></div>`, indentLevel + 3);
+          }
+          html += indent(`<div class="position-relative z-1 d-flex flex-column align-items-center w-100">`, indentLevel + 3);
+          html += indent(`<div class="rounded-circle d-flex align-items-center justify-content-center ${stateCls}" style="width:32px;height:32px;font-size:0.875rem;font-weight:600;">${iconContent}</div>`, indentLevel + 4);
+          html += indent(`<div class="fw-semibold mt-1 text-center ${isActive ? `text-${colorCls}` : isCompleted ? `text-${colorCls}` : 'text-secondary'}" style="font-size:0.9rem;">${item.label}</div>`, indentLevel + 4);
+          if (item.desc && stepSlotChildren.length === 0) {
+            html += indent(`<div class="text-muted text-center mt-0" style="font-size:0.8rem;max-width:120px;">${item.desc}</div>`, indentLevel + 4);
+          }
+          if (stepSlotChildren.length > 0) {
+            stepSlotChildren.forEach(c => {
+              html += "\n" + generateComponentHTML(c, indentLevel + 4, hiddenComponents);
+            });
+          }
+          html += indent("</div>", indentLevel + 3);
+          html += indent("</div>", indentLevel + 2);
+        }
+      });
+
+      html += indent("</div>", indentLevel + 1);
+      return indent(wrap("div", "", html, wrapExtraAttrs, false, customClass, isHidden), indentLevel);
+    }
+
     case "tooltip": {
       const placement = String(p.placement || "top");
       const trigger = String(p.trigger || "hover");
       const variant = String(p.variant || "dark");
 
-      // Map trigger to Bootstrap data-bs-trigger attribute
       let bsTrigger = "";
-      if (trigger === "focus") bsTrigger = " data-bs-trigger=\"focus\"";
-      else if (trigger === "click") bsTrigger = " data-bs-trigger=\"click\"";
-      // hover is default, no attribute needed
+      if (trigger === "focus") bsTrigger = ` data-bs-trigger="focus"`;
+      else if (trigger === "click") bsTrigger = ` data-bs-trigger="click"`;
 
       let btnCls = "btn btn-outline-secondary btn-sm";
       if (variant === "light") btnCls = "btn btn-outline-dark btn-sm";
 
       let html = indent(
-        `<button type="button" class="${btnCls}" data-bs-toggle="tooltip" data-bs-placement="${placement}" title="${p.tooltipText || "Tooltip text}"}${bsTrigger}>${p.text || "Hover me"}</button>`,
+        `<button type="button" class="${btnCls}" data-bs-toggle="tooltip" data-bs-placement="${placement}" title="${p.tooltipText || "Tooltip text"}"${bsTrigger}>${p.text || "Hover me"}</button>`,
         indentLevel + 1
       );
       html += "\n" + indent(

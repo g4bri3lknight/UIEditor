@@ -68,7 +68,7 @@ export const editorCollisionDetection: CollisionDetection = (args) => {
 export function parseSlotId(slotId: string): { parentId: string; slot: string } | null {
   const rest = slotId.replace("slot-", "");
   // Numbered slots: tab-N, acc-N
-  const numberedSlotMatch = rest.match(/^(comp-\d+-\d+)-(tab|acc)-(\d+)$/);
+  const numberedSlotMatch = rest.match(/^(comp-\d+-\d+)-(tab|acc|step)-(\d+)$/);
   // Simple slots: header, footer, body
   const simpleMatch = rest.match(/^(comp-\d+-\d+)-(header|footer|body)$/);
   const match = numberedSlotMatch || simpleMatch;
@@ -144,7 +144,17 @@ function resolveDropTarget(
   }
 
   // For slotted types (card/modal/offcanvas), add to body slot by default
+  // For tab-content, redirect to the active tab slot
+  // For stepper, redirect to the active step slot
   if (isSlottedType(parentComp.type)) {
+    if (parentComp.type === "tab-content") {
+      const activeTab = Number(parentComp.props.active) || 0;
+      return { parentId: parentComp.id, slot: `tab-${activeTab}` };
+    }
+    if (parentComp.type === "stepper") {
+      const activeStep = Number(parentComp.props.active) || 0;
+      return { parentId: parentComp.id, slot: `step-${activeStep}` };
+    }
     return { parentId: parentComp.id, slot: "body" };
   }
 

@@ -74,4 +74,11 @@ export const COMPONENT_PRESETS: Record<string, ComponentPreset[]> = {
     { name: "Light", props: { variant: "light", bgColor: "light", brand: "Brand" } },
     { name: "Primary", props: { variant: "dark", bgColor: "primary", brand: "Brand" } },
   ],
+  stepper: [
+    { name: "Orizzontale", props: { orientation: "horizontal", variant: "number", size: "md", colorScheme: "", active: 1, items: "Registrazione|Crea il tuo account\nProfilo|Compila i dati del profilo\nVerifica|Conferma la tua identità\nCompletamento|Tutto pronto!" } },
+    { name: "Verticale", props: { orientation: "vertical", variant: "number", size: "md", colorScheme: "", active: 1, items: "Registrazione|Crea il tuo account\nProfilo|Compila i dati del profilo\nVerifica|Conferma la tua identità\nCompletamento|Tutto pronto!" } },
+    { name: "Punti Orizzontale", props: { orientation: "horizontal", variant: "dot", size: "md", colorScheme: "success", active: 2, items: "Pianificazione|Definisci gli obiettivi\nSviluppo|Implementa la soluzione\nTesting|Verifica la qualità\nDeploy|Pubblica in produzione" } },
+    { name: "Icone Verticali", props: { orientation: "vertical", variant: "icon", size: "lg", colorScheme: "info", active: 2, items: "Ricerca|Analisi del mercato\nDesign|Progettazione UI/UX\nSviluppo|Codifica e integrazione\nLancio|Go-to-market" } },
+    { name: "3 Step Compatto", props: { orientation: "horizontal", variant: "number", size: "sm", colorScheme: "", active: 0, items: "Inizio|Primo passo\nMezzo|Secondo passo\nFine|Ultimo passo" } },
+  ],
 };

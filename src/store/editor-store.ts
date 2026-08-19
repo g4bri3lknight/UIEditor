@@ -8,7 +8,7 @@ import { getComponentByType } from "@/lib/editor/bootstrap-components";
 // ── Container types that can accept children ──
 export const CONTAINER_TYPES = new Set([
   "container", "row", "col", "card", "modal", "offcanvas",
-  "table", "table-row", "table-cell", "tab-content", "accordion", "collapse",
+  "table", "table-row", "table-cell", "tab-content", "accordion", "collapse", "stepper",
 ]);
 
 export function isContainer(type: string): boolean {
@@ -20,7 +20,7 @@ export function isAutoManaged(type: string): boolean {
 }
 
 // ── Types that support slotted children (header/body/footer or dynamic tabs) ──
-export const SLOTTED_TYPES = new Set(["card", "modal", "offcanvas", "tab-content", "accordion", "collapse"]);
+export const SLOTTED_TYPES = new Set(["card", "modal", "offcanvas", "tab-content", "accordion", "collapse", "stepper"]);
 
 export function isSlottedType(type: string): boolean {
   return SLOTTED_TYPES.has(type);
@@ -40,6 +40,14 @@ export function getAccordionSlots(itemsProp: unknown): string[] {
   if (!raw) return ["acc-0"];
   const lines = raw.split("\n").filter(Boolean);
   return lines.map((_, i) => `acc-${i}`);
+}
+
+// For stepper: extract step slots from the items property
+export function getStepperSlots(itemsProp: unknown): string[] {
+  const raw = String(itemsProp || "");
+  if (!raw) return ["step-0"];
+  const lines = raw.split("\n").filter(Boolean);
+  return lines.map((_, i) => `step-${i}`);
 }
 
 // ── Theme Configuration ──

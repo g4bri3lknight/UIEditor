@@ -12,7 +12,7 @@ export function SlotDropZone({
   slotId: string;
   isDragging: boolean;
   children: React.ReactNode;
-  label: string;
+  label?: string;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: slotId,

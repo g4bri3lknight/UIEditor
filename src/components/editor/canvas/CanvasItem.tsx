@@ -33,7 +33,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { useEditorStore, isContainer, isAutoManaged, isSlottedType, getTabSlots, getAccordionSlots } from "@/store/editor-store";
+import { useEditorStore, isContainer, isAutoManaged, isSlottedType, getTabSlots, getAccordionSlots, getStepperSlots } from "@/store/editor-store";
 import { BootstrapRenderer } from "../BootstrapRenderer";
 import { CanvasComponent } from "@/lib/editor/types";
 import { COMPONENTS, CATEGORIES } from "@/lib/editor/bootstrap-components";
@@ -430,6 +430,29 @@ function CanvasItemInner({
             label={`Rilascia nel pannello "${accTitles[accIndex]}"`}
           >
             {renderSlotContent(accChildren)}
+          </SlotDropZone>
+        </div>
+      );
+    });
+  } else if (isSlotted && component.type === "stepper") {
+    // Stepper: dynamic slots based on the number of steps
+    const stepSlotIds = getStepperSlots(component.props.items);
+
+    // Get step labels for display
+    const rawSteps = String(component.props.items || "").split("\n").filter(Boolean);
+    const stepLabels = rawSteps.map((item) => item.split("|")[0] || "Step");
+
+    slotChildrenMap = {};
+    stepSlotIds.forEach((slotId, stepIndex) => {
+      const stepChildren = allChildren.filter(c => c.slot === slotId);
+      slotChildrenMap[slotId] = (
+        <div key={slotId}>
+          <SlotDropZone
+            slotId={`slot-${component.id}-${slotId}`}
+            isDragging={isDragging}
+            label={`Rilascia nello step "${stepLabels[stepIndex]}"`}
+          >
+            {renderSlotContent(stepChildren)}
           </SlotDropZone>
         </div>
       );
